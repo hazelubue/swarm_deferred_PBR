@@ -15,7 +15,6 @@ ipch
 *.sdf
 *.opensdf
 *.idb
-*.vcxproj
 *.sln
 
 # OSX/Linux build products
@@ -56,18 +55,9 @@ config.cfg
 *.h.gch
 *.h.gch.d
 
-*.sln
-*.slnx
-*.vcproj
-*.vcxproj
-*.vcxproj.*
 *.obj
 *.rsuser
 *.suo
-*.user
-*.userosscache
-*.sln.docstates
-*.userprefs
 mono_crash.*
 .vs/*
 *.pdb
