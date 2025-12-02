@@ -1,0 +1,42 @@
+"GameInfo"
+{
+	"game"		"Swarm Deferred"
+	"title"		"    "	// asw - leave this blank as we have a texture logo
+	"type"		"multiplayer_only"
+	GameData	"swarm.fgd"
+	InstancePath "tilegen/instances/"
+	
+	SupportsDX8     0
+	
+	"FileSystem"
+	{
+		"SteamAppId"	"630"
+		"ToolsAppId"	"211"
+		
+		"SearchPaths"
+		{
+			"Game"	"|gameinfo_path|."
+			"Game"	"swarm"
+			"Game"	"swarm_tempcontent"
+			"Game"	"swarm_base"
+			"Game"	"platform"	
+
+			"Game"  "C:\Users\hazel\Desktop\Shared\#Portal2Remastered\Portal 2\xlsppatch"
+			"Game"  "C:\Users\hazel\Desktop\Shared\#Portal2Remastered/Portal 2/update"
+			"Game"  "C:\Users\hazel\Desktop\Shared\#Portal2Remastered/Portal 2/portal2_dlc2"
+			"Game"  "C:\Users\hazel\Desktop\Shared\#Portal2Remastered/Portal 2/portal2_dlc1"
+			"Game"  "C:\Users\hazel\Desktop\Shared\#Portal2Remastered/Portal 2/portal2"
+			//"Game"	"..\..\..\#Portal2Remastered\P2ASW\game\portal2asw"
+			// Portal 2 code mounts this, but it isn't used by Valve
+			"Game"	"/home/hazel/#Portal2Remastered/Portal 2/xlsppatch"
+			"Game"	"/home/hazel/#Portal2Remastered/Portal 2/update"
+			"Game"	"/home/hazel/#Portal2Remastered/Portal 2/portal2_dlc2"
+			"Game"	"/home/hazel/#Portal2Remastered/Portal 2/portal2_dlc1"
+			"Game" "/home/hazel/#Portal2Remastered/Portal 2/portal2"
+			"Game"	"/mnt/temp/SteamLibrary/steamapps/common/SourceFilmmaker/game/hl2/"
+			//"Game"	"../left 4 dead/left4dead"
+			//"Game"	"../left 4 dead 2/left4dead2"
+			//"Game"	"../portal 2/portal2"
+		}
+	}
+}

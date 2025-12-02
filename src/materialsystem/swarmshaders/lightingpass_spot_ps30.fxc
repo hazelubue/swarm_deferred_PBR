@@ -1,0 +1,220 @@
+// STATIC:      "USEWORLDTRANSFORM"          "0..1"
+// DYNAMIC:     "NUM_SHADOWED_COOKIE"        "0..2"
+// DYNAMIC:     "NUM_SHADOWED"               "0..3"
+// DYNAMIC:     "NUM_COOKIE"                 "0..3"
+// DYNAMIC:     "NUM_SIMPLE"                 "0..5"
+
+// SKIP:        !$NUM_SHADOWED_COOKIE && !$NUM_SHADOWED && !$NUM_COOKIE && !$NUM_SIMPLE
+
+#include "common_ps_fxc.h"
+#include "common_deferred_fxc.h"
+#include "common_pbr.h"
+#include "common_spot_light.h"
+
+sampler sNormals : register(s0);
+sampler sDepth : register(s1);
+sampler sMRAO : register(s15);
+
+#if USEWORLDTRANSFORM
+const float3 g_vecFrustumCenter : register(c3);
+const float3 g_vecFrustumRight  : register(c4);
+const float3 g_vecFrustumUp     : register(c5);
+const float2 g_vecHalfScreenTexel : register(c6);
+#endif
+
+struct PS_INPUT
+{
+#if USEWORLDTRANSFORM
+    float3 vecProjXYW : TEXCOORD0;
+#else
+    float2 vTexCoord : TEXCOORD0;
+    float3 vecWorldRay : TEXCOORD1;
+#endif
+    float2 baseTexCoord : TEXCOORD2;
+    float3 worldNormal : TEXCOORD3;
+    float3 worldPos : TEXCOORD4;
+    float3 projPos : TEXCOORD5;
+};
+
+struct PS_OUTPUT
+{
+    float4 vColor_0 : COLOR0;
+};
+
+PS_OUTPUT main(const PS_INPUT In)
+{
+    PS_OUTPUT output;
+    float2 screenUV;
+    float3 worldRay;
+    float3 vecDelta;
+    float3 lightColor;
+    float dist;
+    float3 local;
+    float3 Diffuse;
+    float3 Specular;
+#if USEWORLDTRANSFORM
+    screenUV = In.vecProjXYW.xy / In.vecProjXYW.z;
+    worldRay = g_vecFrustumCenter + screenUV.x * g_vecFrustumRight + screenUV.y * g_vecFrustumUp;
+    screenUV = screenUV * float2(0.5, -0.5) + 0.5 + g_vecHalfScreenTexel;
+#else
+    screenUV = In.vTexCoord;
+    worldRay = In.vecWorldRay;
+#endif
+
+    float depth = tex2D(sDepth, screenUV).x;
+    if (depth <= 0.0001f)
+        discard;
+    float3 worldPos = g_vecViewOrigin + worldRay * depth;
+    float4 gbufN = tex2D(sNormals, screenUV);
+    float3 worldNormal = normalize(gbufN.xyz * 2.0f - 1.0f);
+	
+    float3 albedo = float3(0.8f, 0.8f, 0.8f);
+
+    float4 mrao = tex2D(sMRAO, screenUV).rgba;
+    
+    float metallic = saturate(mrao.r);
+    
+    bool bHasRealMRAO = (mrao.a > 0.5f);
+    float roughness = 0.0;
+    if (bHasRealMRAO)
+    {
+        roughness = mrao.g * 10.0f;
+    }
+    else
+    {
+        roughness = mrao.g * 18.66f;
+    }
+    float ao = mrao.b * 2.0f;
+    
+    float3 sumLighting = float3(0, 0, 0);
+    
+    float3 eye = g_vecViewOrigin;
+    
+    int idx = 0;
+    int samp = 0;
+
+    for (int i = 0; i < NUM_SHADOWED_COOKIE; i++)
+    {
+        int litIdx = idx * NUM_CONSTS_SPOT_ADVANCED;
+        
+        //old working but less performing method.
+        //we are going to go back to original per light biohazard style.
+        //LightpassParams(litIdx, vecDelta, worldPos, lightColor, dist);
+        
+        vecDelta = worldPos - g_flMixedData[litIdx].xyz;
+        lightColor = g_flMixedData[litIdx + 1].xyz;
+        dist = length(vecDelta);
+        
+        DoPBRCSMCookied(litIdx, worldPos, worldNormal, vecDelta, samp, albedo, g_vecViewOrigin, dist, metallic, roughness, Diffuse, Specular);
+    
+        sumLighting += Diffuse + Specular;
+
+        idx++;
+        samp++;
+    }
+    int ShadowedStartIdx = NUM_SHADOWED_COOKIE * NUM_CONSTS_SPOT_ADVANCED;
+    for (int i = 0; i < NUM_SHADOWED; ++i)
+    {
+        int litIdx = ShadowedStartIdx + (i * NUM_CONSTS_SPOT_ADVANCED);
+        int sampIdx = NUM_SHADOWED_COOKIE + i;
+        
+        //old working but less performing method.
+        //we are going to go back to original per light biohazard style.
+        //LightpassParams(litIdx, vecDelta, worldPos, lightColor, dist);
+        
+        vecDelta = worldPos - g_flMixedData[litIdx].xyz;
+        lightColor = g_flMixedData[litIdx + 1].xyz;
+        dist = length(vecDelta);
+
+        float4x4 w2t = float4x4(
+        g_flMixedData[litIdx + 5], g_flMixedData[litIdx + 6],
+        g_flMixedData[litIdx + 7], g_flMixedData[litIdx + 8] );
+
+        float viewDot = 1.0f - abs(dot(vecDelta / dist, worldNormal));
+        float3 localPos = worldPos + worldNormal * (viewDot + dist * 0.0075f);
+        float4 depthPos = mul(float4(localPos, 1.0f), w2t);
+        depthPos.xyz /= depthPos.w;
+        
+        float3 flShadow = PerformShadow(depthPos, sampIdx, litIdx, g_flMixedData[litIdx + 4].w, vecDelta, dist, worldNormal);
+        
+        DoSpotLightPBR(litIdx, worldNormal, g_flMixedData[litIdx].xyz, lightColor,
+        dist, worldPos, metallic, roughness, albedo, Diffuse, Specular, true);
+        
+        //float3 Li = DoPBRCSM(litIdx, worldPos, worldNormal, vecDelta, samp, albedo, lightColor, dist, screenUV, metallic, roughness, ao);
+        
+        sumLighting += Diffuse + Specular * flShadow;
+       
+        //ShadowedStartIdx++;
+        //samp++;
+    }
+
+    //for (int i = 0; i < NUM_COOKIE; i++)
+    //{
+    //    int litIdx = idx * NUM_CONSTS_SPOT_ADVANCED;
+        
+    //    //todo complete cookie.
+        
+    //    //old working but less performing method.
+    //    //we are going to go back to original per light biohazard style.
+    //    //LightpassParams(litIdx, vecDelta, worldPos, lightColor, dist);
+        
+    //    vecDelta = worldPos - g_flMixedData[litIdx].xyz;
+    //    lightColor = g_flMixedData[litIdx + 1].xyz;
+    //    dist = length(vecDelta);
+        
+    //    //float4x4 w2t = float4x4(
+    //    //g_flMixedData[litIdx + 5], g_flMixedData[litIdx + 6],
+    //    //g_flMixedData[litIdx + 7], g_flMixedData[litIdx + 8]);
+        
+    //    //float viewDot = 1.0f - abs(dot(vecDelta / dist, worldNormal));
+    //    //float3 localPos = worldPos + worldNormal * (viewDot + dist * 0.0075f);
+    //    //float4 depthPos = mul(float4(localPos, 1.0f), w2t);
+    //    //depthPos.xyz /= depthPos.w;
+        
+    //    //float3 cookie = DoLightFinalCookied(g_flMixedData[litIdx + 1].xyz,
+    //    //g_flMixedData[litIdx + 2].xyz,
+    //    //sumLighting.x, DoStandardCookie(sMixedSampler[samp + 1], depthPos.xy));
+        
+    //    //float3 cookie = DoCubemapCookie(sMixedSampler[samp + 1], vecDelta);
+        
+    //    float3 Li = DoPBRCSM(litIdx, worldPos, worldNormal, vecDelta, samp, albedo, lightColor, dist, screenUV, metallic, roughness, ao);
+
+    //    sumLighting += Li/* * cookie*/;
+
+    //    idx++;
+    //    samp++;
+    //}
+    
+    //the purpose of this seperate Idx is to gather seperate data channels so lights can render simultaneously.
+    
+    int simpleStartIdx = (NUM_SHADOWED_COOKIE + NUM_SHADOWED ) * NUM_CONSTS_SPOT_ADVANCED;
+    for (int i = 0; i < NUM_SIMPLE; ++i)
+    {
+        int litIdx = simpleStartIdx + (i * NUM_CONSTS_SPOT_SIMPLE);
+
+        //old working but less performing method.
+        //we are going to go back to original per light biohazard style.
+        //LightpassParams(litIdx, vecDelta, worldPos, lightColor, dist);
+        
+        vecDelta = worldPos - g_flMixedData[litIdx].xyz;
+        lightColor = g_flMixedData[litIdx + 1].xyz;
+        dist = length(vecDelta);
+        
+        DoSpotLightPBR(litIdx, worldNormal, g_flMixedData[litIdx].xyz, lightColor,
+        dist, worldPos, metallic, roughness, albedo, Diffuse, Specular, true);
+        
+        sumLighting += Diffuse + Specular;
+
+       // simpleStartIdx++;
+    }
+
+    //Tonemap
+    sumLighting.rgb = ACES_Tonemap(sumLighting.rgb, 10.0f);
+
+    //Gamma Correct
+    //sumLighting.rgb = pow(sumLighting, 1.0 / 2.2);
+    //sumLighting.rgb = clamp(sumLighting, 0, 1);
+
+    output.vColor_0 = WriteLighting(float4(sumLighting, 1.0f));
+    return output;
+}

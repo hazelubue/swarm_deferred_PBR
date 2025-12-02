@@ -1,0 +1,171 @@
+//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+
+// STATIC: "BASETEXTURE"					"0..1"
+// STATIC: "MULTITEXTURE"					"0..1"
+// STATIC: "REFLECT"						"0..1"
+// STATIC: "REFRACT"						"0..1"
+// STATIC: "ABOVEWATER"						"0..1"
+// STATIC: "FLOWMAP"						"0..1"  [ps20b]
+// STATIC: "FLOWMAP"						"0..0"  [ps20] [ = 0; ]
+// STATIC: "FLOW_DEBUG"						"0..2"
+// STATIC: "FLASHLIGHT"                     "0..1"	[ps20b]
+// STATIC: "FLASHLIGHT"                     "0..0"  [ps20] [ = 0; ]
+// STATIC: "LIGHTMAPWATERFOG"               "0..1"  [ps20b]
+// STATIC: "LIGHTMAPWATERFOG"               "0..0"  [ps20] [ = 0; ]
+// STATIC: "FORCEFRESNEL"					"0..1"
+// STATIC: "SIMPLEOVERLAY"					"0..1"
+// DYNAMIC: "FLASHLIGHTSHADOWS"             "0..1"  [ps20b]
+// DYNAMIC: "FLASHLIGHTSHADOWS"             "0..0"  [ps20] [ = 0; ]
+// DYNAMIC: "BUILDWORLDIMPOSTER"			"0..1" [ = r_buildingmapforworld.GetBool() ? 1 : 0 ] 
+
+#include "common_ps_fxc.h"
+#include "common_fog_ps_fxc.h"
+#include "common_lightmappedgeneric_fxc.h"
+#include "common_deferred_fxc.h"
+#include "common_flashlight_fxc.h"
+#include "common_pbr.h"
+
+//------ Constants --------------------------
+float4 g_vRefractTint : register(c1);
+float4 g_vReflectTint : register(c4);
+float4 g_ReflectRefractScale : register(c5);
+float4 g_WaterFogColor : register(c6);
+float4 g_WaterFogParams : register(c7);
+float g_flTime : register(c8);
+float3 g_flFlashlightTint : register(c10);
+float3 g_EyePos : register(c11);
+float4 g_PixelFogParams : register(c12);
+float4 g_vFlowParams1 : register(c13);
+float4 g_vFlowParams2 : register(c14);
+float4 g_vShadowTweaks : register(c21);
+float3 g_vWorldToViewWater0 : register(c22);
+float3 g_vWorldToViewWater1 : register(c23);
+float4 g_vInvViewportTransform : register(c24);
+float g_flForcedFresnelValue : register(c25);
+float4 g_vColorFlowParams1 : register(c26);
+float4 g_vecFullScreenTexel : register(c27);
+
+//------ Textures ----------------------------
+#if REFRACT
+sampler RefractSampler     : register(s0);
+#endif
+sampler ReflectSampler : register(s1);
+sampler NormalSampler : register(s2);
+sampler LightmapSampler : register(s3);
+#if FLOWMAP
+sampler FlowmapSampler     : register(s4);
+sampler FlowNoiseSampler   : register(s5);
+#endif
+#if FLASHLIGHT
+sampler FlashlightSampler  : register(s6);
+sampler ShadowDepthSampler : register(s7);
+sampler RandRotSampler     : register(s8);
+#endif
+#if BASETEXTURE
+sampler BaseTextureSampler : register(s10);
+#endif
+sampler sLightAccum : register(s14);
+sampler sLightAccum2 : register(s15);
+
+//------ Structs -----------------------------
+struct PS_INPUT
+{
+    float2 vBumpTexCoord : TEXCOORD0;
+    float3 vPositionToCameraRayWs : TEXCOORD1;
+    float4 vReflectXY_vRefractYX : TEXCOORD2;
+    float4 vProjPos : TEXCOORD3;
+    float3 worldPos : TEXCOORD4;
+#if FLASHLIGHT
+    float4 flashlightSpacePos : TEXCOORD5;
+#endif
+#if MULTITEXTURE
+    float4 vExtraBumpTexCoord : TEXCOORD5;
+#endif
+#if (BASETEXTURE && !FLOWMAP)
+    float4 lightmapTexCoord1And2 : TEXCOORD5;
+    float2 lightmapTexCoord3 : TEXCOORD6;
+#endif
+#if LIGHTMAPWATERFOG
+    float2 lightmapTexCoord : TEXCOORD7;
+#endif
+    float4 vScreenPos : VPOS;
+};
+
+struct GBufferOutput
+{
+    float4 Albedo : SV_Target0;
+    float4 Normal : SV_Target1;
+    float4 MRAO : SV_Target2;
+    float4 Emissive : SV_Target3;
+};
+
+float3 EncodeNormal(float3 normal)
+{
+    return normal * 0.5f + 0.5f;
+}
+
+float CalcPixelFog(float eyeZ, float4 fogParams)
+{
+    float fogStart = fogParams.x;
+    float fogEnd = fogParams.y;
+    return saturate((eyeZ - fogStart) / (fogEnd - fogStart));
+}
+
+float3 GetFogColor(float3 worldPos)
+{
+    return g_WaterFogColor.rgb;
+}
+
+//------ Main Pixel Shader -------------------
+GBufferOutput main(PS_INPUT i)
+{
+    GBufferOutput output;
+
+    float3 albedo = float3(1.0, 1.0, 1.0);
+
+#if BASETEXTURE
+    albedo *= tex2D(BaseTextureSampler, i.vBumpTexCoord).rgb;
+#endif
+
+    float3 normalWs;
+#if MULTITEXTURE
+    float3 n0 = tex2D(NormalSampler, i.vBumpTexCoord).xyz;
+    float3 n1 = tex2D(NormalSampler, i.vExtraBumpTexCoord.xy).xyz;
+    float3 n2 = tex2D(NormalSampler, i.vExtraBumpTexCoord.zw).xyz;
+    normalWs = normalize((n0 + n1 + n2) * (2.0 / 3.0) - 1.0);
+#else
+    normalWs = DecompressNormal(NormalSampler, i.vBumpTexCoord, NORM_DECODE_NONE);
+#endif
+
+    // Screen-space UVs for light accumulation
+    float2 screenUV = (i.vScreenPos.xy + 0.5f) * g_vecFullScreenTexel;
+
+    float3 litColor = tex2D(sLightAccum, screenUV).rgb;
+    float3 indirect = tex2D(sLightAccum2, screenUV).rgb;
+
+    float metallic = 0.0;
+    float roughness = 0.3;
+    float ao = 1.0;
+
+    output.Albedo = float4(albedo, 1.0);
+    output.Normal = float4(EncodeNormal(normalWs), 1.0);
+    output.MRAO = float4(metallic, roughness, ao, 1.0);
+    output.Emissive.rgb = litColor + indirect;
+    output.Emissive.a = 1.0;
+
+#if FLASHLIGHT
+    float3 flashlightColor = ApplyFlashlight(i.flashlightSpacePos, normalWs, normalize(g_EyePos - i.worldPos), albedo);
+    output.Emissive.rgb += flashlightColor * g_flFlashlightTint;
+#endif
+
+#if LIGHTMAPWATERFOG
+    float fogFactor = i.lightmapTexCoord.y;
+    output.Emissive.rgb = lerp(output.Emissive.rgb, g_WaterFogColor.rgb, fogFactor);
+#else
+    float eyeZ = i.vPositionToCameraRayWs.z;
+    float fogFactor = CalcPixelFog(eyeZ, g_PixelFogParams);
+    output.Emissive.rgb = lerp(output.Emissive.rgb, GetFogColor(i.worldPos), fogFactor);
+#endif
+
+    return output;
+}

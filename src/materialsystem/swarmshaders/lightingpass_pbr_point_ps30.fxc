@@ -1,0 +1,298 @@
+
+
+// CREDIT
+// VANCE CODE
+// PERSON
+// PERSON
+
+// Deferred PBR Point-Light Shader (ps_3_0) with Fixed Dual-Paraboloid Shadows
+
+#include "common_ps_fxc.h"
+#include "common_deferred_fxc.h"
+#include "common_pbr.h"
+#include "common_point_light.h"
+
+// STATIC:      "USEWORLDTRANSFORM"         "0..1"
+
+// DYNAMIC:     "NUM_SHADOWED_COOKIE"       "0..2"
+// DYNAMIC:     "NUM_SHADOWED"              "0..3"
+// DYNAMIC:     "NUM_COOKIE"                "0..3"
+// DYNAMIC:     "NUM_SIMPLE"                "0..10"
+
+
+// SKIP:		!$NUM_SHADOWED_COOKIE && !$NUM_SHADOWED && !$NUM_COOKIE && !$NUM_SIMPLE
+
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED_COOKIE && $NUM_SHADOWED
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED_COOKIE && $NUM_COOKIE
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED_COOKIE && $NUM_SIMPLE
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED && $NUM_COOKIE
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED && $NUM_SIMPLE
+// SKIP:		$USEWORLDTRANSFORM && $NUM_COOKIE && $NUM_SIMPLE
+
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED_COOKIE > 1
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SHADOWED > 1
+// SKIP:		$USEWORLDTRANSFORM && $NUM_COOKIE > 1
+// SKIP:		$USEWORLDTRANSFORM && $NUM_SIMPLE > 1
+
+#define MAX_COOKIE  3
+#define PARALLAX 0
+
+sampler sNormals : register(s0);
+sampler sDepth : register(s1);
+
+sampler sMRAO : register(s15);
+
+#if USEWORLDTRANSFORM
+const float3 g_vecFrustumCenter  : register(c3);
+const float3 g_vecFrustumRight   : register(c4);
+const float3 g_vecFrustumUp      : register(c5);
+const float2 g_vecHalfScreenTexel : register(c6);
+#endif
+
+const float g_ParallaxDepth : register(c26);
+const float g_ParallaxCenter = 0.9f;
+
+struct PS_INPUT
+{
+#if USEWORLDTRANSFORM
+    float3 vecProjXYW    : TEXCOORD0;
+#else
+    float2 vTexCoord : TEXCOORD0;
+    float3 vecWorldRay : TEXCOORD1;
+#endif
+    float2 baseTexCoord : TEXCOORD2;
+    float3 worldNormal : TEXCOORD3;
+    float3 worldPos : TEXCOORD4;
+    float4 projPos : TEXCOORD5;
+    float4 worldTangent : TEXCOORD6;
+    float3 worldBinormal : TEXCOORD7;
+    float4 viewPos : TEXCOORD8;
+};
+
+struct PS_OUTPUT
+{
+    float4 vColor_0 : COLOR0;
+};
+
+PS_OUTPUT main(const PS_INPUT In)
+{
+    float2 vecTexcoords;
+    float3 vecWorldRay;
+    float2 baseUV;
+    float3 lightColor;
+    float3 lp;
+    float rad;
+    float3 lc;
+    float powf;
+    float3x3 rot;
+    float3 local;
+    float d;
+    float distance;
+    float3 vecDelta;
+    float3 Diffuse;
+    float3 Specular;
+
+#if USEWORLDTRANSFORM
+	vecTexcoords = In.vecProjXYW.xy / In.vecProjXYW.z;
+	vecWorldRay = g_vecFrustumCenter +
+		vecTexcoords.x * g_vecFrustumRight +
+		vecTexcoords.y * g_vecFrustumUp;
+	vecTexcoords = vecTexcoords * float2( 0.5f, -0.5f ) + 0.5f;
+	vecTexcoords += g_vecHalfScreenTexel;
+#else
+    vecTexcoords = In.vTexCoord;
+    vecWorldRay = In.vecWorldRay;
+#endif
+
+    float depth = tex2D(sDepth, vecTexcoords).x;
+#if USEWORLDTRANSFORM
+    clip(min(depth - 0.1f, DEPTH_RECONSTRUCTION_LIMIT - depth));
+#else
+    clip(min(depth - 0.1f, DEPTH_RECONSTRUCTION_LIMIT_FULLSCREEN - depth));
+#endif
+    
+    float2 viewCoord = In.projPos.xy / In.projPos.w;
+    float2 texcoord = viewCoord * 0.5f + 0.5f;
+
+    float3 worldPos = g_vecViewOrigin + vecWorldRay * depth;
+	
+    float3 vWorldNormal = normalize(In.worldNormal);
+    
+    float3 flNormalCtrl = tex2D(sNormals, vecTexcoords);
+    float3 flNormal = normalize(flNormalCtrl.xyz * 2.0f - 1.0f);
+
+    float3 albedo = float3(0.8f, 0.8f, 0.8f);
+
+    float4 mrao = tex2D(sMRAO, vecTexcoords).rgba;
+
+    float metallic = mrao.r;
+	
+    bool bHasRealMRAO = (mrao.a > 0.5f);
+    float roughness = 0.0;
+    if (bHasRealMRAO)
+    {
+        roughness = mrao.g * 10.0f;
+    }
+    else
+    {
+        roughness = mrao.g * 18.66f;
+    }
+    float ao = mrao.b * 2.0f;
+    
+    float sss = tex2D(sMRAO, vecTexcoords).a;
+
+    float3 eye = g_vecViewOrigin;
+    
+    float3 L = normalize(lp - worldPos);
+    float3 N = normalize(vWorldNormal);
+    
+    float NdotL = max(dot(N, L), 0.0);
+    
+    float3 sumLighting = float3(0, 0, 0);
+
+    for (int i = 0; i < NUM_SHADOWED; ++i)
+    {
+        int base = NUM_SHADOWED_COOKIE * NUM_CONSTS_POINT_ADVANCED;
+        int idx = base + i * NUM_CONSTS_POINT_ADVANCED;
+        int samp = NUM_SHADOWED_COOKIE * 2 + i;
+        
+        //old method reduces performance.
+        //LightpassParams(idx, lp, lightColor, rad, lc, powf);
+        
+        //new method. calculate all these per light, its not as expensive as precomputing it each and every time then calling it.
+        lp = g_flMixedData[idx].xyz;
+        rad = max(g_flMixedData[idx].w, 1e-6);
+        lc = g_flMixedData[idx + 1].xyz;
+        powf = max(g_flMixedData[idx + 1].w, 0.001);
+                    
+        float3 toL = lp - worldPos;
+        float d = length(toL);
+        float dn = saturate(d / rad);
+        float lin = 1.0 - dn;
+        float att = lin * lin;
+        
+        RotationMatrix(idx, lp, worldPos, d, rot, local, att, rad, powf);
+       
+        float3 vecDelta = worldPos - g_flMixedData[idx].xyz;
+        float dist = length(vecDelta);
+
+        DoPBRCSMTHEXA(samp, idx, rad, local, d, worldPos, flNormal, albedo, dist, g_flMixedData[idx + 1].xyz, metallic, roughness, Diffuse, Specular);
+
+
+        sumLighting += Specular + (Diffuse * att);
+       
+    }
+
+    for (int i = 0; i < NUM_COOKIE; ++i)
+    {
+        int base = (NUM_SHADOWED_COOKIE + NUM_SHADOWED) * NUM_CONSTS_POINT_ADVANCED;
+        int idx = base + i * NUM_CONSTS_POINT_ADVANCED;
+        int samp = NUM_SHADOWED_COOKIE * 2 + NUM_SHADOWED + i;
+        
+        //old method reduces performance.
+        //LightpassParams(idx, lp, lightColor, rad, lc, powf);
+        
+        //new method. calculate all these per light, its not as expensive as precomputing it each and every time then calling it.
+        lp = g_flMixedData[idx].xyz;
+        rad = max(g_flMixedData[idx].w, 1e-6);
+        lc = g_flMixedData[idx + 1].xyz;
+        powf = max(g_flMixedData[idx + 1].w, 0.001);
+        
+        float3 toL = lp - worldPos;
+        float d = length(toL);
+        float dn = saturate(d / rad);
+        float lin = 1.0 - dn;
+        float att = lin * lin;
+        
+        vecDelta = worldPos - g_flMixedData[idx].xyz;
+        distance = length(vecDelta);
+        
+        RotationMatrix(idx, lp, worldPos, d, rot, local, att, rad, powf);
+        
+        float3 cookie = DoCubemapCookie(sMixedSampler[samp], local);
+        
+        DoPointLightPBR(idx, flNormal, g_flMixedData[idx].xyz, g_flMixedData[idx + 1].xyz,
+        distance, worldPos, metallic, roughness, albedo, Diffuse, Specular);
+        
+        sumLighting += Specular + (Diffuse + cookie * att);
+        
+    }
+
+    for (int i = 0; i < NUM_SHADOWED_COOKIE; ++i)
+    {
+        int idx = i * NUM_CONSTS_POINT_ADVANCED;
+        int samp = i * 2;
+        int sampCookie = NUM_SHADOWED_COOKIE * 2 + NUM_SHADOWED + i;
+  
+        //old method reduces performance.
+        //LightpassParams(idx, lp, lightColor, rad, lc, powf);
+        
+        //new method. calculate all these per light, its not as expensive as precomputing it each and every time then calling it.
+        lp = g_flMixedData[idx].xyz;
+        rad = max(g_flMixedData[idx].w, 1e-6);
+        lc = g_flMixedData[idx + 1].xyz;
+        powf = max(g_flMixedData[idx + 1].w, 0.001);
+        
+        float3 toL = lp - worldPos;
+        float d = length(toL);
+        float dn = saturate(d / rad);
+        float lin = 1.0 - dn;
+        float att = lin * lin;
+        
+        RotationMatrix(idx, lp, worldPos, d, rot, local, att, rad, powf);
+        
+        float3 vecDelta = worldPos - g_flMixedData[idx].xyz;
+        float dist = length(vecDelta);
+
+        DoPBRCSMCookied(samp, sampCookie, idx, rad, local, d, worldPos, flNormal, albedo, dist, g_flMixedData[idx + 1].xyz, metallic, roughness, Diffuse, Specular);
+
+        sumLighting += Specular + (Diffuse * att);
+    }
+    
+    int simpleStartIdx = (NUM_SHADOWED_COOKIE + NUM_SHADOWED + NUM_COOKIE) * NUM_CONSTS_SPOT_ADVANCED;
+    
+    for (int i = 0; i < NUM_SIMPLE; ++i)
+    {
+        int base = (NUM_SHADOWED_COOKIE + NUM_SHADOWED + NUM_COOKIE) * NUM_CONSTS_POINT_ADVANCED;
+        int idx = base + i * NUM_CONSTS_POINT_SIMPLE;
+        int samp = NUM_SHADOWED_COOKIE * 2 + NUM_SHADOWED + NUM_COOKIE + i;
+        //int samp = NUM_SHADOWED_COOKIE * 2 + NUM_SHADOWED + NUM_COOKIE + i;
+        
+        //old method reduces performance.
+        //LightpassParams(idx, lp, lightColor, rad, lc, powf);
+        
+        //new method. calculate all these per light, its not as expensive as precomputing it each and every time then calling it.
+        lp = g_flMixedData[idx].xyz;
+        rad = max(g_flMixedData[idx].w, 1e-6);
+        lc = g_flMixedData[idx + 1].xyz;
+        powf = max(g_flMixedData[idx + 1].w, 0.001);
+        
+        float3 toL = lp - worldPos;
+        float d = length(toL);
+        float dn = saturate(d / rad);
+        float lin = 1.0 - dn;
+        float att = lin * lin;
+        
+        vecDelta = worldPos - g_flMixedData[idx].xyz;
+        distance = length(vecDelta);
+         
+        DoPointLightPBR(idx, flNormal, g_flMixedData[idx].xyz, g_flMixedData[idx + 1].xyz,
+        distance, worldPos, metallic, roughness, albedo, Diffuse, Specular);
+        
+        sumLighting += Specular + (Diffuse * att);
+    }
+    
+    //Tonemap
+    sumLighting.rgb = ACES_Tonemap(sumLighting.rgb, 10.0f);
+    //sumLighting.rgb *= AlbedoSample.rgb; //breaks rendering
+
+    //Gamma Correct
+    //sumLighting.rgb = pow(sumLighting, 1.0 / 2.2);
+    //sumLighting.rgb = clamp(sumLighting, 0, 1);
+    
+    //sumLighting += emission;
+
+    PS_OUTPUT Out;
+    Out.vColor_0 = WriteLighting(float4(sumLighting, 1.0f)) ;
+    return Out;
+}
