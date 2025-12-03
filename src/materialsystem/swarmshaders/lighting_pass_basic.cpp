@@ -15,7 +15,7 @@ ConVar cl_light_specular_brightness_spot("cl_light_specular_brightness_spot", "2
 ConVar cl_light_specular_scale("cl_light_specular_scale", "2", FCVAR_CHEAT);
 ConVar cl_light_diffuse_strength_point("cl_light_diffuse_strength_point", "1", FCVAR_CHEAT);
 ConVar cl_light_diffuse_strength_spot("cl_light_diffuse_strength_spot", "1", FCVAR_CHEAT);
-ConVar cl_light_fresnel_strength("cl_light_fresnel_strength", "10.0", FCVAR_CHEAT);
+//ConVar cl_light_fresnel_strength("cl_light_fresnel_strength", "10.0", FCVAR_CHEAT);
 ConVar cl_light_Sheen_strength("cl_light_Sheen_strength", "0.01", FCVAR_CHEAT);
 
 //make a system that detects if mrao is defined then resort to making mrao render with dedicated texture
@@ -268,9 +268,9 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 		UTIL_StringToFloatArray(LightBrightnessSpot, 1, cl_light_specular_brightness_spot.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_24, LightBrightnessSpot);
 
-		float LightFresnelStrength[1];
+		/*float LightFresnelStrength[1];
 		UTIL_StringToFloatArray(LightFresnelStrength, 1, cl_light_fresnel_strength.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_22, LightFresnelStrength);
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_22, LightFresnelStrength);*/
 
 		float lightSheenStrength[1];
 		UTIL_StringToFloatArray(lightSheenStrength, 1, cl_light_Sheen_strength.GetString());

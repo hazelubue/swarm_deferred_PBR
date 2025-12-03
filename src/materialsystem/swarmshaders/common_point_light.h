@@ -43,12 +43,12 @@ float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out fl
 
 float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, g_FresnelPower) * roughness;
+    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, 111.0f) * roughness;
 }
 
 float3 fresnelSchlick(float cosTheta, float3 F0)
 {
-    return F0 + (1.0f.xxx - F0) * pow(1.0f - cosTheta, g_FresnelPower);
+    return F0 + (1.0f.xxx - F0) * pow(1.0f - cosTheta, 111.0f);
 }
 
 
@@ -154,108 +154,41 @@ float GaSchlickGGXRemapped(float cosLi, float cosLo, float roughness)
     return gaSchlickG1(cosLi, k) * gaSchlickG1(cosLo, k);
 }
 
-//float3 Diffuse_OrenNayar(float3 DiffuseColor, float Roughness, float NoV, float NoL, float VoH)
-//{
-//    float a = Roughness * Roughness;
-//    float s = a;// / ( 1.29 + 0.5 * a );
-//    float s2 = s * s;
-//    float VoL = 2 * VoH * VoH - 1;		// double angle identity
-//    float Cosri = VoL - NoV * NoL;
-//    float C1 = 1 - 0.5 * s2 / (s2 + 0.33);
-//    float C2 = 0.45 * s2 / (s2 + 0.09) * Cosri * (Cosri >= 0 ? 1 / (max(NoL, NoV)) : 1);
-//    return DiffuseColor / PI * (C1 + C2) * (1 + Roughness * 0.5);
-//}
+// Sebastien Lagarde proposes an empirical approach to derive the specular occlusion term from the diffuse occlusion term in [Lagarde14].
+// The result does not have any physical basis but produces visually pleasant results.
+// See Sebastien Lagarde and Charles de Rousiers. 2014. Moving Frostbite to PBR.
+float ComputeSpecularAO(float vDotN, float ao, float roughness)
+{
+    return clamp(pow(vDotN + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao, 0.0, 1.0);
+}
 
-//float3 DoAmbient(float2 UV, float3 vWorldPos, float3 vWorldNormal, float3 vEye, in float roughness, in float3 albedo, in float3 Ambient, in float3 Ground)
-//{
-//	float3 V = normalize( vEye - vWorldPos );
-//    float NV = max(0.0, dot(vWorldNormal, V) * 0.5f +0.5f);
-//    float NU = max(0.0, dot(vWorldNormal, float3(0.0f, 0.0f, 1.0f)) * 0.5f +0.5f);
-//
-//	float diffuseTransition = NU;
-//	float3 diffuse = lerp(Ground, Ambient, diffuseTransition);
-//
-//	HALF3 reflectVect = 2.0 * NV * vWorldNormal - V;
-//	float3 reflection = 0.0f.xxx;
-//    for ( int isample = 0; isample < 32; isample++)
-//	{
-//		float3 randomvec = float3(random(UV + isample), random(UV + isample + 1), random(UV + isample + 2));
-//		randomvec = randomvec * 2.0f - 1.0f;
-//		reflection += SampleAmbientReflection(float4((reflectVect + (randomvec * roughness * roughness * 1.75f)), roughness * 4.0), Ground, Ambient).rgb / 32.0f;
-//	}
-//
-//
-//	return albedo.rgb * lerp(reflection, diffuse, roughness);
-//}
+// Visibility term G( l, v, h )
+// Very similar to Marmoset Toolbag 2 and gives almost the same results as Smith GGX
+float Visibility_Schlick(half vdotN, half ldotN, float alpha)
+{
+    float k = alpha * 0.5;
 
-//float RadicalInverse_VdC(int i)
-//{
-//    float invBase = 0.5;
-//    float result = 0.0;
-//    float fraction = 1.0;
-//
-//    int n = i;
-//    while (n > 0)
-//    {
-//        fraction *= invBase;
-//        result += fraction * (n % 2);
-//        n = n / 2;
-//    }
-//    return result;
-//}
-//
-//float2 Hammersley(int i, int N)
-//{
-//    return float2((float)i / (float)N, RadicalInverse_VdC(i));
-//}
-//
-//
-//float3 HemisphereSample(float2 Xi, float3 N)
-//{
-//    float phi = 2.0f * 3.14159265f * Xi.x;
-//    float cosTheta = sqrt(1.0f - Xi.y);
-//    float sinTheta = sqrt(Xi.y);
-//
-//    float3 H;
-//    H.x = cos(phi) * sinTheta;
-//    H.y = sin(phi) * sinTheta;
-//    H.z = cosTheta;
-//
-//    float3 up = abs(N.z) < 0.999f ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
-//    float3 tangent = normalize(cross(up, N));
-//    float3 bitangent = cross(N, tangent);
-//
-//
-//    return tangent * H.x + bitangent * H.y + N * H.z;
-//}
-//
-//float3 DoAmbient( float2 UV, float3 vWorldPos, float3 vWorldNormal, float3 vEye, in float roughness, in float3 albedo, in float3 Ambient, in float3 Ground)
-//{
-//    float3 V = normalize(vEye - vWorldPos);
-//    float NV = max(0.0, dot(vWorldNormal, V) * 0.5f + 0.5f);
-//    float NU = max(0.0, dot(vWorldNormal, float3(0.0f, 0.0f, 1.0f)) * 0.5f + 0.5f);
-//
-//    float diffuseTransition = NU;
-//    float3 diffuse = lerp(Ground, Ambient, diffuseTransition);
-//
-//    HALF3 reflectVect = 2.0 * NV * vWorldNormal - V;
-//    float3 reflection = 0.0f.xxx;
-//
-//    const int SAMPLE_COUNT = 2u;
-//    for (int i = 0; i < SAMPLE_COUNT; i++)
-//    {
-//        float2 Xi = Hammersley(i, SAMPLE_COUNT);
-//        float3 sampleDir = HemisphereSample(Xi, normalize(reflectVect));
-//
-//        reflection += SampleAmbientReflection(
-//            float4(sampleDir, roughness * 4.0f),
-//            Ground,
-//            Ambient
-//        ).rgb / SAMPLE_COUNT;
-//    }
-//
-//    return albedo.rgb * lerp(reflection, diffuse, roughness);
-//}
+    float schlickL = (ldotN * (1.0 - k) + k);
+    float schlickV = (vdotN * (1.0 - k) + k);
+
+    return (0.25 / (schlickL * schlickV));
+    //return ( ( schlickL * schlickV ) / ( 4.0 * vdotN * ldotN ) );
+}
+
+// see s2013_pbs_rad_notes.pdf
+// Crafting a Next-Gen Material Pipeline for The Order: 1886
+// this visibility function also provides some sort of back lighting
+float Visibility_SmithGGX(half vdotN, half ldotN, float alpha)
+{
+    // alpha is already roughness^2
+
+    float V1 = ldotN + sqrt(alpha + (1.0 - alpha) * ldotN * ldotN);
+    float V2 = vdotN + sqrt(alpha + (1.0 - alpha) * vdotN * vdotN);
+
+    // RB: avoid too bright spots
+    return (1.0 / max(V1 * V2, 0.15));
+}
+
 
 void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, int index, float3 vWorldPos, float3 vEye, float roughness, float metalness, float lightDirectionAngle, float3 albedo, out float3 Diffuse, out float3 Specular)
 {
@@ -280,17 +213,24 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     float VoH = max(0.0f, dot(V, H));
     float VdotH = max(0.0f, dot(V, H));
     float NdotL = max(0.0f, dot(N, L));
+    float vDotN = max(0.0f, dot(V, N));
 
 
     //corrected fresnel with correct values.
     //old implentation caused dark burning spots on any material.
-    float3 F = fresnelSchlickRoughness(fresnelReflectance, VdotH, roughness); // was HL //GREAT effects were with cosHalfAngle, caused normal bug. // Specular reflection
+    float3 F = fresnelSchlickRoughness(fresnelReflectance, vDotN, roughness); // was HL //GREAT effects were with cosHalfAngle, caused normal bug. // Specular reflection
     float3 F2 = fresnelSchlickRoughness(fresnelReflectance, NdotV, roughness); // View-dependent term
     float3 F3 = fresnelSchlickRoughness(fresnelReflectance, NdotL, roughness); // was HL //GREAT effects were with cosHalfAngle, caused normal bug. // Light-dependent term
 
+    float alpha = roughness * roughness;
+
     float D = ndfGGX(cosHalfAngle, roughness);
+    // use Sam Pavloc's function.
+    float G = Visibility_SmithGGX(NdotV, NdotL, alpha);
+    // add specular occlusion for self shadowing.
+    //float specAO = ComputeSpecularAO(NdotV, ao, roughness);
     // Calculate geometric attenuation for specular BRDF
-    float G = GaSchlickGGXRemapped(cosLightIn, NdotV, roughness);
+    //float G = GaSchlickGGXRemapped(cosLightIn, NdotV, roughness);
     // Diffuse scattering happens due to light being refracted multiple times by a dielectric medium
     // Metals on the other hand either reflect or absorb energ so diffuse contribution is always, zero
     // To be energy conserving we must scale diffuse BRDF contribution based on Fresnel factor & metalness
@@ -299,7 +239,7 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     float3 kd = float3(1, 1, 1) - F;
 #else
     //float3 kdF2 = float3(1, 1, 1) - F2;
-    float3 kd = (float3(1, 1, 1) - F) * (float3(1, 1, 1) - F2);
+    float3 kd = (float3(1, 1, 1) - F) * rcp(max(float3(0.1, 0.1, 0.1), float3(1, 1, 1) - F2));
 #endif
  
     // composite all of our fresnel, account for size distortion of lights.
@@ -315,11 +255,11 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     //float3 groundColor = albedo * groundIntensity;
     
     //F2 is stable allows for non black spots of specular
-    float3 diffuseBRDF = Diffuse_OrenNayar(F3, roughness, NV, LN, VoH) * g_DiffuseScale;
+    float3 diffuseBRDF = Diffuse_OrenNayar(F, roughness, NV, LN, VoH) * g_DiffuseScale;
     float3 sheenBRDF = SheenBRDF_DreamWorks(N, V, L, albedo, g_SheenStrength, roughness);
 
     float3 specularBRDF = (Fc * D * G) / max(EPSILON, 4.0f);
-
+    //specularBRDF *= specAO;
     //float3 CompositeAmbient = Ambient;/*DoAmbient( UV, vWorldPos, normal, vEye, roughness, albedo, ambient, groundColor);*/
 
     //composite everything

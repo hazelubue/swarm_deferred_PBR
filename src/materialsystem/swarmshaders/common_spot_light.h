@@ -28,12 +28,12 @@ float g_blue : register(c28);
 
 float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, g_FresnelPower) * roughness;
+    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, 111.0f) * roughness;
 }
 
 float3 fresnelSchlick(float cosTheta, float3 F0)
 {
-    return F0 + (1.0f.xxx - F0) * pow(1.0f - cosTheta, g_FresnelPower);
+    return F0 + (1.0f.xxx - F0) * pow(1.0f - cosTheta, 111.0f);
 }
 
 float DistributionGGX(float3 N, float3 H, float distL, float roughness)
@@ -49,6 +49,15 @@ float DistributionGGX(float3 N, float3 H, float distL, float roughness)
     denom = PI * denom * denom;
 
     return num / denom;
+}
+
+half Distribution_GGX_Disney(half hdotN, half alphaG)
+{
+    float a2 = alphaG * alphaG;
+    float tmp = (hdotN * hdotN) * (a2 - 1.0) + 1.0;
+    //tmp *= tmp;
+
+    return (a2 / (PI * tmp));
 }
 
 float ComputeSpotlightAttenuation(int index, float3 N, float3 vecWorldToLight, float dist, bool bDoSpotAttn)
@@ -248,6 +257,41 @@ float GaSchlickGGXRemapped(float cosLi, float cosLo, float roughness)
     return gaSchlickG1(cosLi, k) * gaSchlickG1(cosLo, k);
 }
 
+// Sebastien Lagarde proposes an empirical approach to derive the specular occlusion term from the diffuse occlusion term in [Lagarde14].
+// The result does not have any physical basis but produces visually pleasant results.
+// See Sebastien Lagarde and Charles de Rousiers. 2014. Moving Frostbite to PBR.
+float ComputeSpecularAO(float vDotN, float ao, float roughness)
+{
+    return clamp(pow(vDotN + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao, 0.0, 1.0);
+}
+
+// Visibility term G( l, v, h )
+// Very similar to Marmoset Toolbag 2 and gives almost the same results as Smith GGX
+float Visibility_Schlick(half vdotN, half ldotN, float alpha)
+{
+    float k = alpha * 0.5;
+
+    float schlickL = (ldotN * (1.0 - k) + k);
+    float schlickV = (vdotN * (1.0 - k) + k);
+
+    return (0.25 / (schlickL * schlickV));
+    //return ( ( schlickL * schlickV ) / ( 4.0 * vdotN * ldotN ) );
+}
+
+// see s2013_pbs_rad_notes.pdf
+// Crafting a Next-Gen Material Pipeline for The Order: 1886
+// this visibility function also provides some sort of back lighting
+float Visibility_SmithGGX(half vdotN, half ldotN, float alpha)
+{
+    // alpha is already roughness^2
+
+    float V1 = ldotN + sqrt(alpha + (1.0 - alpha) * ldotN * ldotN);
+    float V2 = vdotN + sqrt(alpha + (1.0 - alpha) * vdotN * vdotN);
+
+    // RB: avoid too bright spots
+    return (1.0 / max(V1 * V2, 0.15));
+}
+
 void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, int index, float3 vWorldPos, float3 vEye, float roughness, float metalness, float lightDirectionAngle, float3 albedo, out float3 Diffuse, out float3 Specular)
 {
     float3 L = normalize(lightIn);
@@ -270,17 +314,24 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     float VoH = max(0.0f, dot(V, H));
     float VdotH = max(0.0f, dot(V, H));
     float NdotL = max(0.0f, dot(N, L));
+    float vDotN = max(0.0f, dot(V, N));
 
 
     //corrected fresnel with correct values.
     //old implentation caused dark burning spots on any material.
-    float3 F = fresnelSchlickRoughness(fresnelReflectance, VdotH, roughness); // was HL //GREAT effects were with cosHalfAngle, caused normal bug. // Specular reflection
+    float3 F = fresnelSchlickRoughness(fresnelReflectance, vDotN, roughness); // was HL //GREAT effects were with cosHalfAngle, caused normal bug. // Specular reflection
     float3 F2 = fresnelSchlickRoughness(fresnelReflectance, NdotV, roughness); // View-dependent term
     float3 F3 = fresnelSchlickRoughness(fresnelReflectance, NdotL, roughness); // was HL //GREAT effects were with cosHalfAngle, caused normal bug. // Light-dependent term
 
+    float alpha = roughness * roughness;
+
     float D = ndfGGX(cosHalfAngle, roughness);
+    // use Sam Pavloc's function.
+    float G = Visibility_SmithGGX(NdotV, NdotL, alpha);
+    // add specular occlusion for self shadowing.
+    //float specAO = ComputeSpecularAO(NdotV, ao, roughness);
     // Calculate geometric attenuation for specular BRDF
-    float G = GaSchlickGGXRemapped(cosLightIn, NdotV, roughness);
+    //float G = GaSchlickGGXRemapped(cosLightIn, NdotV, roughness);
     // Diffuse scattering happens due to light being refracted multiple times by a dielectric medium
     // Metals on the other hand either reflect or absorb energ so diffuse contribution is always, zero
     // To be energy conserving we must scale diffuse BRDF contribution based on Fresnel factor & metalness
@@ -289,7 +340,7 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     float3 kd = float3(1, 1, 1) - F;
 #else
     //float3 kdF2 = float3(1, 1, 1) - F2;
-    float3 kd = (float3(1, 1, 1) - F) * (float3(1, 1, 1) - F2);
+    float3 kd = (float3(1, 1, 1) - F) * rcp(max(float3(0.1, 0.1, 0.1), float3(1, 1, 1) - F2));
 #endif
 
     // composite all of our fresnel, account for size distortion of lights.
@@ -305,11 +356,11 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     //float3 groundColor = albedo * groundIntensity;
 
     //F2 is stable allows for non black spots of specular
-    float3 diffuseBRDF = Diffuse_OrenNayar(F3, roughness, NV, LN, VoH) * g_DiffuseScale;
+    float3 diffuseBRDF = Diffuse_OrenNayar(F, roughness, NV, LN, VoH) * g_DiffuseScale;
     float3 sheenBRDF = SheenBRDF_DreamWorks(N, V, L, albedo, g_SheenStrength, roughness);
 
     float3 specularBRDF = (Fc * D * G) / max(EPSILON, 4.0f);
-
+    //specularBRDF *= specAO;
     //float3 CompositeAmbient = Ambient;/*DoAmbient( UV, vWorldPos, normal, vEye, roughness, albedo, ambient, groundColor);*/
 
     //composite everything
