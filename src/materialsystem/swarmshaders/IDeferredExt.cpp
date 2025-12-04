@@ -14,6 +14,7 @@ CDeferredExtension::CDeferredExtension()
 	m_matTFrustumD.Identity();
 
 	m_pTexNormals = NULL;
+	m_pTexWaterNormals = NULL;
 	m_pTexDepth = NULL;
 	m_pTexLightAccum = NULL;
 #if ( DEFCFG_LIGHTCTRL_PACKING == 0 )
@@ -112,10 +113,11 @@ float *CDeferredExtension::CommitLightData_Common( float *pFlData, int numRows,
 	return pReturn;
 }
 
-void CDeferredExtension::CommitTexture_General( ITexture *pTexNormals, ITexture *pTexDepth,
+void CDeferredExtension::CommitTexture_General( ITexture *pTexNormals, ITexture *pTexWaterNormals, ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum )
 {
+	m_pTexWaterNormals = pTexWaterNormals;
 	m_pTexNormals = pTexNormals;
 	m_pTexDepth = pTexDepth;
 	m_pTexLightAccum = pTexLightAccum;

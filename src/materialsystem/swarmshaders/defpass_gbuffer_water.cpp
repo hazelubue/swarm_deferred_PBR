@@ -5,7 +5,7 @@
 #include "deferred_includes.h"
 
 #include "include/gbuffer_vs30.inc"
-#include "include/gbuffer_ps30.inc"
+#include "include/gbuffer_water_ps30.inc"
 #include "shaderapi\ishaderapi.h"
 #include "tier0/memdbgon.h"
 
@@ -19,12 +19,12 @@
 
 const int PARALLAX_QUALITY_MAX = 3;
 
-static ConVar mat_pbr_parallaxdepth("mat_pbr_parallaxdepth", ".1"); // 0.04
-static ConVar mat_pbr_parallaxCenter("mat_pbr_parallaxCenter", ".9");
-static ConVar mat_pbr_parallaxmap_quality("mat_pbr_parallaxmap_quality", "100", FCVAR_NONE, "", true, 0, true, PARALLAX_QUALITY_MAX);
-static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
-static ConVar mat_pbr_force_20b("mat_pbr_force_20b", "0", FCVAR_CHEAT);
-static ConVar mat_pbr_iblIntensity("mat_pbr_iblIntensity", "1000.0", FCVAR_CHEAT);
+extern ConVar mat_pbr_parallaxdepth("mat_pbr_parallaxdepth", ".1"); // 0.04
+extern ConVar mat_pbr_parallaxCenter("mat_pbr_parallaxCenter", ".9");
+extern ConVar mat_pbr_parallaxmap_quality("mat_pbr_parallaxmap_quality", "100", FCVAR_NONE, "", true, 0, true, PARALLAX_QUALITY_MAX);
+extern ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
+extern ConVar mat_pbr_force_20b("mat_pbr_force_20b", "0", FCVAR_CHEAT);
+extern ConVar mat_pbr_iblIntensity("mat_pbr_iblIntensity", "1000.0", FCVAR_CHEAT);
 
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
@@ -61,7 +61,7 @@ static void UTIL_StringToFloatArray(float* pVector, int count, const char* pStri
 	}
 }
 
-void InitParmsGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params)
+void InitParmsGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
 	if (PARM_NO_DEFAULT(info.iAlphatestRef) ||
 		(PARM_VALID(info.iAlphatestRef) && PARM_FLOAT(info.iAlphatestRef) == 0.0f))
@@ -88,10 +88,8 @@ void InitParmsGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMa
 
 }
 
-void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params)
+void InitPassGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
-
-	const bool bWater = info.bWater;
 
 	//bool bModel = info.bModel;
 	if (PARM_DEFINED(info.iBumpmap))
@@ -109,15 +107,12 @@ void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	if (PARM_DEFINED(info.iAlbedo2)) pShader->LoadTexture(info.iAlbedo2);
 #endif
 
-	if (bWater)
+	/*if (bModel)
 	{
-		/*if (params[info.iAlbedo]->IsDefined())
-			params[info.iAlbedo]->SetStringValue("dev/graygrid");*/
+		if (params[info.m_nMRAO]->IsDefined())
+			params[info.m_nMRAO]->SetStringValue("null");
+	}*/
 
-
-		if (params[info.iBumpmap]->IsDefined())
-			params[info.iBumpmap]->SetStringValue("dev/graygrid");
-	}
 
 	if (params[info.m_nMRAO]->IsDefined())
 	{
@@ -126,14 +121,12 @@ void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	//if (PARM_DEFINED(info.m_nAlpha)) pShader->LoadTexture(info.m_nAlpha);
 }
 
-void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params,
+void DrawPassGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader, IMaterialVar** params,
 	IShaderShadow* pShaderShadow, IShaderDynamicAPI* pShaderAPI,
 	VertexCompressionType_t vertexCompression, CDeferredPerMaterialContextData* pDeferredContext)
 {
 
 	const bool bModel = info.bModel;
-	//const bool bWater = info.bWater;
-
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 	const bool bFastVTex = g_pHardwareConfig->HasFastVertexTextures();
 	const bool bNoCull = IS_FLAG_SET(MATERIAL_VAR_NOCULL);
@@ -257,7 +250,7 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		SET_STATIC_VERTEX_SHADER_COMBO(TREESWAY, nTreeSwayMode);
 		SET_STATIC_VERTEX_SHADER(gbuffer_vs30);
 
-		DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
+		DECLARE_STATIC_PIXEL_SHADER(gbuffer_water_ps30);
 		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
 		SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
 		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
@@ -265,124 +258,123 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
 		SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
 		SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, 0);
 		SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
-		//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
-		SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
+		SET_STATIC_PIXEL_SHADER(gbuffer_water_ps30);
 	}
 
 		DYNAMIC_STATE
 	{
 		Assert(pDeferredContext != NULL);
 
-		//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
+	//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
 
-		//if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0))
+	//if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0))
 
-		if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0))
+	if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER1))
+	{
+		tmpBuf.Reset();
+
+		if (bAlphatest)
 		{
-			tmpBuf.Reset();
+			PARM_VALIDATE(info.iAlphatestRef);
 
-			if (bAlphatest)
-			{
-				PARM_VALIDATE(info.iAlphatestRef);
-
-				tmpBuf.SetPixelShaderConstant4(0, PARM_FLOAT(info.iAlphatestRef), 0, 0, 0);
-			}
-
-				if (bAlbedo)
-					tmpBuf.BindTexture(pShader, SHADER_SAMPLER0, info.iAlbedo);
-				else
-					tmpBuf.BindStandardTexture(SHADER_SAMPLER0, TEXTURE_GREY);
-
-			if (bBumpmap)
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER1, info.iBumpmap);
-
-
-			if (bSpecular)
-			{
-				tmpBuf.BindTexture(SHADER_SAMPLER5, info.iSpecularTexture);
-			}
-
-			if (bAlbedo2 || bBumpmap2)
-			{
-				if (bBumpmap2)
-					tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iBumpmap2);
-				else
-					tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_NORMALMAP_FLAT);
-
-				if (bAlbedo2)
-					tmpBuf.BindTexture(pShader, SHADER_SAMPLER9, info.iAlbedo2);
-				else
-					tmpBuf.BindStandardTexture(SHADER_SAMPLER9, TEXTURE_GREY);
-
-				if (bBlendmodulate)
-				{
-					tmpBuf.SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, info.iBlendmodulateTransform);
-					tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iBlendmodulate);
-				}
-			}
-
-			if (bhasMRAO)
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER15, info.m_nMRAO);
-
-			if (bTreeSway)
-			{
-				float flParams[4];
-				flParams[0] = GetFloatParam(info.m_nTreeSwaySpeedHighWindMultiplier, params, 2.0f);
-				flParams[1] = GetFloatParam(info.m_nTreeSwayScrumbleFalloffExp, params, 1.0f);
-				flParams[2] = GetFloatParam(info.m_nTreeSwayFalloffExp, params, 1.0f);
-				flParams[3] = GetFloatParam(info.m_nTreeSwayScrumbleSpeed, params, 3.0f);
-				tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_5, flParams);
-
-				flParams[0] = GetFloatParam(info.m_nTreeSwayHeight, params, 1000.0f);
-				flParams[1] = GetFloatParam(info.m_nTreeSwayStartHeight, params, 0.1f);
-				flParams[2] = GetFloatParam(info.m_nTreeSwayRadius, params, 300.0f);
-				flParams[3] = GetFloatParam(info.m_nTreeSwayStartRadius, params, 0.2f);
-				tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, flParams);
-
-				flParams[0] = GetFloatParam(info.m_nTreeSwaySpeed, params, 1.0f);
-				flParams[1] = GetFloatParam(info.m_nTreeSwayStrength, params, 10.0f);
-				flParams[2] = GetFloatParam(info.m_nTreeSwayScrumbleFrequency, params, 12.0f);
-				flParams[3] = GetFloatParam(info.m_nTreeSwayScrumbleStrength, params, 10.0f);
-				tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, flParams);
-
-				flParams[0] = GetFloatParam(info.m_nTreeSwaySpeedLerpStart, params, 3.0f);
-				flParams[1] = GetFloatParam(info.m_nTreeSwaySpeedLerpEnd, params, 6.0f);
-				tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_9, flParams);
-			}
-
-			tmpBuf.SetPixelShaderConstant4(1,
-				IS_FLAG_SET(MATERIAL_VAR_HALFLAMBERT) ? 1.0f : 0.0f,
-				PARM_SET(info.iLitface) ? 1.0f : 0.0f,
-				0, 0);
-
-			tmpBuf.End();
-
-			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0, tmpBuf.Copy());
-
-			//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
-
-			//pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0, tmpBuf.Copy());
+			tmpBuf.SetPixelShaderConstant4(0, PARM_FLOAT(info.iAlphatestRef), 0, 0, 0);
 		}
 
-		pShaderAPI->SetDefaultState();
+			if (bAlbedo)
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER0, info.iAlbedo);
+			else
+				tmpBuf.BindStandardTexture(SHADER_SAMPLER0, TEXTURE_GREY);
 
-		if (bModel && bFastVTex)
-			pShader->SetHWMorphVertexShaderState(VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, VERTEX_SHADER_SHADER_SPECIFIC_CONST_11, SHADER_VERTEXTEXTURE_SAMPLER0);
+		if (bBumpmap)
+			tmpBuf.BindTexture(pShader, SHADER_SAMPLER1, info.iBumpmap);
 
-		DECLARE_DYNAMIC_VERTEX_SHADER(gbuffer_vs30);
-		SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (bModel && (int)vertexCompression) ? 1 : 0);
-		SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, (bModel && pShaderAPI->GetCurrentNumBones() > 0) ? 1 : 0);
-		SET_DYNAMIC_VERTEX_SHADER_COMBO(MORPHING, (bModel && pShaderAPI->IsHWMorphingEnabled()) ? 1 : 0);
-		SET_DYNAMIC_VERTEX_SHADER(gbuffer_vs30);
+
+		if (bSpecular)
+		{
+			tmpBuf.BindTexture(SHADER_SAMPLER5, info.iSpecularTexture);
+		}
+
+		if (bAlbedo2 || bBumpmap2)
+		{
+			if (bBumpmap2)
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iBumpmap2);
+			else
+				tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_NORMALMAP_FLAT);
+
+			if (bAlbedo2)
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER9, info.iAlbedo2);
+			else
+				tmpBuf.BindStandardTexture(SHADER_SAMPLER9, TEXTURE_GREY);
+
+			if (bBlendmodulate)
+			{
+				tmpBuf.SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, info.iBlendmodulateTransform);
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iBlendmodulate);
+			}
+		}
+
+		if (bhasMRAO)
+			tmpBuf.BindTexture(pShader, SHADER_SAMPLER15, info.m_nMRAO);
+
+		if (bTreeSway)
+		{
+			float flParams[4];
+			flParams[0] = GetFloatParam(info.m_nTreeSwaySpeedHighWindMultiplier, params, 2.0f);
+			flParams[1] = GetFloatParam(info.m_nTreeSwayScrumbleFalloffExp, params, 1.0f);
+			flParams[2] = GetFloatParam(info.m_nTreeSwayFalloffExp, params, 1.0f);
+			flParams[3] = GetFloatParam(info.m_nTreeSwayScrumbleSpeed, params, 3.0f);
+			tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_5, flParams);
+
+			flParams[0] = GetFloatParam(info.m_nTreeSwayHeight, params, 1000.0f);
+			flParams[1] = GetFloatParam(info.m_nTreeSwayStartHeight, params, 0.1f);
+			flParams[2] = GetFloatParam(info.m_nTreeSwayRadius, params, 300.0f);
+			flParams[3] = GetFloatParam(info.m_nTreeSwayStartRadius, params, 0.2f);
+			tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, flParams);
+
+			flParams[0] = GetFloatParam(info.m_nTreeSwaySpeed, params, 1.0f);
+			flParams[1] = GetFloatParam(info.m_nTreeSwayStrength, params, 10.0f);
+			flParams[2] = GetFloatParam(info.m_nTreeSwayScrumbleFrequency, params, 12.0f);
+			flParams[3] = GetFloatParam(info.m_nTreeSwayScrumbleStrength, params, 10.0f);
+			tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, flParams);
+
+			flParams[0] = GetFloatParam(info.m_nTreeSwaySpeedLerpStart, params, 3.0f);
+			flParams[1] = GetFloatParam(info.m_nTreeSwaySpeedLerpEnd, params, 6.0f);
+			tmpBuf.SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_9, flParams);
+		}
+
+		tmpBuf.SetPixelShaderConstant4(1,
+			IS_FLAG_SET(MATERIAL_VAR_HALFLAMBERT) ? 1.0f : 0.0f,
+			PARM_SET(info.iLitface) ? 1.0f : 0.0f,
+			0, 0);
+
+		tmpBuf.End();
+
+		pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER1, tmpBuf.Copy());
+
+		//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
+
+		//pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0, tmpBuf.Copy());
+	}
+
+	pShaderAPI->SetDefaultState();
+
+	if (bModel && bFastVTex)
+		pShader->SetHWMorphVertexShaderState(VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, VERTEX_SHADER_SHADER_SPECIFIC_CONST_11, SHADER_VERTEXTEXTURE_SAMPLER0);
+
+	DECLARE_DYNAMIC_VERTEX_SHADER(gbuffer_vs30);
+	SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (bModel && (int)vertexCompression) ? 1 : 0);
+	SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, (bModel && pShaderAPI->GetCurrentNumBones() > 0) ? 1 : 0);
+	SET_DYNAMIC_VERTEX_SHADER_COMBO(MORPHING, (bModel && pShaderAPI->IsHWMorphingEnabled()) ? 1 : 0);
+	SET_DYNAMIC_VERTEX_SHADER(gbuffer_vs30);
 
 #if DEFCFG_DEFERRED_SHADING == 1
 		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 		SET_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 #else
-		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
-		SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_water_ps30);
+		SET_DYNAMIC_PIXEL_SHADER(gbuffer_water_ps30);
 #endif
 
 		if (bModel && bFastVTex)
@@ -408,7 +400,7 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		//vEyePos_SpecExponent[3] = iEnvMapLOD;
 		pShaderAPI->SetPixelShaderConstant(11, vEyePos_SpecExponent, 1);
 
-		
+
 
 		/*float flZDists[2];
 		flZDists[0] = GetDeferredExt()->GetZDistNear();
@@ -517,7 +509,7 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 
 		CommitBaseDeferredConstants_Origin(pShaderAPI, 1);
 		pShader->SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_13, BASETEXTURETRANSFORM);
-		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0));
+		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER1));
 
 		//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
 

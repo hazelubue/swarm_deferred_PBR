@@ -99,6 +99,9 @@
     <ClCompile Include="deferred_water.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="defpass_gbuffer_water.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h">
@@ -172,6 +175,9 @@
     </ClInclude>
     <ClInclude Include="deferred_water.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="defpass_gbuffer_water.h">
+      <Filter>Source Files\scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

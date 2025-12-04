@@ -14,7 +14,7 @@
  * 0 - DISABLE packing, gbuffer 0 at 3 bytes, gbuffer 2 at 4 bytes, less expensive math
  * 1 - ENABLE packing, gbuffer 0 at 4 bytes, gbuffer 2 disabled, more expensive math
  */
-#define DEFCFG_LIGHTCTRL_PACKING 1
+#define DEFCFG_LIGHTCTRL_PACKING 0
 
 
 /* Toggles compression for light accumulation buffer
@@ -43,6 +43,7 @@
 /* RT Names
  */
 #define DEFRTNAME_GBUFFER0 "_rt_defNormals"
+#define DEFRTNAME_GBUFFER_WATER0 "_rt_defNormalsWater"
 #define DEFRTNAME_GBUFFER1 "_rt_defProjDepth"
 #define DEFRTNAME_GBUFFER2 "_rt_def_UnpackedLightControl"
 #define DEFRTNAME_LIGHTACCUM "_rt_LightAccum"

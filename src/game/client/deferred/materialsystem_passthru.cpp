@@ -136,6 +136,7 @@ static void ShaderReplace( const char *szShadername, IMaterial *pMat )
 
 static const char *pszShaderReplaceDict[][2] = {
 	"vertexlitgeneric",			"DEFERRED_MODEL",
+	"water",					"DEFERRED_WATER",
 
 	"lightmappedgeneric",		"DEFERRED_BRUSH",
 	"worldvertextransition",	"DEFERRED_BRUSH",

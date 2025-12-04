@@ -1,16 +1,16 @@
-#ifndef DEFPASS_GBUFFER_H
-#define DEFPASS_GBUFFER_H
+
+#ifndef DEFPASS_GBUFFER_WATER_H
+#define DEFPASS_GBUFFER_WATER_H
 
 class CDeferredPerMaterialContextData;
 
-struct defParms_gBuffer0
+struct defParms_gBuffer1
 {
-	defParms_gBuffer0()
+	defParms_gBuffer1()
 	{
-		Q_memset(this, 0xFF, sizeof(defParms_gBuffer0));
+		Q_memset(this, 0xFF, sizeof(defParms_gBuffer1));
 
 		bModel = false;
-		bWater = false;
 	};
 
 	// textures
@@ -89,13 +89,12 @@ struct defParms_gBuffer0
 
 	// config
 	bool bModel;
-	bool bWater;
 };
 
 
-void InitParmsGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params);
-void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params);
-void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params,
+void InitParmsGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader, IMaterialVar** params);
+void InitPassGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader, IMaterialVar** params);
+void DrawPassGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader, IMaterialVar** params,
 	IShaderShadow* pShaderShadow, IShaderDynamicAPI* pShaderAPI,
 	VertexCompressionType_t vertexCompression, CDeferredPerMaterialContextData* pDeferredContext);
 

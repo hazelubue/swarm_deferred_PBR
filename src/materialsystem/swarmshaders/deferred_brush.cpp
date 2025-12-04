@@ -78,6 +78,7 @@ END_SHADER_PARAMS
 void SetupParmsGBuffer0(defParms_gBuffer0& p)
 {
 	p.bModel = false;
+	p.bWater = false;
 
 	p.iAlbedo = BASETEXTURE;
 #if DEFCFG_DEFERRED_SHADING == 1

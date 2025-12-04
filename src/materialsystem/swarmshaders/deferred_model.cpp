@@ -126,6 +126,7 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 
 		//p.Envmap = 0;
 
+		p.bWater = false;
 		p.bModel = true;
 	}
 

@@ -19,6 +19,7 @@
 #include "deferred_context.h"
 
 #include "defpass_gbuffer.h"
+#include "defpass_gbuffer_water.h"
 #include "defpass_shadow.h"
 #include "defpass_composite.h"
 

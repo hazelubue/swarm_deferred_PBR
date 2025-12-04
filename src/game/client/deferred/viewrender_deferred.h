@@ -31,6 +31,10 @@ public:
 
 	void			ViewDrawGBuffer( const CViewSetup &view, bool &bDrew3dSkybox, SkyboxVisibility_t &nSkyboxVisible,
 		bool bDrawViewModel );
+
+	void			ViewDrawGBufferWater(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
+		bool bDrawViewModel);
+
 	void			ViewDrawComposite( const CViewSetup &view, bool &bDrew3dSkybox, SkyboxVisibility_t &nSkyboxVisible,
 		int nClearFlags, view_id_t viewID, bool bDrawViewModel );
 

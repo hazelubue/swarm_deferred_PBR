@@ -8,6 +8,7 @@ void DefRTsOnModeChanged();
 void InitDeferredRTs( bool bInitial = false );
 
 ITexture *GetDefRT_Normals();
+ITexture *GetDefRT_WaterNormals();
 ITexture *GetDefRT_Depth();
 ITexture *GetDefRT_LightCtrl();
 ITexture *GetDefRT_Lightaccum();

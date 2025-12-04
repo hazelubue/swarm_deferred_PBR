@@ -98,7 +98,7 @@ public:
 		int numShadowedCookied, int numShadowed,
 		int numCookied, int numSimple ) = 0;
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture *pTexDepth,
+	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum ) = 0;
 	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
@@ -138,7 +138,7 @@ public:
 		int numShadowedCookied, int numShadowed,
 		int numCookied, int numSimple );
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture *pTexDepth,
+	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum );
 	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth );
@@ -170,6 +170,7 @@ public:
 	inline const lightData_Global_t &GetLightData_Global();
 
 	inline ITexture *GetTexture_Normals();
+	inline ITexture *GetTexture_WaterNormals();
 	inline ITexture *GetTexture_Depth();
 	inline ITexture *GetTexture_LightAccum();
 
@@ -204,6 +205,7 @@ private:
 	int m_iNumCommon_Simple;
 
 	ITexture *m_pTexNormals;
+	ITexture *m_pTexWaterNormals;
 	ITexture *m_pTexDepth;
 	ITexture *m_pTexLightAccum;
 	ITexture *m_pTexLightCtrl;
@@ -293,6 +295,12 @@ ITexture *CDeferredExtension::GetTexture_Normals()
 {
 	return m_pTexNormals;
 }
+
+ITexture* CDeferredExtension::GetTexture_WaterNormals()
+{
+	return m_pTexWaterNormals;
+}
+
 ITexture *CDeferredExtension::GetTexture_Depth()
 {
 	return m_pTexDepth;

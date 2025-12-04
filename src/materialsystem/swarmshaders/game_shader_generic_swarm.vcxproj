@@ -215,6 +215,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <ClCompile Include="deferred_water.cpp" />
     <ClCompile Include="defpass_composite.cpp" />
     <ClCompile Include="defpass_gbuffer.cpp" />
+    <ClCompile Include="defpass_gbuffer_water.cpp" />
     <ClCompile Include="defpass_shadow.cpp" />
     <ClCompile Include="IDeferredExt.cpp" />
     <ClCompile Include="lighting_global.cpp" />
@@ -246,6 +247,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <ClInclude Include="deferred_water.h" />
     <ClInclude Include="defpass_composite.h" />
     <ClInclude Include="defpass_gbuffer.h" />
+    <ClInclude Include="defpass_gbuffer_water.h" />
     <ClInclude Include="defpass_shadow.h" />
     <ClInclude Include="IDeferredExt.h" />
     <ClInclude Include="lighting_helper.h" />

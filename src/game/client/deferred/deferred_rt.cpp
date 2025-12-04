@@ -5,6 +5,7 @@
 #include "materialsystem/itexture.h"
 
 static CTextureReference g_tex_Normals;
+static CTextureReference g_tex_Water_Normals;
 static CTextureReference g_tex_Depth;
 
 static CTextureReference g_tex_LightCtrl;
@@ -96,6 +97,13 @@ void InitDeferredRTs( bool bInitial )
 			fmt_gbuffer0,
 			MATERIAL_RT_DEPTH_SHARED,
 			gbufferFlags, 0 ) );
+
+		g_tex_Water_Normals.Init(materials->CreateNamedRenderTargetTextureEx2(DEFRTNAME_GBUFFER_WATER0,
+			dummy, dummy,
+			RT_SIZE_FULL_FRAME_BUFFER_ROUNDED_UP,
+			fmt_gbuffer0,
+			MATERIAL_RT_DEPTH_SHARED,
+			gbufferFlags, 0));
 
 		g_tex_Depth.Init( materials->CreateNamedRenderTargetTextureEx2( DEFRTNAME_GBUFFER1,
 			dummy, dummy,
@@ -255,7 +263,7 @@ void InitDeferredRTs( bool bInitial )
 
 	materials->EndRenderTargetAllocation();
 
-	GetDeferredExt()->CommitTexture_General( g_tex_Normals, g_tex_Depth,
+	GetDeferredExt()->CommitTexture_General( g_tex_Normals, g_tex_Water_Normals, g_tex_Depth,
 		g_tex_LightCtrl,
 		g_tex_Lightaccum );
 
@@ -287,6 +295,11 @@ int GetShadowResolution_Spot()
 int GetShadowResolution_Point()
 {
 	return deferred_rt_shadowpoint_res.GetInt();
+}
+
+ITexture *GetDefRT_WaterNormals()
+{
+	return g_tex_Water_Normals;
 }
 
 ITexture *GetDefRT_Normals()
