@@ -1,6 +1,8 @@
 ssgi_ps30.fxc
 passthru_vs30.fxc
 
+gbuffer_translucent_ps30.fxc
+
 water_ps2x.fxc
 gbuffer_water_ps30.fxc
 

@@ -125,6 +125,56 @@ void SetupParmsGBuffer0(defParms_gBuffer0& p)
 
 }
 
+void SetupParmsGBuffer_translucent(defParms_gBuffer_translucent& p)
+{
+	p.bModel = false;
+	p.bWater = false;
+
+	p.iAlbedo = BASETEXTURE;
+#if DEFCFG_DEFERRED_SHADING == 1
+	p.iAlbedo2 = BASETEXTURE2;
+#endif
+	p.iBumpmap = BUMPMAP;
+	p.iBumpmap2 = BUMPMAP2;
+	p.PARALLAX = PARALLAX;
+
+	p.iSSBump = SSBUMP;
+	p.iAlphatestRef = ALPHATESTREFERENCE;
+
+	p.m_nMRAO = MRAOTEXTURE;
+	p.m_nAlpha = ALPHATEXTURE;
+	p.m_nTransparency = TRANSPARENCY;
+	p.m_nTrasncluent = TRANSLUCENT;
+
+	p.FLOWMAP = FLOWMAP;
+	p.FLOWMAPFRAME = FLOWMAPFRAME;
+	p.FLOW_NOISE_TEXTURE = FLOW_NOISE_TEXTURE;
+
+	p.FLOW_WORLDUVSCALE = FLOW_WORLDUVSCALE;
+	p.FLOW_NORMALUVSCALE = FLOW_NORMALUVSCALE;
+	p.FLOW_BUMPSTRENGTH = FLOW_BUMPSTRENGTH;
+	p.COLOR_FLOW_DISPLACEBYNORMALSTRENGTH = COLOR_FLOW_DISPLACEBYNORMALSTRENGTH;
+
+	p.FLOW_TIMEINTERVALINSECONDS = FLOW_TIMEINTERVALINSECONDS;
+	p.FLOW_UVSCROLLDISTANCE = FLOW_UVSCROLLDISTANCE;
+	p.FLOW_NOISE_SCALE = FLOW_NOISE_SCALE;
+
+	p.COLOR_FLOW_UVSCALE = COLOR_FLOW_UVSCALE;
+	p.COLOR_FLOW_TIMEINTERVALINSECONDS = COLOR_FLOW_TIMEINTERVALINSECONDS;
+	p.COLOR_FLOW_UVSCROLLDISTANCE = COLOR_FLOW_UVSCROLLDISTANCE;
+	p.COLOR_FLOW_LERPEXP = COLOR_FLOW_LERPEXP;
+
+	p.REFRACTTINT = REFRACTTINT;
+	p.REFLECTAMOUNT = REFLECTAMOUNT;
+	p.REFRACTAMOUNT = REFRACTAMOUNT;
+	p.FOGCOLOR = FOGCOLOR;
+	p.REFLECTTINT = REFLECTTINT;
+	p.WATERBLENDFACTOR = WATERBLENDFACTOR;
+	p.FOGSTART = FOGSTART;
+	p.FOGEND = FOGEND;
+
+}
+
 void SetupParmsShadow(defParms_shadow& p)
 {
 	p.bModel = false;
@@ -169,12 +219,48 @@ void SetupParmsComposite(defParms_composite& p)
 	p.iFresnelRanges = FRESNELRANGES;
 }
 
+void SetupParmsComposite_translucent(defParms_composite_translucent& p)
+{
+	p.bModel = false;
+	p.iAlbedo = BASETEXTURE;
+	p.iAlbedo2 = BASETEXTURE2;
+	p.iAlbedo3 = BASETEXTURE3;
+	p.iAlbedo4 = BASETEXTURE4;
+
+	p.iEnvmap = ENVMAP;
+	p.iEnvmapMask = ENVMAPMASK;
+	p.iEnvmapMask2 = 0;
+	p.iEnvmapTint = ENVMAPTINT;
+	p.iEnvmapContrast = ENVMAPCONTRAST;
+	p.iEnvmapSaturation = ENVMAPSATURATION;
+
+	p.iAlphatestRef = ALPHATESTREFERENCE;
+
+	p.iPhongScale = 0;
+	p.iPhongFresnel = 0;
+
+	p.iBlendmodulate = BLENDMODULATETEXTURE;
+	p.iBlendmodulate2 = BLENDMODULATETEXTURE2;
+	p.iBlendmodulate3 = BLENDMODULATETEXTURE3;
+	p.iBlendmodulateTransform = BLENDMASKTRANSFORM;
+	p.iBlendmodulateTransform2 = BLENDMASKTRANSFORM2;
+	p.iBlendmodulateTransform3 = BLENDMASKTRANSFORM3;
+	p.iMultiblend = MULTIBLEND;
+
+	p.SelfShadowedBumpFlag = SSBUMP;
+	p.BUMPMAP = BUMPMAP;
+
+	p.MRAOTEXTURE = MRAOTEXTURE;
+
+	p.iFresnelRanges = FRESNELRANGES;
+}
+
 bool DrawToGBuffer(IMaterialVar** params)
 {
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	//const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
-	return !bTranslucent && !bIsDecal;
+	return !bIsDecal;
 }
 
 SHADER_INIT_PARAMS()
@@ -186,41 +272,79 @@ SHADER_INIT_PARAMS()
 		SET_FLAGS2(MATERIAL_VAR2_LIGHTING_BUMPED_LIGHTMAP);
 
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	if (bDrawToGBuffer)
 	{
-		defParms_gBuffer0 parms_gbuffer;
-		SetupParmsGBuffer0(parms_gbuffer);
-		InitParmsGBuffer(parms_gbuffer, this, params);
+		//if (!bTranslucent)
+		//{
+			defParms_gBuffer0 parms_gbuffer;
+			SetupParmsGBuffer0(parms_gbuffer);
+			InitParmsGBuffer(parms_gbuffer, this, params);
+		//}
+		/*else
+		{
+			defParms_gBuffer_translucent parms_gbuffer_translucent;
+			SetupParmsGBuffer_translucent(parms_gbuffer_translucent);
+			InitParmsGBuffer_translucent(parms_gbuffer_translucent, this, params);
+		}*/
 
 		defParms_shadow parms_shadow;
 		SetupParmsShadow(parms_shadow);
 		InitParmsShadowPass(parms_shadow, this, params);
 	}
-
-	defParms_composite parms_composite;
-	SetupParmsComposite(parms_composite);
-	InitParmsComposite(parms_composite, this, params);
+	if (!bTranslucent)
+	{
+		defParms_composite parms_composite;
+		SetupParmsComposite(parms_composite);
+		InitParmsComposite(parms_composite, this, params);
+	}
+	else
+	{
+		defParms_composite_translucent parms_composite_translucent;
+		SetupParmsComposite_translucent(parms_composite_translucent);
+		InitParmsComposite_translucent(parms_composite_translucent, this, params);
+	}
+	
 }
 
 SHADER_INIT
 {
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	if (bDrawToGBuffer)
 	{
-		defParms_gBuffer0 parms_gbuffer;
-		SetupParmsGBuffer0(parms_gbuffer);
-		InitPassGBuffer(parms_gbuffer, this, params);
+		//if (!bTranslucent)
+		//{
+			defParms_gBuffer0 parms_gbuffer;
+			SetupParmsGBuffer0(parms_gbuffer);
+			InitPassGBuffer(parms_gbuffer, this, params);
+		//}
+		/*else
+		{
+			defParms_gBuffer_translucent parms_gbuffer_translucent;
+			SetupParmsGBuffer_translucent(parms_gbuffer_translucent);
+			InitPassGBuffer_translucent(parms_gbuffer_translucent, this, params);
+		}*/
 
 		defParms_shadow parms_shadow;
 		SetupParmsShadow(parms_shadow);
 		InitPassShadowPass(parms_shadow, this, params);
 	}
-
-	defParms_composite parms_composite;
-	SetupParmsComposite(parms_composite);
-	InitPassComposite(parms_composite, this, params);
+	if (!bTranslucent)
+	{
+		defParms_composite parms_composite;
+		SetupParmsComposite(parms_composite);
+		InitPassComposite(parms_composite, this, params);
+	}
+	else
+	{
+		defParms_composite_translucent parms_composite_translucent;
+		SetupParmsComposite_translucent(parms_composite_translucent);
+		InitPassComposite_translucent(parms_composite_translucent, this, params);
+	}
+	
 }
 
 SHADER_FALLBACK
@@ -233,10 +357,10 @@ SHADER_FALLBACK
 		return "LightmappedGeneric";
 	}
 
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	//const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 
-	if (bTranslucent && !bIsDecal)
+	if (bIsDecal)
 		return "LightmappedGeneric";
 
 	return 0;
@@ -253,6 +377,7 @@ SHADER_DRAW
 		pShaderAPI->GetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE)
 		: DEFERRED_RENDER_STAGE_INVALID;
 
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
 
 	Assert(pShaderAPI == NULL ||
@@ -268,6 +393,14 @@ SHADER_DRAW
 			DrawPassGBuffer(parms_gbuffer, this, params, pShaderShadow, pShaderAPI,
 				vertexCompression, pDefContext);
 		}
+		/*else if ( bTranslucent && pShaderShadow != NULL ||
+			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER_TRANSLUCENT)
+		{
+			defParms_gBuffer_translucent parms_gbuffer_translucent;
+			SetupParmsGBuffer_translucent(parms_gbuffer_translucent);
+			DrawPassGBuffer_translucent(parms_gbuffer_translucent, this, params, pShaderShadow, pShaderAPI,
+				vertexCompression, pDefContext);
+		}*/
 		else
 			SkipPass();
 
@@ -283,12 +416,20 @@ SHADER_DRAW
 			SkipPass();
 	}
 
-	if (pShaderShadow != NULL ||
+	if (!bTranslucent && pShaderShadow != NULL ||
 		iDeferredRenderStage == DEFERRED_RENDER_STAGE_COMPOSITION)
 	{
 		defParms_composite parms_composite;
 		SetupParmsComposite(parms_composite);
 		DrawPassComposite(parms_composite, this, params, pShaderShadow, pShaderAPI,
+			vertexCompression, pDefContext);
+	}
+	else if (bTranslucent && pShaderShadow != NULL ||
+		iDeferredRenderStage == DEFERRED_RENDER_STAGE_COMPOSITION)
+	{
+		defParms_composite_translucent parms_composite_translucent;
+		SetupParmsComposite_translucent(parms_composite_translucent);
+		DrawPassComposite_translucent(parms_composite_translucent, this, params, pShaderShadow, pShaderAPI,
 			vertexCompression, pDefContext);
 	}
 	else

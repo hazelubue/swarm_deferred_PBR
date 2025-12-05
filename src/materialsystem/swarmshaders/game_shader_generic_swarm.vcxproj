@@ -214,6 +214,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <ClCompile Include="deferred_utility.cpp" />
     <ClCompile Include="deferred_water.cpp" />
     <ClCompile Include="defpass_composite.cpp" />
+    <ClCompile Include="defpass_composite_translucent.cpp" />
     <ClCompile Include="defpass_gbuffer.cpp" />
     <ClCompile Include="defpass_gbuffer_water.cpp" />
     <ClCompile Include="defpass_shadow.cpp" />
@@ -247,6 +248,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <ClInclude Include="deferred_utility.h" />
     <ClInclude Include="deferred_water.h" />
     <ClInclude Include="defpass_composite.h" />
+    <ClInclude Include="defpass_composite_translucent.h" />
     <ClInclude Include="defpass_gbuffer.h" />
     <ClInclude Include="defpass_gbuffer_water.h" />
     <ClInclude Include="defpass_shadow.h" />
@@ -291,6 +293,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <None Include="deferred_shaders.txt" />
     <None Include="gaussianblur_6_ps30.fxc" />
     <None Include="gbuffer_ps30.fxc" />
+    <None Include="gbuffer_translucent_ps30.fxc" />
     <None Include="gbuffer_vs30.fxc" />
     <None Include="lightingpass_global_ps30.fxc" />
     <None Include="lightingpass_point_ps30.fxc" />

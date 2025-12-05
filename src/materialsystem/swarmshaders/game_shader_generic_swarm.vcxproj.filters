@@ -105,6 +105,9 @@
     <ClCompile Include="ssgi.cpp">
       <Filter>Source Files\lighting</Filter>
     </ClCompile>
+    <ClCompile Include="defpass_composite_translucent.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h">
@@ -180,6 +183,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="defpass_gbuffer_water.h">
+      <Filter>Source Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="defpass_composite_translucent.h">
       <Filter>Source Files\scene</Filter>
     </ClInclude>
   </ItemGroup>
@@ -287,6 +293,9 @@
       <Filter>Shader Source\fxc</Filter>
     </None>
     <None Include="ssgi_ps30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
+    <None Include="gbuffer_translucent_ps30.fxc">
       <Filter>Shader Source\fxc</Filter>
     </None>
   </ItemGroup>

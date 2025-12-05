@@ -87,6 +87,8 @@ public:
 		RenderableInstance_t m_InstanceData;
 		uint8				m_nModelType : 7;		// See RenderableModelType_t
 		uint8				m_TwoPass : 1;
+		int					m_RenderGroupCounts[RENDER_GROUP_COUNT];
+		int					m_nBoneSetupDependencyCount;
 	};
 
 	// The leaves for the entries are in the order of the leaves you call CollateRenderablesInLeaf in.
