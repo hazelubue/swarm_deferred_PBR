@@ -43,7 +43,7 @@
 /* RT Names
  */
 #define DEFRTNAME_GBUFFER0 "_rt_defNormals"
-#define DEFRTNAME_GBUFFER_WATER0 "_rt_defNormalsWater"
+#define DEFRTNAME_GBUFFER_WATER0 "_rt_ssgi"
 #define DEFRTNAME_GBUFFER1 "_rt_defProjDepth"
 #define DEFRTNAME_GBUFFER2 "_rt_def_UnpackedLightControl"
 #define DEFRTNAME_LIGHTACCUM "_rt_LightAccum"

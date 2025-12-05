@@ -1928,6 +1928,9 @@
     <ClCompile Include="deferred\flashlighteffect_deferred.cpp">
       <Filter>Source Files\deferred</Filter>
     </ClCompile>
+    <ClCompile Include="deferred\deferred_screenspace_effects_order.cpp">
+      <Filter>Source Files\deferred</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="achievement_notification_panel.h">

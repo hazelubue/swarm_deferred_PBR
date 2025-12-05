@@ -1,0 +1,5 @@
+"ssgi"
+{
+	"$FRAMEBUFFER" "_rt_fullframefb"
+	"$DEPTHBUFFER " "_rt_defprojdepth"
+}

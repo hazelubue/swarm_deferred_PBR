@@ -820,7 +820,7 @@ float4 main( PS_INPUT i ) : COLOR
 	
     //vResult += flLighting * baseSample.rgba;
 	
-    vResult.rgb = lerp(finalColor, vResult.rgb, alpha);
+    vResult.rgb = lerp(vResult.rgb, finalColor, alpha);
     //vResult *= ao;
     //vResult += metallic;
     //vResult += roughness;

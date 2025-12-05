@@ -12,6 +12,7 @@
 #endif
 
 #include "postprocess_shared.h"
+#include "ScreenSpaceEffects.h"
 
 struct RenderableInstance_t;
 
@@ -34,5 +35,36 @@ void DoBlurFade( float flStrength, float flDesaturate, int x, int y, int w, int 
 void SetPostProcessParams( const PostProcessParameters_t *pPostProcessParameters );
 
 void SetViewFadeParams( byte r, byte g, byte b, byte a, bool bModulate );
+
+//class CSSGI : public IScreenSpaceEffect
+//{
+//public:
+//	CSSGI(void) {};
+//
+//	virtual void Init(void);
+//	virtual void Shutdown(void);
+//	virtual void SetParameters(KeyValues* params) {};
+//	virtual void Enable(bool bEnable) { m_bEnabled = bEnable; }
+//	virtual bool IsEnabled() { return m_bEnabled; }
+//
+//	virtual void Render(int x, int y, int w, int h);
+//
+//private:
+//	bool				m_bEnabled;
+//
+//	CTextureReference	m_Normal;
+//	CTextureReference	m_SSGI;
+//
+//	CTextureReference	m_SSAOY;
+//
+//
+//	CMaterialReference	m_SSAO_BilateralY;
+//	CMaterialReference	m_SSAO_BilateralX;
+//	CMaterialReference	m_SSGI_Mat;
+//	CMaterialReference	m_SSGI_Combine;
+//};
+//
+//static CSSGI g_SSGI;
+
 
 #endif // VIEWPOSTPROCESS_H

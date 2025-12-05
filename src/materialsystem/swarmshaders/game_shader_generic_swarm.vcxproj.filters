@@ -102,6 +102,9 @@
     <ClCompile Include="defpass_gbuffer_water.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
+    <ClCompile Include="ssgi.cpp">
+      <Filter>Source Files\lighting</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h">
@@ -278,6 +281,12 @@
       <Filter>Shader Source\fxc</Filter>
     </None>
     <None Include="volume_blend_ps30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
+    <None Include="passthru_vs30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
+    <None Include="ssgi_ps30.fxc">
       <Filter>Shader Source\fxc</Filter>
     </None>
   </ItemGroup>

@@ -3,24 +3,91 @@
   "WorkspaceRootPath": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\materialsystem_passthru.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\materialsystem_passthru.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_global_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\lightingpass_global_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\deferred_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\defpass_gbuffer_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_composite.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\defpass_composite.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\defpass_gbuffer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_global.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\lighting_global.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|\\\\host.lan\\Data\\#Portal2Remastered\\biohazard\\swarm-deferred-3d41f0f9b9ccc5bdf2d8924ec537b375441ff303\\src\\materialsystem\\swarmshaders\\lighting_global.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_pass_basic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\lighting_pass_basic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_screenspace_effects_order.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\deferred_screenspace_effects_order.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\viewpostprocess.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\viewpostprocess.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\viewpostprocess.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\viewpostprocess.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_screenspace_effects.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:game\\client\\deferred\\deferred_screenspace_effects.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\ssgi.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\ssgi.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_rt.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\deferred_rt.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_global_common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:materialsystem\\swarmshaders\\deferred_global_common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\ssgi_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\ssgi_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\passthru_vs30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\passthru_vs30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\deferred_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water_ps2x.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\water_ps2x.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_spot_light.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\common_spot_light.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\materialsystem_passthru.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\materialsystem_passthru.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\defpass_gbuffer_water.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\viewrender_deferred.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -35,10 +102,6 @@
       "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\viewrender_deferred.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_rt.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\deferred_rt.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\IDeferredExt.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\IDeferredExt.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -49,10 +112,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_rt.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\deferred_rt.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_global_common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:materialsystem\\swarmshaders\\deferred_global_common.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -79,16 +138,8 @@
       "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\gbuffer_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_pass_basic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\lighting_pass_basic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\cdeferred_manager_client.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A26C0361-6B09-9E3D-5194-C9CB89243710}|game\\client\\swarm_skeleton_client.vcxproj|solutionrelative:game\\client\\deferred\\cdeferred_manager_client.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_composite.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:materialsystem\\swarmshaders\\defpass_composite.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_shadow.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -101,14 +152,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_point_light.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\common_point_light.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_spot_light.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\common_spot_light.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_world.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -125,10 +168,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\PUBLIC\\RENDERPARM.H||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|solutionrelative:PUBLIC\\RENDERPARM.H||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water_ps2x.fxc||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:materialsystem\\swarmshaders\\water_ps2x.fxc||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C8D2DC83-E117-7576-7B43-10C844264C51}|materialsystem\\swarmshaders\\game_shader_generic_swarm.vcxproj|C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_composite.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -170,11 +209,139 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 11,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "lightingpass_global_ps30.fxc",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_global_ps30.fxc",
+              "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lightingpass_global_ps30.fxc",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_global_ps30.fxc",
+              "RelativeToolTip": "materialsystem\\swarmshaders\\lightingpass_global_ps30.fxc",
+              "ViewState": "AgIAAB0BAAAAAAAAAAAiwC8BAAAeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-12-04T23:49:02.817Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "lighting_global.cpp",
+              "DocumentMoniker": "\\\\host.lan\\Data\\#Portal2Remastered\\biohazard\\swarm-deferred-3d41f0f9b9ccc5bdf2d8924ec537b375441ff303\\src\\materialsystem\\swarmshaders\\lighting_global.cpp",
+              "ToolTip": "\\\\host.lan\\Data\\#Portal2Remastered\\biohazard\\swarm-deferred-3d41f0f9b9ccc5bdf2d8924ec537b375441ff303\\src\\materialsystem\\swarmshaders\\lighting_global.cpp",
+              "ViewState": "AgIAAB8AAAAAAAAAAAAiwDEAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-12-04T23:46:20.776Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "lighting_global.cpp",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_global.cpp",
+              "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lighting_global.cpp",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_global.cpp",
+              "RelativeToolTip": "materialsystem\\swarmshaders\\lighting_global.cpp",
+              "ViewState": "AgIAAGcAAAAAAAAAAAAAADUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-12-04T23:41:54.339Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "deferred_screenspace_effects.h",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_screenspace_effects.h",
+              "RelativeDocumentMoniker": "game\\client\\deferred\\deferred_screenspace_effects.h",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_screenspace_effects.h",
+              "RelativeToolTip": "game\\client\\deferred\\deferred_screenspace_effects.h",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAiwDkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-12-04T20:47:33.9Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "deferred_screenspace_effects_order.cpp",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_screenspace_effects_order.cpp",
+              "RelativeDocumentMoniker": "game\\client\\deferred\\deferred_screenspace_effects_order.cpp",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_screenspace_effects_order.cpp",
+              "RelativeToolTip": "game\\client\\deferred\\deferred_screenspace_effects_order.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-12-04T20:46:34.847Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "viewpostprocess.h",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\viewpostprocess.h",
+              "RelativeDocumentMoniker": "game\\client\\viewpostprocess.h",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\viewpostprocess.h",
+              "RelativeToolTip": "game\\client\\viewpostprocess.h",
+              "ViewState": "AgIAABYAAAAAAAAAAAAqwCYAAAACAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-12-04T20:41:02.185Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "viewpostprocess.cpp",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\viewpostprocess.cpp",
+              "RelativeDocumentMoniker": "game\\client\\viewpostprocess.cpp",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\viewpostprocess.cpp",
+              "RelativeToolTip": "game\\client\\viewpostprocess.cpp",
+              "ViewState": "AgIAAAEHAAAAAAAAAAAAAA0HAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-12-04T20:39:30.393Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "passthru_vs30.fxc",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\passthru_vs30.fxc",
+              "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\passthru_vs30.fxc",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\passthru_vs30.fxc",
+              "RelativeToolTip": "materialsystem\\swarmshaders\\passthru_vs30.fxc",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-12-04T20:33:36.251Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 11,
+              "Title": "ssgi.cpp",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\ssgi.cpp",
+              "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\ssgi.cpp",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\ssgi.cpp",
+              "RelativeToolTip": "materialsystem\\swarmshaders\\ssgi.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACgAAAACAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-12-04T20:32:47.587Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ssgi_ps30.fxc",
+              "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\ssgi_ps30.fxc",
+              "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\ssgi_ps30.fxc",
+              "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\ssgi_ps30.fxc",
+              "RelativeToolTip": "materialsystem\\swarmshaders\\ssgi_ps30.fxc",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-12-04T20:32:27.353Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
               "Title": "deferred_rt.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_rt.h",
               "RelativeDocumentMoniker": "game\\client\\deferred\\deferred_rt.h",
@@ -187,7 +354,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 29,
               "Title": "deferred_context.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_context.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_context.h",
@@ -200,7 +367,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 22,
               "Title": "viewrender_deferred.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\viewrender_deferred.cpp",
               "RelativeDocumentMoniker": "game\\client\\deferred\\viewrender_deferred.cpp",
@@ -213,7 +380,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 30,
               "Title": "defpass_gbuffer_water.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer_water.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_gbuffer_water.h",
@@ -226,7 +393,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 21,
               "Title": "defpass_gbuffer_water.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer_water.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_gbuffer_water.cpp",
@@ -239,20 +406,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 16,
               "Title": "deferred_water.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_water.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_water.cpp",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_water.cpp",
               "RelativeToolTip": "materialsystem\\swarmshaders\\deferred_water.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADcBAAAGAAAAAAAAAA==",
+              "ViewState": "AgIAAHUAAAAAAAAAAAAAAA4AAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-12-04T02:42:20.26Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 34,
               "Title": "cdeferred_manager_client.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\cdeferred_manager_client.cpp",
               "RelativeDocumentMoniker": "game\\client\\deferred\\cdeferred_manager_client.cpp",
@@ -265,7 +432,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 35,
               "Title": "defpass_shadow.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_shadow.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_shadow.h",
@@ -278,19 +445,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 19,
               "Title": "common_spot_light.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_spot_light.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\common_spot_light.h",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_spot_light.h",
               "RelativeToolTip": "materialsystem\\swarmshaders\\common_spot_light.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAABIAAAAAAAAAA==",
+              "ViewState": "AgIAACEAAAAAAAAAAAAqwEoAAAA6AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-12-03T01:00:53.254Z"
+              "WhenOpened": "2025-12-03T01:00:53.254Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 41,
               "Title": "renderparm.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\public\\renderparm.h",
               "RelativeDocumentMoniker": "public\\renderparm.h",
@@ -302,7 +470,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 24,
               "Title": "viewrender_deferred.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\viewrender_deferred.h",
               "RelativeDocumentMoniker": "game\\client\\deferred\\viewrender_deferred.h",
@@ -315,7 +483,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 20,
               "Title": "materialsystem_passthru.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\materialsystem_passthru.cpp",
               "RelativeDocumentMoniker": "game\\client\\deferred\\materialsystem_passthru.cpp",
@@ -328,32 +496,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 18,
               "Title": "water_ps2x.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water_ps2x.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\water_ps2x.fxc",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water_ps2x.fxc",
               "RelativeToolTip": "materialsystem\\swarmshaders\\water_ps2x.fxc",
-              "ViewState": "AgIAAB0DAAAAAAAAAAAQwEcDAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAwDAAAAAAAAAAAqwOECAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-12-01T17:20:06.782Z"
+              "WhenOpened": "2025-12-01T17:20:06.782Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 17,
               "Title": "water.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\water.cpp",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\water.cpp",
               "RelativeToolTip": "materialsystem\\swarmshaders\\water.cpp",
-              "ViewState": "AgIAAA4AAAAAAAAAAAAAACMAAAAlAAAAAAAAAA==",
+              "ViewState": "AgIAAEABAAAAAAAAAAAAAGgBAAA+AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-12-01T17:18:11.019Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 32,
               "Title": "deferred_water.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_water.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_water.h",
@@ -366,7 +535,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 23,
               "Title": "deferred_brush.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_brush.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_brush.cpp",
@@ -379,7 +548,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 36,
               "Title": "deferred_model.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_model.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_model.cpp",
@@ -392,7 +561,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 37,
               "Title": "common_point_light.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_point_light.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\common_point_light.h",
@@ -404,7 +573,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 39,
               "Title": "lightingpass_spot_ps30.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_spot_ps30.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lightingpass_spot_ps30.fxc",
@@ -416,19 +585,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 1,
               "Title": "lightingpass_pbr_point_ps30.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc",
               "RelativeToolTip": "materialsystem\\swarmshaders\\lightingpass_pbr_point_ps30.fxc",
-              "ViewState": "AgIAAHIAAAAAAAAAAAAAAHgAAAA4AAAAAAAAAA==",
+              "ViewState": "AgIAAFoAAAAAAAAAAAAAAIEAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-30T15:06:03.541Z"
+              "WhenOpened": "2025-11-30T15:06:03.541Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 26,
               "Title": "IDeferredExt.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\IDeferredExt.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\IDeferredExt.h",
@@ -441,7 +611,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 25,
               "Title": "IDeferredExt.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\IDeferredExt.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\IDeferredExt.cpp",
@@ -454,33 +624,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "deferred_global_common.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_global_common.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_global_common.h",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_global_common.h",
               "RelativeToolTip": "materialsystem\\swarmshaders\\deferred_global_common.h",
-              "ViewState": "AgIAAA8AAAAAAAAAAAAawC0AAAA1AAAAAAAAAA==",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAawC0AAAAqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-11-30T11:34:01.764Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 12,
               "Title": "deferred_rt.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_rt.cpp",
               "RelativeDocumentMoniker": "game\\client\\deferred\\deferred_rt.cpp",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\game\\client\\deferred\\deferred_rt.cpp",
               "RelativeToolTip": "game\\client\\deferred\\deferred_rt.cpp",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAAAAYAAAAZAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-11-30T11:32:58.171Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 46,
               "Title": "pbr_dx9.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\pbr_dx9.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\pbr_dx9.h",
@@ -492,7 +662,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 38,
               "Title": "lighting_world.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_world.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lighting_world.cpp",
@@ -504,7 +674,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 47,
               "Title": "lighting_pass_basic.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_pass_basic.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lighting_pass_basic.h",
@@ -516,20 +686,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 6,
               "Title": "lighting_pass_basic.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_pass_basic.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\lighting_pass_basic.cpp",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\lighting_pass_basic.cpp",
               "RelativeToolTip": "materialsystem\\swarmshaders\\lighting_pass_basic.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAAPYAAAAAAAAAAAAAABIBAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-11-30T08:30:18.774Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 45,
               "Title": "common_vs_fxc.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\common_vs_fxc.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\common_vs_fxc.h",
@@ -541,7 +711,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 48,
               "Title": "IShader.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\public\\materialsystem\\IShader.h",
               "RelativeDocumentMoniker": "public\\materialsystem\\IShader.h",
@@ -553,7 +723,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 43,
               "Title": "pbr_common_ps2_3_x.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\pbr_common_ps2_3_x.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\pbr_common_ps2_3_x.h",
@@ -565,7 +735,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 28,
               "Title": "defpass_gbuffer.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_gbuffer.h",
@@ -578,7 +748,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 31,
               "Title": "deferred_includes.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\deferred_includes.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\deferred_includes.h",
@@ -597,14 +767,14 @@
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_gbuffer.cpp",
               "ToolTip": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_gbuffer.cpp",
               "RelativeToolTip": "materialsystem\\swarmshaders\\defpass_gbuffer.cpp",
-              "ViewState": "AgIAAAsCAAAAAAAAAAAqwEUCAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAwCAAAAAAAAAAAiwEUCAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-11-30T06:58:48.371Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 33,
               "Title": "gbuffer_ps30.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\gbuffer_ps30.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\gbuffer_ps30.fxc",
@@ -617,7 +787,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 39,
+              "DocumentIndex": 49,
               "Title": "gbuffer_vs30.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\gbuffer_vs30.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\gbuffer_vs30.fxc",
@@ -629,7 +799,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 42,
               "Title": "defpass_composite.h",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_composite.h",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_composite.h",
@@ -641,7 +811,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 40,
               "Title": "composite_ps30.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\composite_ps30.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\composite_ps30.fxc",
@@ -653,7 +823,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 44,
               "Title": "composite_vs30.fxc",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\composite_vs30.fxc",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\composite_vs30.fxc",
@@ -665,7 +835,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 2,
               "Title": "defpass_composite.cpp",
               "DocumentMoniker": "C:\\Users\\hazel\\Desktop\\Shared\\#hengine\\deferred\\src\\materialsystem\\swarmshaders\\defpass_composite.cpp",
               "RelativeDocumentMoniker": "materialsystem\\swarmshaders\\defpass_composite.cpp",

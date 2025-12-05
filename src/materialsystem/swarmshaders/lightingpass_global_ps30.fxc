@@ -1,88 +1,360 @@
-
 // DYNAMIC:		"HAS_SHADOW"		"0..1"
+
+static const float EPSILON = 0.00001;
 
 
 #include "common_ps_fxc.h"
 #include "common_deferred_fxc.h"
+#include "common_pbr.h"
 
-sampler sNormals							: register( s0 );
-sampler sDepth								: register( s1 );
+
+sampler sMixedSampler[FREE_LIGHT_SAMPLERS] : register(FIRST_LIGHT_SAMPLER_FXC);
+const float4 g_flMixedData[78] : register(FIRST_SHARED_LIGHTDATA_CONSTANT_FXC);
+
+sampler sNormals : register(s0);
+sampler sDepth : register(s1);
+sampler MRAOSampler : register(s14);
+//sampler EmissiveSampler : register(s13);
+//sampler BRDFSampler : register(s15);
+
 
 #if HAS_SHADOW
-sampler sShadowDepth						: register( s2 );
+sampler sShadowDepth : register(s2);
 #endif
 
-const float3 g_vecViewOrigin				: register( c0 );
-const float3 g_vecLightVec_Forward			: register( c1 );
+const float3 g_vecViewOrigin : register(c0);
+const float3 g_vecLightVec_Forward : register(c1);
 
-const float4x3 g_matOrtho[2]				: register( c2 );
-const float4 g_vecUVTransform[2]			: register( c8 );
-const float3 g_vecSlopeData[2]				: register( c10 );
-const float4 g_vecFilterConfig_A[2]			: register( c12 );
-const float4 g_vecFilterConfig_B[2]			: register( c14 );
+const float4x3 g_matOrtho[2] : register(c2);
+const float4 g_vecUVTransform[2] : register(c8);
+const float3 g_vecSlopeData[2] : register(c10);
+const float4 g_vecFilterConfig_A[2] : register(c12);
+const float4 g_vecFilterConfig_B[2] : register(c14);
 
-const float3 g_light_diffuse				: register( c16 );
-const float3 g_light_ambient_high			: register( c17 );
-const float3 g_light_ambient_low_half		: register( c18 );
+const float3 g_light_diffuse : register(c16);
+const float3 g_light_ambient_high : register(c17);
+const float3 g_light_ambient_low_half : register(c18);
+
+float g_GrazingFactor : register(c19);
+float g_GrazingPower : register(c20);
+float g_SpecularBoost : register(c21);
+float g_SpecSizeScale : register(c22);
+float3 g_flGIIntensity : register(c23);
+float g_flEnableGI : register(c24);
+float g_RoughnessScale : register(c25);
+float g_shapeBias : register(c26);
+float g_DiffuseScale : register(c27);
+float g_FresnelPower : register(c28);
+float g_SheenStrength : register(c29);
+float g_SheenRoughness : register(c30);
+float g_MetallicRoughnessFactor : register(c31);
+
+
 
 struct PS_INPUT
 {
-	float2 vTexCoord				: TEXCOORD0;
-
-	float3 vecWorldRay				: TEXCOORD1;
+    float2 vTexCoord : TEXCOORD0;
+    float3 vecWorldRay : TEXCOORD1;
 };
 
 struct PS_OUTPUT
 {
-	float4 vColor_0				:	COLOR0;
+    float4 vColor_0 : COLOR0;
 };
 
-PS_OUTPUT main( const PS_INPUT In )
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-	PS_OUTPUT Out = (PS_OUTPUT)0;
+    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, g_FresnelPower) * roughness;
+}
 
-	float flDepth = tex2D( sDepth, In.vTexCoord ).x;
+float3 fresnelSchlick(float cosTheta, float3 F0)
+{
+    return F0 + (1.0f.xxx - F0) * pow(1.0f - cosTheta, g_FresnelPower);
+}
 
-	clip( flDepth - 0.1f );
 
-	float4 flNormalCtrl = tex2D( sNormals, In.vTexCoord );
-	float3 flNormal = normalize( flNormalCtrl.xyz * 2.0f - 1.0f );
+float DistributionGGX(float3 N, float3 H, float distL, float roughness)
+{
+    float alphaPrime = saturate(16.0f / (distL * 2.0) + roughness);
+    float a = roughness * alphaPrime;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
 
-	float phong_exp, half_lambert, litface;
-	UnpackLightingControls( flNormalCtrl.a, phong_exp, half_lambert, litface );
+    float num = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
 
-	float3 flLitNormal = lerp( 1, dot( flNormal, g_vecLightVec_Forward ), litface ) * flNormal;
+    return num / denom;
+}
+float CharlieDistribution(float NdotH, float alpha)
+{
+    float sinThetaH = sqrt(1.0 - NdotH * NdotH);
+    float alphaInv = 1.0 / max(alpha, 0.001);
+    float exponent = alphaInv;
+    float numer = (2.0 + exponent) * pow(sinThetaH, exponent);
+    return numer / (2.0 * PI);
+}
 
-	float flSpecular = max( 0, dot( normalize( -In.vecWorldRay + g_vecLightVec_Forward ), flLitNormal ) );
-	flSpecular = pow( flSpecular, phong_exp ) * dot( -In.vecWorldRay, flLitNormal );
+float3 FresnelSheen(float NV, float3 tint, float strength)
+{
+    float grazing = pow(1.0 - NV, 5.0);
+    return tint * strength * grazing;
+}
 
-	float viewFwdDot = dot( g_vecLightVec_Forward.xyz, flLitNormal );
-	float litDot = lerp( viewFwdDot, viewFwdDot * 0.5f + 0.5f, half_lambert );
+float3 SheenBRDF_DreamWorks(float3 N, float3 V, float3 L, float3 tint, float strength, float roughness)
+{
+    const float kMinSheenR = 0.05;
+    float sheenRough = max(saturate(roughness), kMinSheenR);
 
-	float3 diffuse = g_light_diffuse;
-	float lightAmount = saturate( litDot );
-	float3 ambient = lerp( g_light_ambient_low_half, g_light_ambient_high, viewFwdDot );
+    float3 H = normalize(V + L);
+    float NdotH = saturate(dot(N, H));
+    float NV = saturate(dot(N, V));
 
-#if HAS_SHADOW
-	if ( flDepth < DEPTH_RECONSTRUCTION_LIMIT )
-	{
-		float3 worldPos = g_vecViewOrigin + In.vecWorldRay * flDepth;
+    float D = CharlieDistribution(NdotH, sheenRough);
 
-		float shadowMult = PerformCascadedShadow( sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
-									g_vecFilterConfig_A, g_vecFilterConfig_B, flLitNormal, viewFwdDot );
+    float grazing = pow(1.0 - NV, 5.0);
+    float3 F = tint * strength * grazing;
 
-#if 0
-		// fixes self shadowing for half lambertian, but, i don't like it!
-		lightAmount *= max( shadowMult, (1.0f - saturate( viewFwdDot )) * half_lambert );
+    return D * F;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float num = NdotV;
+    float denom = NdotV * (1.0 - roughness) + roughness;
+
+    return num / denom;
+}
+
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
+    float r = roughness + 1.0f;
+    r = (r * r) / 8.0f;
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = GeometrySchlickGGX(NdotV, r);
+    float ggx1 = GeometrySchlickGGX(NdotL, r);
+
+    return ggx1 * ggx2;
+}
+
+float ndfGGX(float cosNH, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float denom = (cosNH * cosNH) * (a2 - 1.0) + 1.0;
+    return a2 / (PI * denom * denom);
+}
+
+float gaSchlickG1(float cosTheta, float k)
+{
+    return cosTheta / (cosTheta * (1.0 - k) + k);
+}
+
+float gaSchlickGGX(float cosLi, float cosLo, float roughness)
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return gaSchlickG1(cosLi, k) * gaSchlickG1(cosLo, k);
+}
+
+// Schlick-GGX approximation of geometric attenuation function using Smith's method
+// This version remaps the roughness to reduce "hotness", however this should only be used for analytical lights
+float GaSchlickGGXRemapped(float cosLi, float cosLo, float roughness)
+{
+    // k is alpha/2, to better fit the Smith model for GGX
+    // Roughness is also remapped using (roughness + 1)/2 before squaring
+    //
+    // Substituting the remapping, you get:
+    //  alpha = ((roughness+1)/2)^2 = (roughness+1)*(roughness+1)/4
+    //  k = alpha/2 = (roughness+1)*(roughness+1)/8
+
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return gaSchlickG1(cosLi, k) * gaSchlickG1(cosLo, k);
+}
+
+
+float3 calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, float roughness, float metalness, float ao, float lightDirectionAngle, float3 albedo)
+{
+    float3 L = normalize(lightIn);
+    float3 V = normalize(lightOut);
+    float3 N = normalize(normal);
+
+    float3 HalfAngle = normalize(L + V);
+    float3 H = (dot(HalfAngle, HalfAngle) > 0.0f) ? HalfAngle : N;
+
+    float cosLightIn = max(0.0f, dot(N, L));
+    float cosHalfAngle = max(0.0f, dot(N, H));
+
+    float HV = max(0.0f, dot(H, V));
+    float HL = max(0.0f, dot(H, L));
+    float NV = max(0.0f, dot(N, V));
+    float LN = cosLightIn;
+    float VoH = max(0.0f, dot(V, H));
+
+    float3 F = fresnelSchlick(fresnelReflectance, max(0.0, dot(H, L)));
+    float3 F2 = fresnelSchlick(fresnelReflectance, max(0.0, dot(H, V)));
+    float3 F3 = fresnelSchlick(fresnelReflectance, max(0.0, dot(H, L)));
+
+    /*float3 F = fresnelSchlick(fresnelReflectance, max(0.0, dot(HalfAngle, lightOut)));
+    float3 F2 = fresnelSchlick(fresnelReflectance, max(0.0, dot(normal, lightOut)));
+    float3 F3 = fresnelSchlick(fresnelReflectance, max(0.0, dot(normal, lightIn)));*/
+
+    float D = ndfGGX(cosHalfAngle, roughness);
+    // Calculate geometric attenuation for specular BRDF
+    float G = GaSchlickGGXRemapped(cosLightIn, lightDirectionAngle, roughness);
+    // Diffuse scattering happens due to light being refracted multiple times by a dielectric medium
+    // Metals on the other hand either reflect or absorb energ so diffuse contribution is always, zero
+    // To be energy conserving we must scale diffuse BRDF contribution based on Fresnel factor & metalness
+#if SPECULAR
+    // Metalness is not used if F0 map is available
+    float3 kd = float3(1, 1, 1) - F;
 #else
-		lightAmount *= shadowMult;
+    float3 kd = lerp((float3(1, 1, 1) - F2) * (float3(1, 1, 1) - F3), float3(0, 0, 0), metalness);
 #endif
-	}
+    
+    float3 diffuseBRDF = Diffuse_OrenNayar(kd, roughness, NV, LN, VoH) * g_DiffuseScale;
+    float3 sheenBRDF = SheenBRDF_DreamWorks(N, V, L, albedo, g_SheenStrength, roughness);
+
+    float3 specularBRDF = (F * D * G) / max(EPSILON, 4.0f * LN * lightDirectionAngle);
+    
+    //composite everything
+    float3 finalColor = (diffuseBRDF + specularBRDF * g_SpecularBoost + sheenBRDF) * lightIntensity * LN;
+
+#if LIGHTMAPPED && !FLASHLIGHT
+    return specularBRDF * lightIntensity * LN;
+#else
+
+    //return the computed pbr light with tone mapping and gamma correction
+    return finalColor;
+
+    //old method
+    //return (diffuseBRDF + specularBRDF * g_SpecularBoost + sheenBRDF) * lightIntensity * LN;
+#endif
+}
+
+float3 DoPointLightPBR(const int index, float3 normal,
+    float3 lightPos, float3 lightColor,
+    float lightToWorldDist, float3 worldPos,
+    float metalScalar, float roughness, float ao, float3 albedo)
+{
+    float3 L = normalize(lightPos - worldPos);
+    float3 V = normalize(g_vecViewOrigin.xyz - worldPos);
+    float NdotL = max(0.0f, dot(normal, L));
+    float NdotV = max(0.0f, dot(normal, V));
+
+    // Build F0 from albedo & metalness
+    float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metalScalar);
+
+    // pass correct args: last-but-one is NdotV (lightDirectionAngle), last is albedo
+    float3 directLighting = calculateLight(L, lightColor, V, normal, F0, roughness, metalScalar, ao, NdotV, albedo);
+
+    float radius = g_flMixedData[index].w;
+    float distFade = 1.0f - saturate(lightToWorldDist / radius);
+    distFade *= distFade;
+
+    return directLighting * distFade;
+}
+
+PS_OUTPUT main(const PS_INPUT In)
+{
+    PS_OUTPUT Out = (PS_OUTPUT) 0;
+
+    float2 vecTexcoords;
+    float3 vecWorldRay;
+    float atten;
+#if USEWORLDTRANSFORM
+	vecTexcoords = In.vecProjXYW.xy / In.vecProjXYW.z;
+	vecWorldRay = g_vecFrustumCenter +
+		vecTexcoords.x * g_vecFrustumRight +
+		vecTexcoords.y * g_vecFrustumUp;
+	vecTexcoords = vecTexcoords * float2(0.5f, -0.5f) + 0.5f;
+	vecTexcoords += g_vecHalfScreenTexel;
+#else
+    vecTexcoords = In.vTexCoord;
+    vecWorldRay = In.vecWorldRay;
+#endif
+    float flDepth = tex2D(sDepth, vecTexcoords).x;
+
+#if USEWORLDTRANSFORM
+	clip(min(flDepth - 0.1f, DEPTH_RECONSTRUCTION_LIMIT - flDepth));
+#else
+    clip(min(flDepth - 0.1f, 32256.0f - flDepth));
 #endif
 
-	float4 lighting = float4( lerp( ambient, diffuse * ( litDot ), lightAmount ), flSpecular * lightAmount );
+    float3 worldPos = g_vecViewOrigin + In.vecWorldRay * flDepth;
 
-	Out.vColor_0 = WriteLighting( lighting );
+    float4 flNormalCtrl = tex2D(sNormals, vecTexcoords);
+    float3 flNormal = normalize(flNormalCtrl.xyz * 2.0f - 1.0f);
 
-	return Out;
+    float4 mrao = tex2D(MRAOSampler, vecTexcoords).rgba;
+    
+    float metalness = mrao.r;
+    
+    bool bHasRealMRAO = (mrao.a > 0.5f);
+    float roughness = 0.0;
+    if (bHasRealMRAO)
+    {
+        roughness = mrao.g * 10.0f;
+    }
+    else
+    {
+        roughness = mrao.g * 3.33;
+    }
+    float ao = mrao.b * 2.0f;
+    
+    float3 fresnelReflectance = mrao.rgb;
+
+
+    float3 albedo = float3(0.8f, 0.8f, 0.8f); 
+    float3 vLightDir = g_vecLightVec_Forward;
+    float3 vEye = g_vecViewOrigin;
+    float lightRadius = 1000.0f; 
+
+    float3 lightPos = worldPos + vLightDir * lightRadius;
+    float3 radiance = g_light_diffuse;
+
+    float shadowMult = 1.0f;
+#if HAS_SHADOW
+    if (flDepth < DEPTH_RECONSTRUCTION_LIMIT)
+    {
+        shadowMult = PerformCascadedShadow(
+            sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
+            g_vecFilterConfig_A, g_vecFilterConfig_B, flNormal, dot(vLightDir, flNormal)
+        );
+    }
+#endif
+       
+    //float3 pbrLight = DoPBRLight(worldPos, flNormal, albedo, lightPos,
+    //                         radiance, vEye, lightRadius,
+    //                         metalness.xxx, roughness.xxx);
+    
+    float3 outgoingLightDirection = normalize(g_vecViewOrigin.xyz - worldPos); // Lo
+    float lightDirectionAngle = max(0, dot(flNormal, outgoingLightDirection)); // cosLo
+
+    float3 LightIn = g_vecLightVec_Forward;
+    float3 LightColor = float3(1.0, 1.0, 1.0);
+	
+    float viewFwdDot = dot(g_vecLightVec_Forward.xyz, flNormal);
+    
+    float litDot = lerp(viewFwdDot, viewFwdDot * 0.5f + 0.5f, 0.0f);
+    float lightAmount = saturate(litDot);
+    
+    float3 F0 = lerp(0.04f.xxx, albedo, metalness);
+    float3 directLighting = calculateLight(LightIn, LightColor, outgoingLightDirection,
+                    flNormal, F0, roughness, metalness, ao, lightDirectionAngle, albedo);
+
+    //float viewFwdDot = dot(g_vecLightVec_Forward, flNormal);
+    //viewFwdDot = saturate(viewFwdDot);
+    
+    float3 ambient = lerp(g_light_ambient_low_half, g_light_ambient_high, viewFwdDot);
+    float3 finalColor = directLighting * shadowMult;
+    
+    float3 ambientLight = lerp(ambient * shadowMult, radiance * litDot, lightAmount);
+    float3 combinedLighting = (finalColor + ambientLight);
+    Out.vColor_0 = float4(combinedLighting, 1.0f);
+    
+    return Out;
 }

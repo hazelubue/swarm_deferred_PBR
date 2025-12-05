@@ -25,6 +25,7 @@
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
+#include <viewpostprocess.h>
 
 
 //-----------------------------------------------------------------------------
@@ -1144,6 +1145,57 @@ IMaterial *CBloomAddMaterialProxy::GetMaterial()
 
 EXPOSE_MATERIAL_PROXY( CBloomAddMaterialProxy, BloomAdd );
 
+//void CSSGI::Init(void)
+//{
+//	m_bEnabled = true;
+//
+//	PrecacheMaterial("shaders/ssgi");
+//
+//
+//	m_SSGI.Init("_rt_SSGI", TEXTURE_GROUP_RENDER_TARGET);
+//	//m_SSAOY.Init("_rt_SSAOFBY", TEXTURE_GROUP_RENDER_TARGET);
+//	
+//	//m_Normal.Init("_rt_defnormals", TEXTURE_GROUP_RENDER_TARGET);
+//	//m_SSGI.InitRenderTarget(ScreenWidth() / 2, ScreenHeight() / 2, RT_SIZE_DEFAULT, IMAGE_FORMAT_RGBA8888, MATERIAL_RT_DEPTH_SHARED, false, "_rt_SSAOFB");
+//
+//	//m_SSAO_BilateralX.Init(materials->FindMaterial("shaders/ssao_bilateralx", TEXTURE_GROUP_PIXEL_SHADERS, true));
+//	//m_SSAO_BilateralY.Init(materials->FindMaterial("shaders/ssao_bilateraly", TEXTURE_GROUP_PIXEL_SHADERS, true));
+//	m_SSGI_Mat.Init(materials->FindMaterial("shaders/ssgi", TEXTURE_GROUP_PIXEL_SHADERS, true));
+//	//m_SSGI_Combine.Init(materials->FindMaterial("shaders/ssgi_combine", TEXTURE_GROUP_PIXEL_SHADERS, true));
+//}
+//
+//void CSSGI::Shutdown(void)
+//{
+//	m_SSGI.Shutdown();
+//}
+//
+//ConVar r_post_ssgi("r_post_ssgi", "0", FCVAR_ARCHIVE);
+//void CSSGI::Render(int x, int y, int w, int h)
+//{
+//	VPROF("CFXAA::Render");
+//
+//	IMaterialVar* var;
+//	CMatRenderContextPtr pRenderContext(materials);
+//
+//	UpdateScreenEffectTexture(0, x, y, w, h, false);
+//	pRenderContext->PushRenderTargetAndViewport(m_SSGI);
+//	DrawScreenEffectMaterial(m_SSGI_Mat, m_SSGI->GetActualWidth(), m_SSGI->GetActualHeight(),0,0);
+//	pRenderContext->PopRenderTargetAndViewport();
+//
+//	// Pass 1: Extract Luma
+//	DrawScreenEffectMaterial(m_SSGI_Mat, x, y, w, h);
+//
+//	pRenderContext.SafeRelease();
+//}
+//
+//
+//void RenderPostSSGI(int x, int y, int w, int h)
+//{
+//	g_SSGI.Render(x, y, w, h);
+//}
+
+
+
 //=====================================================================================================================
 // Engine_Post material proxy ============================================================================================
 //=====================================================================================================================
@@ -1751,6 +1803,11 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	{
 		DrawBloomDebugBoxes( pRenderContext, x, y, w, h );
 	}
+
+	/*if (r_post_ssgi.GetBool())
+	{
+		RenderPostSSGI(x, y, w, h);
+	}*/
 
 	s_bScreenEffectTextureIsUpdated = false; // Force an update in tone mapping code
 	DoTonemapping( pRenderContext, x, y, w, h, flAutoExposureMin, flAutoExposureMax );
