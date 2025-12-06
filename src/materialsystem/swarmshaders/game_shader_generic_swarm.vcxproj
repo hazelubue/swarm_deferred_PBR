@@ -133,11 +133,12 @@
     <CustomBuildStep>
       <Message>
       </Message>
-      <Command>if exist "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll" attrib -r "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll"
-copy "$(TargetDir)"$(ProjectName).dll "$(appsDir)\Sourcemods\$(modName)\bin"
-if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).map"</Command>
-      <Outputs>$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll;$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).map;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath) $(appsDir) $(modName) $(ProjectName)</Inputs>
+      <Command>
+      </Command>
+      <Outputs>
+      </Outputs>
+      <Inputs>
+      </Inputs>
     </CustomBuildStep>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -308,6 +309,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <None Include="volume_prepass_vs30.fxc" />
     <None Include="volumpass_point_ps30.fxc" />
     <None Include="volumpass_spot_ps30.fxc" />
+    <None Include="water_deferred_ps30.fxc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

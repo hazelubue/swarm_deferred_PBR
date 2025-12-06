@@ -298,5 +298,8 @@
     <None Include="gbuffer_translucent_ps30.fxc">
       <Filter>Shader Source\fxc</Filter>
     </None>
+    <None Include="water_deferred_ps30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
   </ItemGroup>
 </Project>

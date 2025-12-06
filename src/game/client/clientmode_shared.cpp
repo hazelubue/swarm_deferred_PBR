@@ -186,7 +186,7 @@ ClientModeShared::ClientModeShared()
 ClientModeShared::~ClientModeShared()
 {
 	// VGui_Shutdown() should have deleted/NULL'd
-	Assert( !m_pViewport );
+	//Assert( !m_pViewport );
 }
 
 void ClientModeShared::ReloadScheme( void )

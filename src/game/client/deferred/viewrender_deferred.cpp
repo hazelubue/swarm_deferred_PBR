@@ -2509,6 +2509,16 @@ void CGBufferView::Draw()
 #endif
 }
 
+void CGBufferViewWater::PushView(float waterHeight)
+{
+	PushGBufferWater(!m_bDrewSkybox);
+}
+
+void CGBufferViewWater::PopView()
+{
+	PopGBufferWater();
+}
+
 void CGBufferView::PushView( float waterHeight )
 {
 	PushGBuffer( !m_bDrewSkybox );
@@ -2625,15 +2635,7 @@ void CGBufferViewWater::Draw()
 //#endif
 //}
 
-void CGBufferViewWater::PushView(float waterHeight)
-{
-	PushGBufferWater(!m_bDrewSkybox);
-}
 
-void CGBufferViewWater::PopView()
-{
-	PopGBufferWater();
-}
 
 //void CGBufferViewTranslucent::PushView(float waterHeight)
 //{

@@ -87,9 +87,13 @@ const float4 g_WaterFogParams : register(c37);
 
 const float g_flTime : register(c38);
 
+const float g_NoiseScaleTransparency : register(c39);
+
 
 float NormalToHeight(float3 normalSample)
 {
+    // Check if the normal map is in [0,1] or [-1,1] range
+    // If the normal map is in [0,1] range, remap to [-1,1]
     float3 n;
     if (any(normalSample > 1.0))
     {
@@ -103,7 +107,9 @@ float NormalToHeight(float3 normalSample)
     }
     
     // Use the Z component (blue channel) to derive height
-
+    // Flat surfaces (normal pointing up) will have high Z values
+    // Steep surfaces will have lower Z values
+    // Add more contrast to make height differences more noticeable
     float height = pow(saturate(n.z * 0.5 + 0.5), 2.0);
     
     float heightNormalized = abs(height);
@@ -175,34 +181,45 @@ float GenerateRoughness(in float3 normal, in float4 albedo)
 
 float4 GenerateSpecular(in float3 normal, in float3 albedo, in float2 texCoord)
 {
+    // Use texCoord derivatives to detect texture detail/tiling
     float2 texCoordDx = texCoord.x;
     float2 texCoordDy = texCoord.y;
     float texelDensity = length(texCoordDx) + length(texCoordDy);
     
+    // Use texCoord for positional variation
     float coordNoise = frac(sin(dot(texCoord, float2(12.9898, 78.233))) * 43758.5453);
     
+    // Calculate variation across ALL 4 channels (RGBA)
     float maxChannel = max(max(albedo.r, albedo.g), max(albedo.b, 1.0));
     float minChannel = min(min(albedo.r, albedo.g), min(albedo.b, 1.0));
     float variation = (maxChannel - minChannel) / (maxChannel + 0.001);
     
+    // Reduce the multiplier and smoothstep range for smoother transitions
     float normalVariation = length(normal.x) + length(normal.y) * 8.0;
     float roughness = smoothstep(0.0, 1.0, normalVariation * 0.4);
     
     float brightnessRoughness = 1.0 - smoothstep(0.2, 1.0, variation);
     
-    float saturation = variation;
-    float desaturationBoost = smoothstep(0.3, 0.05, saturation) * 0.3;
+    float saturation = variation; // Reuse the variation as saturation measure
+    float desaturationBoost = smoothstep(0.3, 0.05, saturation) * 0.3; // 0.3 extra roughness for greys
   
+    // Add texel density influence - higher density = more roughness variation
     float texelRoughness = texelDensity * coordNoise * 0.15;
     roughness = roughness * 0.4 + brightnessRoughness * 0.5 + desaturationBoost + texelRoughness;
   
     roughness = max(roughness, 0.02);
 
+    // Metallic calculation (saturation already calculated above, don't redeclare)
     float metallicFromSat = smoothstep(0.3, 0.7, saturation);
-
+  
+    // Normal variation: smooth surfaces = metallic
+    // Use screen-space derivatives to detect surface smoothness
     float smoothnessBoost = 1.0 - smoothstep(0.0, 0.3, normalVariation);
+    
+    // Use texel density to modulate metallic - fine textures are less metallic
     float texelMetallicMod = 1.0 - smoothstep(0.0, 2.0, texelDensity * 100.0) * 0.4;
   
+    // Combine: saturation weighted higher, smoothness as modifier
     float metallic = clamp(metallicFromSat * (0.7 + smoothnessBoost * 0.3) * texelMetallicMod, 0.0, 1.0);
     
     return float4(metallic, roughness, 0.0, 1.0);
@@ -330,10 +347,28 @@ float3 ComputeNormalFromRGTexture(float2 vRGPixel)
     return vNormalTs.xyz;
 }
 
+float BlueNoiseGbuffer1(float2 screenPos)
+{
+    float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
+    return frac(magic.z * frac(dot(screenPos, magic.xy)));
+}
+
+static const float gauss6[8] =
+{
+    0.064702,
+	0.190834,
+	0.414465,
+	0.014465,
+	0.150834,
+	0.081237,
+    0.120834,
+	0.084702,
+};
+
 // Input structure
 struct PS_INPUT
 {
-    float4 vProjPos : POSITION;
+    float4 vProjPos : VPOS;
 #if BLENDMODULATE
     float4 vTexCoord : TEXCOORD0; // xy = base, zw = second layer
 #else
@@ -382,6 +417,7 @@ PS_OUTPUT main(const PS_INPUT In)
 
     float4 vNormalWs;
     float4 vFlowColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 vFlowTexel = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
 #if FLOWMAP
 		float flWorldUvScale				= g_flWorldUvScale;
@@ -400,7 +436,7 @@ PS_OUTPUT main(const PS_INPUT In)
 		float flNoise = tex2D( FlowNoiseSampler, float2( In.worldPos.x, -In.worldPos.y ) * flNoiseScale ).g;
 
 		// Flow texel has a 2D flow vector in the rg channels of the texture
-		float4 vFlowTexel = tex2D( FlowmapSampler, vWorldUv.xy );
+		vFlowTexel = tex2D( FlowmapSampler, vWorldUv.xy );
 #if FLOW_DEBUG == 1 // Flow vectors
 
 			vResult.rgba = float4( pow( vFlowTexel.rgb, 2.2f ), 0 );
@@ -614,7 +650,74 @@ PS_OUTPUT main(const PS_INPUT In)
     
     float3 CompositeGenerated = float3(metallic, roughness, 0.0f);
     
-    float alpha = flAlbedoSample.a;
+    //float alpha = flAlbedoSample.a;
+    
+    float depthValue = In.worldNormal_Depth.w;
+    float transparency = 1.0 - flAlbedoSample.a; // Invert alpha for transparency
+    float alpha = vFlowTexel * depthValue;
+
+    float2x2 bayerMatrix2x2 =
+    {
+        0.0 / 4.0, 2.0 / 4.0,
+    3.0 / 4.0, 1.0 / 4.0
+    };
+
+    // Old works amazing, this is what we want. it just doesnt affect opaque surfaces
+    // nicely, and we want both.
+    
+    int2 pos = int2(In.vProjPos.xy) % 4;
+        
+    //loop over guassian, here we will attempt to create a guassian blur
+    //I thiik we need a UV for blurring.
+    //float noise = 0.0f;
+    //for (int x = 0; x < 4; x++)
+    //{
+    //    int2 samplePos = (pos + int2(x, 0)) % 4;
+    //    noise += BlueNoiseGbuffer1(samplePos) * gauss4_1d[x];
+    //}
+    
+    float col = 0;
+    float noise = 0;
+    
+    float2 screenPos = In.vProjPos.xy;
+
+    for (int i = 0; i < 8; i++)
+    {
+        float offset = (i - 2.5) * 32.0;
+        int2 samplePos = pos + int2(offset, 0); // Sample noise at offset positions
+        noise += BlueNoiseGbuffer1(samplePos) * gauss6[i];
+    }
+    //float noise = BlueNoiseGbuffer1(pos);
+   
+    float ditherThreshold = g_NoiseScaleTransparency;
+
+    if (noise < ditherThreshold)
+        clip(alpha - 0.85);
+    
+    //Experimenting to find opaque and transparent middle ground. GOES HERE.
+
+    //bayer matrix looked good but lacked studio visual fidelity.
+    //int2 pos = int2(In.vProjPos.xy) % 4;
+    //float ditherThreshold = bayerMatrix2x2[pos.y][pos.x];
+    
+    //if (alpha < ditherThreshold)
+    //    clip(alpha - 0.50);    
+    
+    // this works great as fuck!
+    //float2 screenPos = In.vProjPos.xy;
+    //float ditherValue = frac(sin(dot(screenPos, float2(12.9898, 78.233))) * 43758.5453);
+    //float ditherThreshold = 0.5; // This controls the 50% coverage
+    //if (ditherValue < ditherThreshold)
+    //    clip(alpha - 0.50);
+    
+    Out.vColor_Normal = float4(worldNormal, alpha);
+    Out.vColor_Cubemap = float4(alpha, alpha, alpha, alpha);
+    Out.vColor_Depth = float4(depthValue /*In.worldNormal_Depth.w*/, 0, 0, alpha);
+#if DEDICATEDMRAO
+    Out.vColor_LightCtrl = float4(mrao.rgb, alpha); 
+#else
+    Out.vColor_LightCtrl = float4(CompositeGenerated.rgb, 0.0f);
+#endif
     
 //#if SPECULAR
 //        float3 specular = tex2D(sSpecular, correctedTexCoord).rgb;
@@ -622,15 +725,15 @@ PS_OUTPUT main(const PS_INPUT In)
 //    float3 specular = lerp(0.0, flAlbedoSample.rgb, mrao.x);
 //#endif
 
-    Out.vColor_Normal = float4(worldNormal, 1.0f);
-    Out.vColor_Cubemap = float4(flAlbedoSample.rgba);
-    //Out.vColor_Alpha = float4(0, 0, 0, alpha);
-    Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, 1);
-#if DEDICATEDMRAO
-    Out.vColor_LightCtrl = float4(mrao.rgb, 1.0f); 
-#else
-    Out.vColor_LightCtrl = float4(CompositeGenerated.rgb, 0.0f);
-#endif
+//    Out.vColor_Normal = float4(worldNormal, 1.0f);
+//    Out.vColor_Cubemap = float4(flAlbedoSample.rgba);
+//    //Out.vColor_Alpha = float4(0, 0, 0, alpha);
+//    Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, 1);
+//#if DEDICATEDMRAO
+//    Out.vColor_LightCtrl = float4(mrao.rgb, 1.0f); 
+//#else
+//    Out.vColor_LightCtrl = float4(CompositeGenerated.rgb, 0.0f);
+//#endif
     
 //#if TRANSLUCENT
 //    clip(alpha - g_flAlphaRef);
