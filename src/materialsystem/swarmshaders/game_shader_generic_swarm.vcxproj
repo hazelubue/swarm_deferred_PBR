@@ -235,6 +235,7 @@
     <ClInclude Include="commandbuilder.h" />
     <ClInclude Include="common_deferred_fxc.h" />
     <ClInclude Include="common_fxc.h" />
+    <ClInclude Include="common_glass_pbr.h" />
     <ClInclude Include="common_hlsl_cpp_consts.h" />
     <ClInclude Include="common_lighting_fxc.h" />
     <ClInclude Include="common_pragmas.h" />
@@ -287,6 +288,7 @@
     <None Include="..\..\devtools\bin\valve_perl_helpers.pl" />
     <None Include="..\..\devtools\bin\vsh_prep.pl" />
     <None Include="composite_ps30.fxc" />
+    <None Include="composite_translucent_ps30.fxc" />
     <None Include="composite_vs30.fxc" />
     <None Include="debug_lighting_ctrl_ps30.fxc" />
     <None Include="debug_shadow_ortho_ps30.fxc" />

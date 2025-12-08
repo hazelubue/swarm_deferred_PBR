@@ -6,6 +6,14 @@
 class CViewSetup;
 class CDeferredViewRender;
 
+//struct ForwardLightData
+//{
+//	float position[4];      // xyz = position, w = radius
+//	float color[4];         // xyz = color, w = intensity  
+//	float direction[4];     // xyz = direction, w = type (0=point, 1=spot, 2=directional)
+//	float attenuation[4];   // x = constant, y = linear, z = quadratic, w = spotCutoff
+//};
+
 class CLightingManager : public CAutoGameSystemPerFrame
 {
 	typedef CAutoGameSystemPerFrame BaseClass;
@@ -60,7 +68,17 @@ public:
 	void DebugLights_Draw_DebugMeshes();
 #endif
 
+	void CollectForwardLights();
+	void CommitForwardLightsToExtension();
+	int GetNumForwardLights() const { return m_vecForwardLights.Count(); }
+	const ForwardLightData* GetForwardLightData(int index) const;
+
+	const CUtlVector<def_light_t*>& GetRenderLights() const { return m_hRenderLights; }
 private:
+
+	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<float> m_vecForwardLightBuffer;
+	bool m_bForwardLightsDirty;
 
 	bool m_bDrawWorldLights;
 

@@ -9,6 +9,13 @@
 #include "deferred_global_common.h"
 #endif
 
+struct ForwardLightData
+{
+	float position[4];      // xyz = position, w = radius
+	float color[4];         // xyz = color, w = intensity  
+	float direction[4];     // xyz = direction, w = type (0=point, 1=spot, 2=directional)
+	float attenuation[4];   // x = constant, y = linear, z = quadratic, w = spotCutoff
+};
 
 struct lightData_Global_t
 {
@@ -106,6 +113,25 @@ public:
 	virtual void CommitTexture_ProjectedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
 	virtual void CommitTexture_Cookie( const int &index, ITexture *pTexCookie ) = 0;
 	virtual void CommitTexture_VolumePrePass( ITexture *pTexVolumePrePass ) = 0;
+
+	virtual void ClearForwardLights() = 0;
+	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
+		float intensity, int type = 0, const Vector& dir = vec3_origin,
+		float constantAtt = 1.0f, float linearAtt = 0.0f,
+		float quadraticAtt = 0.0f, float spotCutoff = 45.0f) = 0;
+
+	virtual float* GetForwardLightData() = 0;
+
+	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights) = 0;
+	virtual int GetForwardLights_NumRows() = 0;
+	virtual int GetNumActiveForwardLights() = 0;
+
+private:
+	
+
+	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<float> m_vecForwardLightBuffer;
+	bool m_bForwardLightsDirty;
 };
 
 #define DEFERRED_EXTENSION_VERSION "DeferredExtensionVersion001"
@@ -182,7 +208,25 @@ public:
 	inline ITexture *GetTexture_Cookie( const int &index );
 	inline ITexture *GetTexture_VolumePrePass();
 
+	virtual void ClearForwardLights();
+	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
+		float intensity, int type = 0, const Vector& dir = vec3_origin,
+		float constantAtt = 1.0f, float linearAtt = 0.0f,
+		float quadraticAtt = 0.0f, float spotCutoff = 45.0f);
+
+	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights);
+
+	virtual float* GetForwardLightData();
+	virtual int GetForwardLights_NumRows();
+	virtual int GetNumActiveForwardLights();
+
 private:
+
+	
+	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<float> m_vecForwardLightBuffer;
+	bool m_bForwardLightsDirty;
+
 	bool m_bDefLightingEnabled;
 
 	Vector4D m_vecOrigin;

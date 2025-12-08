@@ -3,12 +3,16 @@
 
 #include "include/composite_vs30.inc"
 #include "include/composite_ps30.inc"
+#include "include/composite_translucent_ps30.inc"
 
 #include "tier0/memdbgon.h"
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
 extern ConVar building_cubemaps;
+extern ConVar cl_light_specular_point_boost;
+extern ConVar cl_light_diffuse_strength_point;
+extern ConVar cl_light_Sheen_strength;
 
 void InitParmsComposite_translucent(const defParms_composite_translucent& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
@@ -37,9 +41,32 @@ void InitParmsComposite_translucent(const defParms_composite_translucent& info, 
 
 void InitPassComposite_translucent(const defParms_composite_translucent& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
+	//this boolean is for testing purposes.
+	const bool bDedicated = false;
+
 	if (PARM_DEFINED(info.iAlbedo))
 		pShader->LoadTexture(info.iAlbedo);
 
+	/*if (PARM_DEFINED(info.SelfShadowedBumpFlag))
+		params[info.SelfShadowedBumpFlag]->SetIntValue(1);*/
+
+	if (bDedicated)
+	{
+		if (PARM_DEFINED(info.MRAOTEXTURE))
+			pShader->LoadTexture(info.MRAOTEXTURE);
+
+		if (PARM_DEFINED(info.BUMPMAP))
+			pShader->LoadBumpMap(info.BUMPMAP);
+	}
+	else
+	{
+		if (PARM_DEFINED(info.BUMPMAP))
+			params[info.BUMPMAP]->SetStringValue("dev/graygrid");
+
+		if (PARM_DEFINED(info.MRAOTEXTURE))
+			params[info.MRAOTEXTURE]->SetStringValue("dev/dev_perfectgloss");
+	}
+	
 	if (PARM_DEFINED(info.iEnvmap))
 		pShader->LoadCubeMap(info.iEnvmap);
 
@@ -76,6 +103,8 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 	const bool bFastVTex = g_pHardwareConfig->HasFastVertexTextures();
 
+	
+
 	const bool bAlbedo = PARM_TEX(info.iAlbedo);
 	const bool bAlbedo2 = !bModel && bAlbedo && PARM_TEX(info.iAlbedo2);
 	const bool bAlbedo3 = !bModel && bAlbedo && PARM_TEX(info.iAlbedo3);
@@ -111,7 +140,11 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 	const bool bGBufferNormal = bEnvmap || bRimLight || bNeedsFresnel;
 	const bool bWorldEyeVec = bGBufferNormal;
 
-	//const bool bMRAO = PARM_SET(info.MRAOTEXTURE);
+	//const bool bHasNormalTexture = params[info.BUMPMAP]->IsTexture();
+	//bool hasSSBump = bGBufferNormal && params[info.SelfShadowedBumpFlag]->GetIntValue() && (params[info.SelfShadowedBumpFlag]->GetIntValue());
+	const bool bMRAO = PARM_SET(info.MRAOTEXTURE);
+
+	//const bool bForward = PARM_SET(info.bForward);
 
 
 	AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
@@ -159,16 +192,18 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		pShaderShadow->EnableTexture(SHADER_SAMPLER0, true);
 		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER0, bUseSRGB);
 
-		if (bGBufferNormal)
-		{
+		/*if (bGBufferNormal)
+		{*/
 			pShaderShadow->EnableTexture(SHADER_SAMPLER1, true);
 			pShaderShadow->EnableSRGBRead(SHADER_SAMPLER1, false);
-		}
+		//}
 
 		if (bTranslucent)
 		{
 			pShader->EnableAlphaBlending(SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA);
 		}
+
+		//pShaderShadow->DepthFunc(SHADER_DEPTHFUNC_NEARER);
 
 		pShaderShadow->EnableTexture(SHADER_SAMPLER2, true);
 		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER2, false);
@@ -239,7 +274,9 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		SET_STATIC_VERTEX_SHADER_COMBO(MULTIBLEND, bMultiBlend);
 		SET_STATIC_VERTEX_SHADER(composite_vs30);
 
-		DECLARE_STATIC_PIXEL_SHADER(composite_ps30);
+		//int bumpmap_variant = (hasSSBump) ? 2 : bGBufferNormal;
+
+		DECLARE_STATIC_PIXEL_SHADER(composite_translucent_ps30);
 		SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
 		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
 		SET_STATIC_PIXEL_SHADER_COMBO(READNORMAL, bGBufferNormal);
@@ -247,7 +284,7 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		SET_STATIC_PIXEL_SHADER_COMBO(ENVMAP, bEnvmap);
 		SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPMASK, bEnvmapMask);
 		SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPFRESNEL, bEnvmapFresnel);
-		SET_STATIC_PIXEL_SHADER_COMBO(PHONGFRESNEL, bPhongFresnel);
+		//SET_STATIC_PIXEL_SHADER_COMBO(PHONGFRESNEL, bPhongFresnel);
 		SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHT, bRimLight);
 		SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHTMODULATELIGHT, bRimLightModLight);
 		SET_STATIC_PIXEL_SHADER_COMBO(BASETEXTURE2, bAlbedo2 && !bMultiBlend);
@@ -256,7 +293,8 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM, bSelfIllum);
 		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_MASK, bSelfIllumMask);
 		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_ENVMAP_ALPHA, bSelfIllumMaskInEnvmapMask);
-		SET_STATIC_PIXEL_SHADER(composite_ps30);
+		//SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bGBufferNormal);
+		SET_STATIC_PIXEL_SHADER(composite_translucent_ps30);
 	}
 		DYNAMIC_STATE
 	{
@@ -364,10 +402,19 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 				tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iSelfIllumMask);
 			}
 
-			/*if (bMRAO)
+			if (bMRAO)
 			{
 				tmpBuf.BindTexture(pShader, SHADER_SAMPLER11, info.MRAOTEXTURE);
+			}
+			/*if (bHasNormalTexture)
+			{
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER1, info.BUMPMAP);
+
 			}*/
+			
+			//pShader->BindTexture(SHADER_SAMPLER2, GetDeferredExt()->GetTexture_LightAccum());
+			//pShader->BindTexture(SHADER_SAMPLER11, info.MRAOTEXTURE);
+
 
 			int x, y, w, t;
 			pShaderAPI->GetCurrentViewport(x, y, w, t);
@@ -396,9 +443,21 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		SET_DYNAMIC_VERTEX_SHADER_COMBO(MORPHING, (bModel && pShaderAPI->IsHWMorphingEnabled()) ? 1 : 0);
 		SET_DYNAMIC_VERTEX_SHADER(composite_vs30);
 
-		DECLARE_DYNAMIC_PIXEL_SHADER(composite_ps30);
+		/*DECLARE_DYNAMIC_PIXEL_SHADER(composite_ps30);
 		SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-		SET_DYNAMIC_PIXEL_SHADER(composite_ps30);
+		SET_DYNAMIC_PIXEL_SHADER(composite_ps30);*/
+
+		CDeferredExtension* pExt = GetDeferredExt();
+		int numForwardLights = pExt->GetNumActiveForwardLights();
+		//int shaderNumForwardLights = (numForwardLights > 0) ? 1 : 0;
+
+		//const bool bLightingEnabled = true;
+
+		DECLARE_DYNAMIC_PIXEL_SHADER(composite_translucent_ps30);
+		SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+		//SET_DYNAMIC_PIXEL_SHADER_COMBO(FORWARD_LIGHTING_ENABLED, bLightingEnabled);
+		//SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_FORWARD_LIGHTS, 0);
+		SET_DYNAMIC_PIXEL_SHADER(composite_translucent_ps30);
 
 		if (bModel && bFastVTex)
 		{
@@ -406,15 +465,34 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			pShaderAPI->MarkUnusedVertexFields(0, 3, bUnusedTexCoords);
 		}
 
+		pShader->BindTexture(SHADER_SAMPLER1, GetDeferredExt()->GetTexture_Normals());
+
 		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE));
 
-		if (bGBufferNormal)
-			pShader->BindTexture(SHADER_SAMPLER1, GetDeferredExt()->GetTexture_Normals());
-
-		pShader->BindTexture(SHADER_SAMPLER2, GetDeferredExt()->GetTexture_LightAccum());
-		pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_LightCtrl());
-
 		CommitBaseDeferredConstants_Origin(pShaderAPI, 3);
+		
+		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(49, forwardLightCount);
+
+		if (numForwardLights > 0)
+		{
+			float* pLightData = pExt->GetForwardLightData();
+			if (pLightData)
+			{
+				pShaderAPI->SetPixelShaderConstant(50,
+					pLightData,
+					pExt->GetForwardLights_NumRows());
+			}
+		}
+		
+		float LightPointBoost[4] = { cl_light_specular_point_boost.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(16, LightPointBoost);
+
+		float lightDiffuseStrengthPoint[4] = { cl_light_diffuse_strength_point.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(21, lightDiffuseStrengthPoint);
+
+		float lightSheenStrength[4] = { cl_light_Sheen_strength.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(23, lightSheenStrength);
 
 		if (bWorldEyeVec)
 		{

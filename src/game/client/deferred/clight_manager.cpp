@@ -1016,3 +1016,94 @@ void CLightingManager::DebugLights_Draw_DebugMeshes()
 	pRenderContext->PopMatrix();
 }
 #endif
+
+void CLightingManager::CollectForwardLights()
+{
+	m_vecForwardLights.RemoveAll();
+	m_bForwardLightsDirty = true;
+
+	DebugMsg("Stage: CollectForwardLights - Starting collection\n");
+
+	// Collect from rendered lights
+	DebugMsg("  Rendering %d lights, collecting forward lights...\n", m_hRenderLights.Count());
+
+	FOR_EACH_VEC_FAST(def_light_t*, m_hRenderLights, l)
+	{
+		// Only collect lights that should affect translucent materials
+		if (l->flDistance_ViewOrigin > l->flRadius * 2.0f) // Limit to nearby lights
+			continue;
+
+		ForwardLightData lightData;
+
+		// Position and radius
+		lightData.position[0] = l->pos.x;
+		lightData.position[1] = l->pos.y;
+		lightData.position[2] = l->pos.z;
+		lightData.position[3] = l->flRadius;
+
+		// Color and intensity
+		float flLightstyle = DoLightStyle(l);
+		float flMasterFade = flLightstyle * (1.0f - SATURATE((l->flDistance_ViewOrigin - l->iVisible_Dist) / l->iVisible_Range));
+
+		lightData.color[0] = l->col_diffuse.x * flMasterFade;
+		lightData.color[1] = l->col_diffuse.y * flMasterFade;
+		lightData.color[2] = l->col_diffuse.z * flMasterFade;
+		lightData.color[3] = 1.0f; // Intensity multiplier
+
+		// Direction and type
+		if (l->IsSpot())
+		{
+			lightData.direction[0] = l->backDir.x;
+			lightData.direction[1] = l->backDir.y;
+			lightData.direction[2] = l->backDir.z;
+			lightData.direction[3] = 1.0f; // Spot light
+		}
+		else
+		{
+			lightData.direction[0] = 0;
+			lightData.direction[1] = 0;
+			lightData.direction[2] = 0;
+			lightData.direction[3] = 0.0f; // Point light
+		}
+
+		// Attenuation
+		lightData.attenuation[0] = 1.0f; // Constant
+		lightData.attenuation[1] = 1.0f / l->flRadius; // Linear
+		lightData.attenuation[2] = 1.0f / (l->flRadius * l->flRadius); // Quadratic
+		lightData.attenuation[3] = l->IsSpot() ? l->flSpotCone_Outer : 180.0f; // Spot cutoff
+
+		m_vecForwardLights.AddToTail(lightData);
+
+		DebugMsg("  Added forward light %d: Pos(%.1f,%.1f,%.1f) R=%.1f Type=%d\n",
+			m_vecForwardLights.Count() - 1,
+			l->pos.x, l->pos.y, l->pos.z,
+			l->flRadius,
+			l->IsSpot() ? 1 : 0);
+	}
+	FOR_EACH_VEC_FAST_END
+
+		DebugMsg("Stage: CollectForwardLights - Collected %d forward lights\n", m_vecForwardLights.Count());
+}
+
+const ForwardLightData* CLightingManager::GetForwardLightData(int index) const
+{
+	if (index < 0 || index >= m_vecForwardLights.Count())
+		return NULL;
+	return &m_vecForwardLights[index];
+}
+
+void CLightingManager::CommitForwardLightsToExtension()
+{
+	if (m_vecForwardLights.Count() > 0)
+	{
+		GetDeferredExt()->CommitForwardLightData(
+			m_vecForwardLights.Base(),
+			m_vecForwardLights.Count()
+		);
+	}
+	else
+	{
+		// Clear forward lights if none available
+		GetDeferredExt()->CommitForwardLightData(NULL, 0);
+	}
+}

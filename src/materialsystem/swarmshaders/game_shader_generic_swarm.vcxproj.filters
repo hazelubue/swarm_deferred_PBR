@@ -188,6 +188,9 @@
     <ClInclude Include="defpass_composite_translucent.h">
       <Filter>Source Files\scene</Filter>
     </ClInclude>
+    <ClInclude Include="common_glass_pbr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\dx9sdk\lib\d3dx9.lib">
@@ -299,6 +302,9 @@
       <Filter>Shader Source\fxc</Filter>
     </None>
     <None Include="water_deferred_ps30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
+    <None Include="composite_translucent_ps30.fxc">
       <Filter>Shader Source\fxc</Filter>
     </None>
   </ItemGroup>

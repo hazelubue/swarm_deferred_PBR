@@ -62,8 +62,12 @@ struct defParms_composite_translucent
 	int iMultiblend;
 
 	int iFresnelRanges;
+	int iFramebuffer;
 
+
+	int iRefraction;
 	// config
+	bool bForward;
 	bool bModel;
 };
 

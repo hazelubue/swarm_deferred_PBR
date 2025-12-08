@@ -133,11 +133,12 @@
     <CustomBuildStep>
       <Message>
       </Message>
-      <Command>if exist "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll" attrib -r "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll"
-copy "$(TargetDir)"$(ProjectName).dll "$(appsDir)\Sourcemods\$(modName)\bin"
-if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).map"</Command>
-      <Outputs>$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll;$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).map;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath) $(appsDir) $(modName) $(ProjectName)</Inputs>
+      <Command>
+      </Command>
+      <Outputs>
+      </Outputs>
+      <Inputs>
+      </Inputs>
     </CustomBuildStep>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -234,6 +235,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <ClInclude Include="commandbuilder.h" />
     <ClInclude Include="common_deferred_fxc.h" />
     <ClInclude Include="common_fxc.h" />
+    <ClInclude Include="common_glass_pbr.h" />
     <ClInclude Include="common_hlsl_cpp_consts.h" />
     <ClInclude Include="common_lighting_fxc.h" />
     <ClInclude Include="common_pragmas.h" />
@@ -286,6 +288,7 @@ if exist "$(TargetDir)"$(ProjectName).map copy "$(TargetDir)"$(ProjectName).map 
     <None Include="..\..\devtools\bin\valve_perl_helpers.pl" />
     <None Include="..\..\devtools\bin\vsh_prep.pl" />
     <None Include="composite_ps30.fxc" />
+    <None Include="composite_translucent_ps30.fxc" />
     <None Include="composite_vs30.fxc" />
     <None Include="debug_lighting_ctrl_ps30.fxc" />
     <None Include="debug_shadow_ortho_ps30.fxc" />

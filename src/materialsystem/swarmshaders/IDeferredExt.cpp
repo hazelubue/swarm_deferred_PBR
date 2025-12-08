@@ -147,3 +147,91 @@ void CDeferredExtension::CommitTexture_VolumePrePass( ITexture *pTexVolumePrePas
 {
 	m_pTexVolumePrePass = pTexVolumePrePass;
 }
+void CDeferredExtension::ClearForwardLights()
+{
+    m_vecForwardLights.RemoveAll();
+    m_vecForwardLightBuffer.RemoveAll();
+    m_bForwardLightsDirty = true;
+}
+
+void CDeferredExtension::AddForwardLight(const Vector& pos, float radius,
+    const Vector& color, float intensity,
+    int type, const Vector& dir,
+    float constantAtt, float linearAtt,
+    float quadraticAtt, float spotCutoff)
+{
+    ForwardLightData light;
+
+    // Position + radius
+    light.position[0] = pos.x;
+    light.position[1] = pos.y;
+    light.position[2] = pos.z;
+    light.position[3] = radius;
+
+    // Color + intensity
+    light.color[0] = color.x;
+    light.color[1] = color.y;
+    light.color[2] = color.z;
+    light.color[3] = intensity;
+
+    // Direction + type
+    light.direction[0] = dir.x;
+    light.direction[1] = dir.y;
+    light.direction[2] = dir.z;
+    light.direction[3] = (float)type;  // 0=point, 1=spot, 2=directional
+
+    // Attenuation + spot cutoff
+    light.attenuation[0] = constantAtt;
+    light.attenuation[1] = linearAtt;
+    light.attenuation[2] = quadraticAtt;
+    light.attenuation[3] = spotCutoff;
+
+    m_vecForwardLights.AddToTail(light);
+    m_bForwardLightsDirty = true;
+}
+
+void CDeferredExtension::CommitForwardLightData(const ForwardLightData* pLights, int numLights)
+{
+    m_vecForwardLights.RemoveAll();
+
+    if (pLights && numLights > 0)
+    {
+        m_vecForwardLights.AddMultipleToTail(numLights, pLights);
+    }
+
+    m_bForwardLightsDirty = true;
+}
+
+float* CDeferredExtension::GetForwardLightData()
+{
+
+    m_vecForwardLightBuffer.RemoveAll();
+
+    for (int i = 0; i < m_vecForwardLights.Count(); i++)
+    {
+        const ForwardLightData& light = m_vecForwardLights[i];
+
+        m_vecForwardLightBuffer.AddToTail(light.position[0]);
+        m_vecForwardLightBuffer.AddToTail(light.position[1]);
+        m_vecForwardLightBuffer.AddToTail(light.position[2]);
+        m_vecForwardLightBuffer.AddToTail(light.position[3]);
+
+        m_vecForwardLightBuffer.AddToTail(light.color[0]);
+        m_vecForwardLightBuffer.AddToTail(light.color[1]);
+        m_vecForwardLightBuffer.AddToTail(light.color[2]);
+        m_vecForwardLightBuffer.AddToTail(light.color[3]);
+    }
+
+    return m_vecForwardLightBuffer.Count() > 0 ? m_vecForwardLightBuffer.Base() : NULL;
+}
+int CDeferredExtension::GetForwardLights_NumRows()
+{
+    return m_vecForwardLights.Count() * 2;
+}
+
+int CDeferredExtension::GetNumActiveForwardLights()
+{
+    return m_vecForwardLights.Count();
+}
+
+

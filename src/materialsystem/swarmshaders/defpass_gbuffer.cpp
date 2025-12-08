@@ -247,8 +247,8 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		SET_STATIC_VERTEX_SHADER_COMBO(TREESWAY, nTreeSwayMode);
 		SET_STATIC_VERTEX_SHADER(gbuffer_vs30);
 
-		if (!bTranslucent)
-		{
+		/*if (!bTranslucent)
+		{*/
 			DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
 			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
 			SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
@@ -261,22 +261,22 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 			SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
 			//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
 			SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
-		}
-		else
-		{
-			DECLARE_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
-			SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
-			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
-			SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
-			SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
-			SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
-			SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-			SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
-			SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
-			//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
-			SET_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-		}
+		//}
+		//else
+		//{
+		//	DECLARE_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
+		//	//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
+		//	SET_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		//}
 	}
 
 		DYNAMIC_STATE
@@ -389,16 +389,16 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 		SET_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 #else
-		if (!bTranslucent)
-		{
+		/*if (!bTranslucent)
+		{*/
 			DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
 			SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
-		}
+		/*}
 		else
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
 			SET_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-		}
+		}*/
 		
 #endif
 

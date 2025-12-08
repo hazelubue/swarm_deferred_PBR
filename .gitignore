@@ -63,3 +63,4 @@ mono_crash.*
 *.tlog
 *.exp
 *.FileListAbsolute.txt
+game/deferred/maps/sd_island_fortitude.bsp

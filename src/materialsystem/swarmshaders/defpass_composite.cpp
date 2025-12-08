@@ -10,6 +10,10 @@ static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
 ConVar building_cubemaps( "building_cubemaps", "0" );
 
+extern ConVar cl_light_specular_point_boost;
+extern ConVar cl_light_diffuse_strength_point;
+extern ConVar cl_light_Sheen_strength;
+
 void InitParmsComposite( const defParms_composite &info, CBaseVSShader *pShader, IMaterialVar **params )
 {
 	if ( PARM_NO_DEFAULT( info.iAlphatestRef ) ||
@@ -37,8 +41,30 @@ void InitParmsComposite( const defParms_composite &info, CBaseVSShader *pShader,
 
 void InitPassComposite( const defParms_composite &info, CBaseVSShader *pShader, IMaterialVar **params )
 {
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+
 	if ( PARM_DEFINED( info.iAlbedo ) )
 		pShader->LoadTexture( info.iAlbedo );
+
+	if (bTranslucent)
+	{
+		if (PARM_DEFINED(info.BUMPMAP))
+			pShader->LoadBumpMap(info.BUMPMAP);
+
+		if (PARM_DEFINED(info.MRAOTEXTURE))
+			params[info.MRAOTEXTURE]->SetStringValue("dev/dev_perfectgloss");
+
+		if (PARM_DEFINED(info.MRAOTEXTURE))
+			pShader->LoadTexture(info.MRAOTEXTURE);
+	}
+	/*else
+	{
+		if (PARM_DEFINED(info.BUMPMAP))
+			params[info.BUMPMAP]->SetStringValue("dev/graygrid");
+
+		if (PARM_DEFINED(info.MRAOTEXTURE))
+			params[info.MRAOTEXTURE]->SetStringValue("dev/dev_perfectgloss");
+	}*/
 
 	if ( PARM_DEFINED( info.iEnvmap ) )
 		pShader->LoadCubeMap( info.iEnvmap );
@@ -73,38 +99,38 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 	VertexCompressionType_t vertexCompression, CDeferredPerMaterialContextData *pDeferredContext )
 {
 	const bool bModel = info.bModel;
-	const bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
+	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 	const bool bFastVTex = g_pHardwareConfig->HasFastVertexTextures();
 
-	const bool bAlbedo = PARM_TEX( info.iAlbedo );
-	const bool bAlbedo2 = !bModel && bAlbedo && PARM_TEX( info.iAlbedo2 );
-	const bool bAlbedo3 = !bModel && bAlbedo && PARM_TEX( info.iAlbedo3 );
-	const bool bAlbedo4 = !bModel && bAlbedo && PARM_TEX( info.iAlbedo4 );
+	const bool bAlbedo = PARM_TEX(info.iAlbedo);
+	const bool bAlbedo2 = !bModel && bAlbedo && PARM_TEX(info.iAlbedo2);
+	const bool bAlbedo3 = !bModel && bAlbedo && PARM_TEX(info.iAlbedo3);
+	const bool bAlbedo4 = !bModel && bAlbedo && PARM_TEX(info.iAlbedo4);
 
-	const bool bAlphatest = IS_FLAG_SET( MATERIAL_VAR_ALPHATEST ) && bAlbedo;
-	const bool bTranslucent = IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT ) && bAlbedo && !bAlphatest;
+	const bool bAlphatest = IS_FLAG_SET(MATERIAL_VAR_ALPHATEST) && bAlbedo;
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT) && bAlbedo && !bAlphatest;
 
-	const bool bNoCull = IS_FLAG_SET( MATERIAL_VAR_NOCULL );
+	const bool bNoCull = IS_FLAG_SET(MATERIAL_VAR_NOCULL);
 
 	const bool bUseSRGB = DEFCFG_USE_SRGB_CONVERSION != 0;
-	const bool bPhongFresnel = PARM_SET( info.iPhongFresnel );
+	const bool bPhongFresnel = PARM_SET(info.iPhongFresnel);
 
-	const bool bEnvmap = PARM_TEX( info.iEnvmap );
-	const bool bEnvmapMask = bEnvmap && PARM_TEX( info.iEnvmapMask );
-	const bool bEnvmapMask2 = bEnvmapMask && PARM_TEX( info.iEnvmapMask2 );
-	const bool bEnvmapFresnel = bEnvmap && PARM_SET( info.iEnvmapFresnel );
+	const bool bEnvmap = PARM_TEX(info.iEnvmap);
+	const bool bEnvmapMask = bEnvmap && PARM_TEX(info.iEnvmapMask);
+	const bool bEnvmapMask2 = bEnvmapMask && PARM_TEX(info.iEnvmapMask2);
+	const bool bEnvmapFresnel = bEnvmap && PARM_SET(info.iEnvmapFresnel);
 
-	const bool bRimLight = PARM_SET( info.iRimlightEnable );
-	const bool bRimLightModLight = bRimLight && PARM_SET( info.iRimlightModLight );
-	const bool bBlendmodulate = bAlbedo2 && PARM_TEX( info.iBlendmodulate );
-	const bool bBlendmodulate2 = bBlendmodulate && PARM_TEX( info.iBlendmodulate2 );
-	const bool bBlendmodulate3 = bBlendmodulate && PARM_TEX( info.iBlendmodulate3 );
+	const bool bRimLight = PARM_SET(info.iRimlightEnable);
+	const bool bRimLightModLight = bRimLight && PARM_SET(info.iRimlightModLight);
+	const bool bBlendmodulate = bAlbedo2 && PARM_TEX(info.iBlendmodulate);
+	const bool bBlendmodulate2 = bBlendmodulate && PARM_TEX(info.iBlendmodulate2);
+	const bool bBlendmodulate3 = bBlendmodulate && PARM_TEX(info.iBlendmodulate3);
 
-	const bool bSelfIllum = !bAlbedo2 && IS_FLAG_SET( MATERIAL_VAR_SELFILLUM );
-	const bool bSelfIllumMaskInEnvmapMask = bSelfIllum && bEnvmapMask && PARM_SET( info.iSelfIllumMaskInEnvmapAlpha );
-	const bool bSelfIllumMask = bSelfIllum && !bSelfIllumMaskInEnvmapMask && !bEnvmapMask && PARM_TEX( info.iSelfIllumMask );
+	const bool bSelfIllum = !bAlbedo2 && IS_FLAG_SET(MATERIAL_VAR_SELFILLUM);
+	const bool bSelfIllumMaskInEnvmapMask = bSelfIllum && bEnvmapMask && PARM_SET(info.iSelfIllumMaskInEnvmapAlpha);
+	const bool bSelfIllumMask = bSelfIllum && !bSelfIllumMaskInEnvmapMask && !bEnvmapMask && PARM_TEX(info.iSelfIllumMask);
 
-	const bool bMultiBlend = PARM_SET( info.iMultiblend )
+	const bool bMultiBlend = PARM_SET(info.iMultiblend)
 		&& bAlbedo && bAlbedo2 && bAlbedo3 && !bEnvmapMask && !bSelfIllumMask;
 
 	const bool bNeedsFresnel = bPhongFresnel || bEnvmapFresnel;
@@ -114,149 +140,148 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 	//const bool bMRAO = PARM_SET(info.MRAOTEXTURE);
 
 
-	AssertMsgOnce( !(bTranslucent || bAlphatest) || !bAlbedo2,
-		"blended albedo not supported by gbuffer pass!" );
+	AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
+		"blended albedo not supported by gbuffer pass!");
 
-	AssertMsgOnce( IS_FLAG_SET( MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK ) == false,
-		"Normal map sampling should stay out of composition pass." );
+	AssertMsgOnce(IS_FLAG_SET(MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK) == false,
+		"Normal map sampling should stay out of composition pass.");
 
-	AssertMsgOnce( !PARM_TEX( info.iSelfIllumMask ) || !bEnvmapMask,
-		"Can't use separate selfillum mask with envmap mask - use SELFILLUM_ENVMAPMASK_ALPHA instead." );
+	AssertMsgOnce(!PARM_TEX(info.iSelfIllumMask) || !bEnvmapMask,
+		"Can't use separate selfillum mask with envmap mask - use SELFILLUM_ENVMAPMASK_ALPHA instead.");
 
-	AssertMsgOnce( PARM_SET( info.iMultiblend ) == bMultiBlend,
-		"Multiblend forced off due to invalid usage! May cause vertexformat mis-matches between passes." );
+	AssertMsgOnce(PARM_SET(info.iMultiblend) == bMultiBlend,
+		"Multiblend forced off due to invalid usage! May cause vertexformat mis-matches between passes.");
 
 
 	SHADOW_STATE
 	{
 		pShaderShadow->SetDefaultState();
-		pShaderShadow->EnableSRGBWrite( bUseSRGB );
+		pShaderShadow->EnableSRGBWrite(bUseSRGB);
 
-		if ( bNoCull )
+		if (bNoCull)
 		{
-			pShaderShadow->EnableCulling( false );
+			pShaderShadow->EnableCulling(false);
 		}
 
 		int iVFmtFlags = VERTEX_POSITION;
 		int iUserDataSize = 0;
 
-		int *pTexCoordDim;
+		int* pTexCoordDim;
 		int iTexCoordNum;
-		GetTexcoordSettings( ( bModel && bIsDecal && bFastVTex ), bMultiBlend,
-			iTexCoordNum, &pTexCoordDim );
+		GetTexcoordSettings((bModel && bIsDecal && bFastVTex), bMultiBlend,
+			iTexCoordNum, &pTexCoordDim);
 
-		if ( bModel )
+		if (bModel)
 		{
 			iVFmtFlags |= VERTEX_NORMAL;
 			iVFmtFlags |= VERTEX_FORMAT_COMPRESSED;
 		}
 		else
 		{
-			if ( bAlbedo2 )
+			if (bAlbedo2)
 				iVFmtFlags |= VERTEX_COLOR;
 		}
 
-		pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
-		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, bUseSRGB );
+		pShaderShadow->EnableTexture(SHADER_SAMPLER0, true);
+		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER0, bUseSRGB);
 
-		if ( bGBufferNormal )
+
+		pShaderShadow->EnableTexture(SHADER_SAMPLER1, true);
+		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER1, false);
+
+
+		if (bTranslucent)
 		{
-			pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, false );
+			pShader->EnableAlphaBlending(SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA);
 		}
 
-		if ( bTranslucent )
+		pShaderShadow->EnableTexture(SHADER_SAMPLER2, true);
+		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER2, false);
+
+		if (bEnvmap)
 		{
-			pShader->EnableAlphaBlending( SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA );
-		}
+			pShaderShadow->EnableTexture(SHADER_SAMPLER3, true);
 
-		pShaderShadow->EnableTexture( SHADER_SAMPLER2, true );
-		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER2, false );
+			if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE)
+				pShaderShadow->EnableSRGBRead(SHADER_SAMPLER3, true);
 
-		if ( bEnvmap )
-		{
-			pShaderShadow->EnableTexture( SHADER_SAMPLER3, true );
-
-			if( g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE )
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER3, true );
-
-			if ( bEnvmapMask )
+			if (bEnvmapMask)
 			{
-				pShaderShadow->EnableTexture( SHADER_SAMPLER4, true );
+				pShaderShadow->EnableTexture(SHADER_SAMPLER4, true);
 
-				if ( bAlbedo2 )
-					pShaderShadow->EnableTexture( SHADER_SAMPLER7, true );
+				if (bAlbedo2)
+					pShaderShadow->EnableTexture(SHADER_SAMPLER7, true);
 			}
 		}
-		else if ( bSelfIllumMask )
+		else if (bSelfIllumMask)
 		{
-			pShaderShadow->EnableTexture( SHADER_SAMPLER4, true );
+			pShaderShadow->EnableTexture(SHADER_SAMPLER4, true);
 		}
 
-		if ( bAlbedo2 )
+		if (bAlbedo2)
 		{
-			pShaderShadow->EnableTexture( SHADER_SAMPLER5, true );
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER5, bUseSRGB );
+			pShaderShadow->EnableTexture(SHADER_SAMPLER5, true);
+			pShaderShadow->EnableSRGBRead(SHADER_SAMPLER5, bUseSRGB);
 
-			if ( bBlendmodulate )
-				pShaderShadow->EnableTexture( SHADER_SAMPLER6, true );
+			if (bBlendmodulate)
+				pShaderShadow->EnableTexture(SHADER_SAMPLER6, true);
 		}
 
-		if ( bMultiBlend )
+		if (bMultiBlend)
 		{
-			pShaderShadow->EnableTexture( SHADER_SAMPLER7, true );
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER7, bUseSRGB );
+			pShaderShadow->EnableTexture(SHADER_SAMPLER7, true);
+			pShaderShadow->EnableSRGBRead(SHADER_SAMPLER7, bUseSRGB);
 
-			if ( bAlbedo4 )
+			if (bAlbedo4)
 			{
-				pShaderShadow->EnableTexture( SHADER_SAMPLER8, true );
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER8, bUseSRGB );
+				pShaderShadow->EnableTexture(SHADER_SAMPLER8, true);
+				pShaderShadow->EnableSRGBRead(SHADER_SAMPLER8, bUseSRGB);
 			}
 
-			if ( bBlendmodulate )
+			if (bBlendmodulate)
 			{
-				pShaderShadow->EnableTexture( SHADER_SAMPLER9, true );
-				pShaderShadow->EnableTexture( SHADER_SAMPLER10, true );
+				pShaderShadow->EnableTexture(SHADER_SAMPLER9, true);
+				pShaderShadow->EnableTexture(SHADER_SAMPLER10, true);
 			}
 		}
 
 		pShaderShadow->EnableTexture(SHADER_SAMPLER11, true);
 
-		pShaderShadow->EnableAlphaWrites( false );
-		pShaderShadow->EnableDepthWrites( !bTranslucent );
+		pShaderShadow->EnableAlphaWrites(false);
+		pShaderShadow->EnableDepthWrites(!bTranslucent);
 
 		pShader->DefaultFog();
 
-		pShaderShadow->VertexShaderVertexFormat( iVFmtFlags, iTexCoordNum, pTexCoordDim, iUserDataSize );
+		pShaderShadow->VertexShaderVertexFormat(iVFmtFlags, iTexCoordNum, pTexCoordDim, iUserDataSize);
 
-		DECLARE_STATIC_VERTEX_SHADER( composite_vs30 );
-		SET_STATIC_VERTEX_SHADER_COMBO( MODEL, bModel );
-		SET_STATIC_VERTEX_SHADER_COMBO( MORPHING_VTEX, bModel && bFastVTex );
-		SET_STATIC_VERTEX_SHADER_COMBO( DECAL, bModel && bIsDecal );
-		SET_STATIC_VERTEX_SHADER_COMBO( EYEVEC, bWorldEyeVec );
-		SET_STATIC_VERTEX_SHADER_COMBO( BASETEXTURE2, bAlbedo2 && !bMultiBlend );
-		SET_STATIC_VERTEX_SHADER_COMBO( BLENDMODULATE, bBlendmodulate );
-		SET_STATIC_VERTEX_SHADER_COMBO( MULTIBLEND, bMultiBlend );
-		SET_STATIC_VERTEX_SHADER( composite_vs30 );
+		DECLARE_STATIC_VERTEX_SHADER(composite_vs30);
+		SET_STATIC_VERTEX_SHADER_COMBO(MODEL, bModel);
+		SET_STATIC_VERTEX_SHADER_COMBO(MORPHING_VTEX, bModel && bFastVTex);
+		SET_STATIC_VERTEX_SHADER_COMBO(DECAL, bModel && bIsDecal);
+		SET_STATIC_VERTEX_SHADER_COMBO(EYEVEC, bWorldEyeVec);
+		SET_STATIC_VERTEX_SHADER_COMBO(BASETEXTURE2, bAlbedo2 && !bMultiBlend);
+		SET_STATIC_VERTEX_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
+		SET_STATIC_VERTEX_SHADER_COMBO(MULTIBLEND, bMultiBlend);
+		SET_STATIC_VERTEX_SHADER(composite_vs30);
 
-		DECLARE_STATIC_PIXEL_SHADER( composite_ps30 );
-		SET_STATIC_PIXEL_SHADER_COMBO( ALPHATEST, bAlphatest );
-		SET_STATIC_PIXEL_SHADER_COMBO( TRANSLUCENT, bTranslucent );
-		SET_STATIC_PIXEL_SHADER_COMBO( READNORMAL, bGBufferNormal );
-		SET_STATIC_PIXEL_SHADER_COMBO( NOCULL, bNoCull );
-		SET_STATIC_PIXEL_SHADER_COMBO( ENVMAP, bEnvmap );
-		SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPMASK, bEnvmapMask );
-		SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPFRESNEL, bEnvmapFresnel );
-		SET_STATIC_PIXEL_SHADER_COMBO( PHONGFRESNEL, bPhongFresnel );
-		SET_STATIC_PIXEL_SHADER_COMBO( RIMLIGHT, bRimLight );
-		SET_STATIC_PIXEL_SHADER_COMBO( RIMLIGHTMODULATELIGHT, bRimLightModLight );
-		SET_STATIC_PIXEL_SHADER_COMBO( BASETEXTURE2, bAlbedo2 && !bMultiBlend );
-		SET_STATIC_PIXEL_SHADER_COMBO( BLENDMODULATE, bBlendmodulate );
-		SET_STATIC_PIXEL_SHADER_COMBO( MULTIBLEND, bMultiBlend );
-		SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM, bSelfIllum );
-		SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM_MASK, bSelfIllumMask );
-		SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM_ENVMAP_ALPHA, bSelfIllumMaskInEnvmapMask );
-		SET_STATIC_PIXEL_SHADER( composite_ps30 );
+		DECLARE_STATIC_PIXEL_SHADER(composite_ps30);
+		SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
+		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+		SET_STATIC_PIXEL_SHADER_COMBO(READNORMAL, bGBufferNormal);
+		SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
+		SET_STATIC_PIXEL_SHADER_COMBO(ENVMAP, bEnvmap);
+		SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPMASK, bEnvmapMask);
+		SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPFRESNEL, bEnvmapFresnel);
+		SET_STATIC_PIXEL_SHADER_COMBO(PHONGFRESNEL, bPhongFresnel);
+		SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHT, bRimLight);
+		SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHTMODULATELIGHT, bRimLightModLight);
+		SET_STATIC_PIXEL_SHADER_COMBO(BASETEXTURE2, bAlbedo2 && !bMultiBlend);
+		SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
+		SET_STATIC_PIXEL_SHADER_COMBO(MULTIBLEND, bMultiBlend);
+		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM, bSelfIllum);
+		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_MASK, bSelfIllumMask);
+		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_ENVMAP_ALPHA, bSelfIllumMaskInEnvmapMask);
+		SET_STATIC_PIXEL_SHADER(composite_ps30);
 	}
 	DYNAMIC_STATE
 	{
@@ -359,6 +384,12 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 				}
 			}
 
+			if (bTranslucent)
+			{
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER11, info.MRAOTEXTURE);
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER1, info.BUMPMAP);
+			}
+
 			if ( bSelfIllum && bSelfIllumMask )
 			{
 				tmpBuf.BindTexture( pShader, SHADER_SAMPLER4, info.iSelfIllumMask );
@@ -415,6 +446,32 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 		pShader->BindTexture( SHADER_SAMPLER11, GetDeferredExt()->GetTexture_LightCtrl() );
 
 		CommitBaseDeferredConstants_Origin( pShaderAPI, 3 );
+
+		CDeferredExtension* pExt = GetDeferredExt();
+		int numForwardLights = pExt->GetNumActiveForwardLights();
+
+		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(49, forwardLightCount);
+
+		if (numForwardLights > 0)
+		{
+			float* pLightData = pExt->GetForwardLightData();
+			if (pLightData)
+			{
+				pShaderAPI->SetPixelShaderConstant(50,
+					pLightData,
+					pExt->GetForwardLights_NumRows());
+			}
+		}
+
+		float LightPointBoost[4] = { cl_light_specular_point_boost.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(16, LightPointBoost);
+
+		float lightDiffuseStrengthPoint[4] = { cl_light_diffuse_strength_point.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(21, lightDiffuseStrengthPoint);
+
+		float lightSheenStrength[4] = { cl_light_Sheen_strength.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(23, lightSheenStrength);
 
 		if ( bWorldEyeVec )
 		{

@@ -3,8 +3,6 @@
 
 //sampler sMRAO : register(s15);
 
-static const float EPSILON = 0.00001;
-
 sampler sMixedSampler[FREE_LIGHT_SAMPLERS] : register(FIRST_LIGHT_SAMPLER_FXC);
 const float4 g_flMixedData[112] : register(FIRST_SHARED_LIGHTDATA_CONSTANT_FXC);
 
@@ -258,7 +256,7 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     float3 diffuseBRDF = Diffuse_OrenNayar(F, roughness, NV, LN, VoH) * g_DiffuseScale;
     float3 sheenBRDF = SheenBRDF_DreamWorks(N, V, L, albedo, g_SheenStrength, roughness);
 
-    float3 specularBRDF = (Fc * D * G) / max(EPSILON, 4.0f);
+    float3 specularBRDF = (Fc * D * G) / max(0.00001, 4.0f);
     //specularBRDF *= specAO;
     //float3 CompositeAmbient = Ambient;/*DoAmbient( UV, vWorldPos, normal, vEye, roughness, albedo, ambient, groundColor);*/
 

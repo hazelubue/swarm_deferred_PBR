@@ -1,0 +1,6 @@
+"lightmappedgeneric"
+{
+	"$basetexture" "Dev/dev_measuregeneric12"
+	"$mraotexture" "Dev/pbr/dev_gloss"
+	"$bumpmap" "Dev/pbr/dev_measuregeneric_normal"
+}
