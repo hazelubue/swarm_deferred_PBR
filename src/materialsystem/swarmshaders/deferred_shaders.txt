@@ -1,3 +1,7 @@
+composite_vs30.fxc
+composite_ps30.fxc
+
+
 composite_translucent_ps30.fxc
 
 lightingpass_global_ps30.fxc
@@ -16,8 +20,6 @@ water_ps2x.fxc
 gbuffer_water_ps30.fxc
 
 
-composite_vs30.fxc
-composite_ps30.fxc
 
 
 

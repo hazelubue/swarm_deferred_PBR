@@ -8,95 +8,69 @@
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
-ConVar building_cubemaps( "building_cubemaps", "0" );
+ConVar building_cubemaps("building_cubemaps", "0");
 
-extern ConVar cl_light_specular_point_boost;
-extern ConVar cl_light_diffuse_strength_point;
-extern ConVar cl_light_Sheen_strength;
-
-void InitParmsComposite( const defParms_composite &info, CBaseVSShader *pShader, IMaterialVar **params )
+void InitParmsComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
-	if ( PARM_NO_DEFAULT( info.iAlphatestRef ) ||
-		PARM_VALID( info.iAlphatestRef ) && PARM_FLOAT( info.iAlphatestRef ) == 0.0f )
-		params[ info.iAlphatestRef ]->SetFloatValue( DEFAULT_ALPHATESTREF );
+	if (PARM_NO_DEFAULT(info.iAlphatestRef) ||
+		PARM_VALID(info.iAlphatestRef) && PARM_FLOAT(info.iAlphatestRef) == 0.0f)
+		params[info.iAlphatestRef]->SetFloatValue(DEFAULT_ALPHATESTREF);
 
-	PARM_INIT_FLOAT( info.iPhongScale, DEFAULT_PHONG_SCALE );
-	PARM_INIT_INT( info.iPhongFresnel, 0 );
+	PARM_INIT_FLOAT(info.iPhongScale, DEFAULT_PHONG_SCALE);
+	PARM_INIT_INT(info.iPhongFresnel, 0);
 
-	PARM_INIT_FLOAT( info.iEnvmapContrast, 0.0f );
-	PARM_INIT_FLOAT( info.iEnvmapSaturation, 1.0f );
-	PARM_INIT_VEC3( info.iEnvmapTint, 1.0f, 1.0f, 1.0f );
-	PARM_INIT_INT( info.iEnvmapFresnel, 0 );
+	PARM_INIT_FLOAT(info.iEnvmapContrast, 0.0f);
+	PARM_INIT_FLOAT(info.iEnvmapSaturation, 1.0f);
+	PARM_INIT_VEC3(info.iEnvmapTint, 1.0f, 1.0f, 1.0f);
+	PARM_INIT_INT(info.iEnvmapFresnel, 0);
 
-	PARM_INIT_INT( info.iRimlightEnable, 0 );
-	PARM_INIT_FLOAT( info.iRimlightExponent, 4.0f );
-	PARM_INIT_FLOAT( info.iRimlightAlbedoScale, 0.0f );
-	PARM_INIT_VEC3( info.iRimlightTint, 1.0f, 1.0f, 1.0f );
-	PARM_INIT_INT( info.iRimlightModLight, 0 );
+	PARM_INIT_INT(info.iRimlightEnable, 0);
+	PARM_INIT_FLOAT(info.iRimlightExponent, 4.0f);
+	PARM_INIT_FLOAT(info.iRimlightAlbedoScale, 0.0f);
+	PARM_INIT_VEC3(info.iRimlightTint, 1.0f, 1.0f, 1.0f);
+	PARM_INIT_INT(info.iRimlightModLight, 0);
 
-	PARM_INIT_VEC3( info.iSelfIllumTint, 1.0f, 1.0f, 1.0f );
-	PARM_INIT_INT( info.iSelfIllumMaskInEnvmapAlpha, 0 );
-	PARM_INIT_INT( info.iSelfIllumFresnelModulate, 0 );
+	PARM_INIT_VEC3(info.iSelfIllumTint, 1.0f, 1.0f, 1.0f);
+	PARM_INIT_INT(info.iSelfIllumMaskInEnvmapAlpha, 0);
+	PARM_INIT_INT(info.iSelfIllumFresnelModulate, 0);
 }
 
-void InitPassComposite( const defParms_composite &info, CBaseVSShader *pShader, IMaterialVar **params )
+void InitPassComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	if (PARM_DEFINED(info.iAlbedo))
+		pShader->LoadTexture(info.iAlbedo);
 
-	if ( PARM_DEFINED( info.iAlbedo ) )
-		pShader->LoadTexture( info.iAlbedo );
+	if (PARM_DEFINED(info.iEnvmap))
+		pShader->LoadCubeMap(info.iEnvmap);
 
-	if (bTranslucent)
-	{
-		if (PARM_DEFINED(info.BUMPMAP))
-			pShader->LoadBumpMap(info.BUMPMAP);
+	if (PARM_DEFINED(info.iEnvmapMask))
+		pShader->LoadTexture(info.iEnvmapMask);
 
-		if (PARM_DEFINED(info.MRAOTEXTURE))
-			params[info.MRAOTEXTURE]->SetStringValue("dev/dev_perfectgloss");
+	if (PARM_DEFINED(info.iAlbedo2))
+		pShader->LoadTexture(info.iAlbedo2);
 
-		if (PARM_DEFINED(info.MRAOTEXTURE))
-			pShader->LoadTexture(info.MRAOTEXTURE);
-	}
-	/*else
-	{
-		if (PARM_DEFINED(info.BUMPMAP))
-			params[info.BUMPMAP]->SetStringValue("dev/graygrid");
+	if (PARM_DEFINED(info.iAlbedo3))
+		pShader->LoadTexture(info.iAlbedo3);
 
-		if (PARM_DEFINED(info.MRAOTEXTURE))
-			params[info.MRAOTEXTURE]->SetStringValue("dev/dev_perfectgloss");
-	}*/
+	if (PARM_DEFINED(info.iAlbedo4))
+		pShader->LoadTexture(info.iAlbedo4);
 
-	if ( PARM_DEFINED( info.iEnvmap ) )
-		pShader->LoadCubeMap( info.iEnvmap );
+	if (PARM_DEFINED(info.iBlendmodulate))
+		pShader->LoadTexture(info.iBlendmodulate);
 
-	if ( PARM_DEFINED( info.iEnvmapMask ) )
-		pShader->LoadTexture( info.iEnvmapMask );
+	if (PARM_DEFINED(info.iBlendmodulate2))
+		pShader->LoadTexture(info.iBlendmodulate2);
 
-	if ( PARM_DEFINED( info.iAlbedo2 ) )
-		pShader->LoadTexture( info.iAlbedo2 );
+	if (PARM_DEFINED(info.iBlendmodulate3))
+		pShader->LoadTexture(info.iBlendmodulate3);
 
-	if ( PARM_DEFINED( info.iAlbedo3 ) )
-		pShader->LoadTexture( info.iAlbedo3 );
-
-	if ( PARM_DEFINED( info.iAlbedo4 ) )
-		pShader->LoadTexture( info.iAlbedo4 );
-
-	if ( PARM_DEFINED( info.iBlendmodulate ) )
-		pShader->LoadTexture( info.iBlendmodulate );
-
-	if ( PARM_DEFINED( info.iBlendmodulate2 ) )
-		pShader->LoadTexture( info.iBlendmodulate2 );
-
-	if ( PARM_DEFINED( info.iBlendmodulate3 ) )
-		pShader->LoadTexture( info.iBlendmodulate3 );
-
-	if ( PARM_DEFINED( info.iSelfIllumMask ) )
-		pShader->LoadTexture( info.iSelfIllumMask );
+	if (PARM_DEFINED(info.iSelfIllumMask))
+		pShader->LoadTexture(info.iSelfIllumMask);
 }
 
-void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, IMaterialVar **params,
+void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params,
 	IShaderShadow* pShaderShadow, IShaderDynamicAPI* pShaderAPI,
-	VertexCompressionType_t vertexCompression, CDeferredPerMaterialContextData *pDeferredContext )
+	VertexCompressionType_t vertexCompression, CDeferredPerMaterialContextData* pDeferredContext)
 {
 	const bool bModel = info.bModel;
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
@@ -185,10 +159,11 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 		pShaderShadow->EnableTexture(SHADER_SAMPLER0, true);
 		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER0, bUseSRGB);
 
-
-		pShaderShadow->EnableTexture(SHADER_SAMPLER1, true);
-		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER1, false);
-
+		if (bGBufferNormal)
+		{
+			pShaderShadow->EnableTexture(SHADER_SAMPLER1, true);
+			pShaderShadow->EnableSRGBRead(SHADER_SAMPLER1, false);
+		}
 
 		if (bTranslucent)
 		{
@@ -283,116 +258,110 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_ENVMAP_ALPHA, bSelfIllumMaskInEnvmapMask);
 		SET_STATIC_PIXEL_SHADER(composite_ps30);
 	}
-	DYNAMIC_STATE
+		DYNAMIC_STATE
 	{
-		Assert( pDeferredContext != NULL );
+		Assert(pDeferredContext != NULL);
 
-		if ( pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands( CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE )
-			|| building_cubemaps.GetBool() )
+		if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE)
+			|| building_cubemaps.GetBool())
 		{
 			tmpBuf.Reset();
 
-			if ( bAlphatest )
+			if (bAlphatest)
 			{
-				PARM_VALIDATE( info.iAlphatestRef );
-				tmpBuf.SetPixelShaderConstant1( 0, PARM_FLOAT( info.iAlphatestRef ) );
+				PARM_VALIDATE(info.iAlphatestRef);
+				tmpBuf.SetPixelShaderConstant1(0, PARM_FLOAT(info.iAlphatestRef));
 			}
 
-			if ( bAlbedo )
-				tmpBuf.BindTexture( pShader, SHADER_SAMPLER0, info.iAlbedo );
+			if (bAlbedo)
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER0, info.iAlbedo);
 			else
-				tmpBuf.BindStandardTexture( SHADER_SAMPLER0, TEXTURE_GREY );
+				tmpBuf.BindStandardTexture(SHADER_SAMPLER0, TEXTURE_GREY);
 
-			if ( bEnvmap )
+			if (bEnvmap)
 			{
-				if ( building_cubemaps.GetBool() )
-					tmpBuf.BindStandardTexture( SHADER_SAMPLER3, TEXTURE_BLACK );
+				if (building_cubemaps.GetBool())
+					tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_BLACK);
 				else
 				{
-					if ( PARM_TEX( info.iEnvmap ) && !bModel )
-						tmpBuf.BindTexture( pShader, SHADER_SAMPLER3, info.iEnvmap );
+					if (PARM_TEX(info.iEnvmap) && !bModel)
+						tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iEnvmap);
 					else
-						tmpBuf.BindStandardTexture( SHADER_SAMPLER3, TEXTURE_LOCAL_ENV_CUBEMAP );
+						tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_LOCAL_ENV_CUBEMAP);
 				}
 
-				if ( bEnvmapMask )
-					tmpBuf.BindTexture( pShader, SHADER_SAMPLER4, info.iEnvmapMask );
+				if (bEnvmapMask)
+					tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iEnvmapMask);
 
-				if ( bAlbedo2 )
+				if (bAlbedo2)
 				{
-					if ( bEnvmapMask2 )
-						tmpBuf.BindTexture( pShader, SHADER_SAMPLER7, info.iEnvmapMask2 );
+					if (bEnvmapMask2)
+						tmpBuf.BindTexture(pShader, SHADER_SAMPLER7, info.iEnvmapMask2);
 					else
-						tmpBuf.BindStandardTexture( SHADER_SAMPLER7, TEXTURE_WHITE );
+						tmpBuf.BindStandardTexture(SHADER_SAMPLER7, TEXTURE_WHITE);
 				}
 
-				tmpBuf.SetPixelShaderConstant( 5, info.iEnvmapTint );
+				tmpBuf.SetPixelShaderConstant(5, info.iEnvmapTint);
 
 				float fl6[4] = { 0 };
-				fl6[0] = PARM_FLOAT( info.iEnvmapSaturation );
-				fl6[1] = PARM_FLOAT( info.iEnvmapContrast );
-				tmpBuf.SetPixelShaderConstant( 6, fl6 );
+				fl6[0] = PARM_FLOAT(info.iEnvmapSaturation);
+				fl6[1] = PARM_FLOAT(info.iEnvmapContrast);
+				tmpBuf.SetPixelShaderConstant(6, fl6);
 			}
 
-			if ( bNeedsFresnel )
+			if (bNeedsFresnel)
 			{
-				tmpBuf.SetPixelShaderConstant( 7, info.iFresnelRanges );
+				tmpBuf.SetPixelShaderConstant(7, info.iFresnelRanges);
 			}
 
-			if ( bRimLight )
+			if (bRimLight)
 			{
 				float fl9[4] = { 0 };
-				fl9[0] = PARM_FLOAT( info.iRimlightExponent );
-				fl9[1] = PARM_FLOAT( info.iRimlightAlbedoScale );
-				tmpBuf.SetPixelShaderConstant( 9, fl9 );
+				fl9[0] = PARM_FLOAT(info.iRimlightExponent);
+				fl9[1] = PARM_FLOAT(info.iRimlightAlbedoScale);
+				tmpBuf.SetPixelShaderConstant(9, fl9);
 			}
 
-			if ( bAlbedo2 )
+			if (bAlbedo2)
 			{
-				tmpBuf.BindTexture( pShader, SHADER_SAMPLER5, info.iAlbedo2 );
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER5, info.iAlbedo2);
 
-				if ( bBlendmodulate )
+				if (bBlendmodulate)
 				{
-					tmpBuf.SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_1, info.iBlendmodulateTransform );
-					tmpBuf.BindTexture( pShader, SHADER_SAMPLER6, info.iBlendmodulate );
+					tmpBuf.SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_1, info.iBlendmodulateTransform);
+					tmpBuf.BindTexture(pShader, SHADER_SAMPLER6, info.iBlendmodulate);
 				}
 			}
 
-			if ( bMultiBlend )
+			if (bMultiBlend)
 			{
-				tmpBuf.BindTexture( pShader, SHADER_SAMPLER7, info.iAlbedo3 );
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER7, info.iAlbedo3);
 
-				if ( bAlbedo4 )
-					tmpBuf.BindTexture( pShader, SHADER_SAMPLER8, info.iAlbedo4 );
+				if (bAlbedo4)
+					tmpBuf.BindTexture(pShader, SHADER_SAMPLER8, info.iAlbedo4);
 				else
-					tmpBuf.BindStandardTexture( SHADER_SAMPLER8, TEXTURE_WHITE );
+					tmpBuf.BindStandardTexture(SHADER_SAMPLER8, TEXTURE_WHITE);
 
-				if ( bBlendmodulate )
+				if (bBlendmodulate)
 				{
-					tmpBuf.SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, info.iBlendmodulateTransform2 );
-					tmpBuf.SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_5, info.iBlendmodulateTransform3 );
+					tmpBuf.SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, info.iBlendmodulateTransform2);
+					tmpBuf.SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_5, info.iBlendmodulateTransform3);
 
-					if ( bBlendmodulate2 )
-						tmpBuf.BindTexture( pShader, SHADER_SAMPLER9, info.iBlendmodulate2 );
+					if (bBlendmodulate2)
+						tmpBuf.BindTexture(pShader, SHADER_SAMPLER9, info.iBlendmodulate2);
 					else
-						tmpBuf.BindStandardTexture( SHADER_SAMPLER9, TEXTURE_BLACK );
+						tmpBuf.BindStandardTexture(SHADER_SAMPLER9, TEXTURE_BLACK);
 
-					if ( bBlendmodulate3 )
-						tmpBuf.BindTexture( pShader, SHADER_SAMPLER10, info.iBlendmodulate3 );
+					if (bBlendmodulate3)
+						tmpBuf.BindTexture(pShader, SHADER_SAMPLER10, info.iBlendmodulate3);
 					else
-						tmpBuf.BindStandardTexture( SHADER_SAMPLER10, TEXTURE_BLACK );
+						tmpBuf.BindStandardTexture(SHADER_SAMPLER10, TEXTURE_BLACK);
 				}
 			}
 
-			if (bTranslucent)
+			if (bSelfIllum && bSelfIllumMask)
 			{
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER11, info.MRAOTEXTURE);
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER1, info.BUMPMAP);
-			}
-
-			if ( bSelfIllum && bSelfIllumMask )
-			{
-				tmpBuf.BindTexture( pShader, SHADER_SAMPLER4, info.iSelfIllumMask );
+				tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iSelfIllumMask);
 			}
 
 			/*if (bMRAO)
@@ -401,93 +370,67 @@ void DrawPassComposite( const defParms_composite &info, CBaseVSShader *pShader, 
 			}*/
 
 			int x, y, w, t;
-			pShaderAPI->GetCurrentViewport( x, y, w, t );
+			pShaderAPI->GetCurrentViewport(x, y, w, t);
 			float fl1[4] = { 1.0f / w, 1.0f / t, 0, 0 };
 
-			tmpBuf.SetPixelShaderConstant( 1, fl1 );
+			tmpBuf.SetPixelShaderConstant(1, fl1);
 
-			tmpBuf.SetPixelShaderFogParams( 2 );
+			tmpBuf.SetPixelShaderFogParams(2);
 
-			float fl4 = { PARM_FLOAT( info.iPhongScale ) };
-			tmpBuf.SetPixelShaderConstant1( 4, fl4 );
+			float fl4 = { PARM_FLOAT(info.iPhongScale) };
+			tmpBuf.SetPixelShaderConstant1(4, fl4);
 
 			tmpBuf.End();
 
-			pDeferredContext->SetCommands( CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy() );
+			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy());
 		}
 
 		pShaderAPI->SetDefaultState();
 
-		if ( bModel && bFastVTex )
-			pShader->SetHWMorphVertexShaderState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, VERTEX_SHADER_SHADER_SPECIFIC_CONST_11, SHADER_VERTEXTEXTURE_SAMPLER0 );
-		
-		DECLARE_DYNAMIC_VERTEX_SHADER( composite_vs30 );
-		SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (bModel && (int)vertexCompression) ? 1 : 0 );
-		SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, (bModel && pShaderAPI->GetCurrentNumBones() > 0) ? 1 : 0 );
-		SET_DYNAMIC_VERTEX_SHADER_COMBO( MORPHING, (bModel && pShaderAPI->IsHWMorphingEnabled()) ? 1 : 0 );
-		SET_DYNAMIC_VERTEX_SHADER( composite_vs30 );
+		if (bModel && bFastVTex)
+			pShader->SetHWMorphVertexShaderState(VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, VERTEX_SHADER_SHADER_SPECIFIC_CONST_11, SHADER_VERTEXTEXTURE_SAMPLER0);
 
-		DECLARE_DYNAMIC_PIXEL_SHADER( composite_ps30 );
-		SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
-		SET_DYNAMIC_PIXEL_SHADER( composite_ps30 );
+		DECLARE_DYNAMIC_VERTEX_SHADER(composite_vs30);
+		SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (bModel && (int)vertexCompression) ? 1 : 0);
+		SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, (bModel && pShaderAPI->GetCurrentNumBones() > 0) ? 1 : 0);
+		SET_DYNAMIC_VERTEX_SHADER_COMBO(MORPHING, (bModel && pShaderAPI->IsHWMorphingEnabled()) ? 1 : 0);
+		SET_DYNAMIC_VERTEX_SHADER(composite_vs30);
 
-		if ( bModel && bFastVTex )
+		DECLARE_DYNAMIC_PIXEL_SHADER(composite_ps30);
+		SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+		SET_DYNAMIC_PIXEL_SHADER(composite_ps30);
+
+		if (bModel && bFastVTex)
 		{
 			bool bUnusedTexCoords[3] = { false, true, !pShaderAPI->IsHWMorphingEnabled() || !bIsDecal };
-			pShaderAPI->MarkUnusedVertexFields( 0, 3, bUnusedTexCoords );
+			pShaderAPI->MarkUnusedVertexFields(0, 3, bUnusedTexCoords);
 		}
 
-		pShaderAPI->ExecuteCommandBuffer( pDeferredContext->GetCommands( CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE ) );
+		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE));
 
-		if ( bGBufferNormal )
-			pShader->BindTexture( SHADER_SAMPLER1, GetDeferredExt()->GetTexture_Normals() );
+		if (bGBufferNormal)
+			pShader->BindTexture(SHADER_SAMPLER1, GetDeferredExt()->GetTexture_Normals());
 
-		pShader->BindTexture( SHADER_SAMPLER2, GetDeferredExt()->GetTexture_LightAccum() );
-		pShader->BindTexture( SHADER_SAMPLER11, GetDeferredExt()->GetTexture_LightCtrl() );
+		pShader->BindTexture(SHADER_SAMPLER2, GetDeferredExt()->GetTexture_LightAccum());
+		pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_LightCtrl());
 
-		CommitBaseDeferredConstants_Origin( pShaderAPI, 3 );
+		CommitBaseDeferredConstants_Origin(pShaderAPI, 3);
 
-		CDeferredExtension* pExt = GetDeferredExt();
-		int numForwardLights = pExt->GetNumActiveForwardLights();
-
-		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(49, forwardLightCount);
-
-		if (numForwardLights > 0)
-		{
-			float* pLightData = pExt->GetForwardLightData();
-			if (pLightData)
-			{
-				pShaderAPI->SetPixelShaderConstant(50,
-					pLightData,
-					pExt->GetForwardLights_NumRows());
-			}
-		}
-
-		float LightPointBoost[4] = { cl_light_specular_point_boost.GetFloat(), 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(16, LightPointBoost);
-
-		float lightDiffuseStrengthPoint[4] = { cl_light_diffuse_strength_point.GetFloat(), 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(21, lightDiffuseStrengthPoint);
-
-		float lightSheenStrength[4] = { cl_light_Sheen_strength.GetFloat(), 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(23, lightSheenStrength);
-
-		if ( bWorldEyeVec )
+		if (bWorldEyeVec)
 		{
 			float vEyepos[4] = {0,0,0,0};
-			pShaderAPI->GetWorldSpaceCameraPosition( vEyepos );
-			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, vEyepos );
+			pShaderAPI->GetWorldSpaceCameraPosition(vEyepos);
+			pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, vEyepos);
 		}
 
-		if ( bRimLight )
+		if (bRimLight)
 		{
-			pShaderAPI->SetPixelShaderConstant( 8, params[ info.iRimlightTint ]->GetVecValue() );
+			pShaderAPI->SetPixelShaderConstant(8, params[info.iRimlightTint]->GetVecValue());
 		}
 
-		if ( bSelfIllum )
+		if (bSelfIllum)
 		{
-			pShaderAPI->SetPixelShaderConstant( 10, params[ info.iSelfIllumTint ]->GetVecValue() );
+			pShaderAPI->SetPixelShaderConstant(10, params[info.iSelfIllumTint]->GetVecValue());
 		}
 	}
 

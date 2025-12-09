@@ -205,7 +205,13 @@ void CDeferredExtension::CommitForwardLightData(const ForwardLightData* pLights,
 float* CDeferredExtension::GetForwardLightData()
 {
 
-    m_vecForwardLightBuffer.RemoveAll();
+    if (!m_bForwardLightsDirty && m_vecForwardLightBuffer.Count() > 0)
+    {
+        return m_vecForwardLightBuffer.Base();
+    }
+
+    m_vecForwardLightBuffer.SetCount(0);
+    m_vecForwardLightBuffer.EnsureCapacity(m_vecForwardLights.Count() * 8);
 
     for (int i = 0; i < m_vecForwardLights.Count(); i++)
     {
@@ -222,6 +228,7 @@ float* CDeferredExtension::GetForwardLightData()
         m_vecForwardLightBuffer.AddToTail(light.color[3]);
     }
 
+    m_bForwardLightsDirty = false;
     return m_vecForwardLightBuffer.Count() > 0 ? m_vecForwardLightBuffer.Base() : NULL;
 }
 int CDeferredExtension::GetForwardLights_NumRows()

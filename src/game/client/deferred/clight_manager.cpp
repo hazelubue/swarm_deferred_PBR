@@ -1029,8 +1029,7 @@ void CLightingManager::CollectForwardLights()
 
 	FOR_EACH_VEC_FAST(def_light_t*, m_hRenderLights, l)
 	{
-		// Only collect lights that should affect translucent materials
-		if (l->flDistance_ViewOrigin > l->flRadius * 2.0f) // Limit to nearby lights
+		if (l->flDistance_ViewOrigin > (l->iVisible_Dist + l->iVisible_Range))
 			continue;
 
 		ForwardLightData lightData;

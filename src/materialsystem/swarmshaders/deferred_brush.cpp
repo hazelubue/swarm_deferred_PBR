@@ -168,6 +168,42 @@ void SetupParmsComposite(defParms_composite& p)
 	p.iFresnelRanges = FRESNELRANGES;
 }
 
+void SetupParmsComposite_translucent(defParms_composite_translucent& p)
+{
+	p.bModel = false;
+	p.iAlbedo = BASETEXTURE;
+	p.iAlbedo2 = BASETEXTURE2;
+	p.iAlbedo3 = BASETEXTURE3;
+	p.iAlbedo4 = BASETEXTURE4;
+
+	p.iEnvmap = ENVMAP;
+	p.iEnvmapMask = ENVMAPMASK;
+	p.iEnvmapMask2 = 0;
+	p.iEnvmapTint = ENVMAPTINT;
+	p.iEnvmapContrast = ENVMAPCONTRAST;
+	p.iEnvmapSaturation = ENVMAPSATURATION;
+
+	p.iAlphatestRef = ALPHATESTREFERENCE;
+
+	p.iPhongScale = 0;
+	p.iPhongFresnel = 0;
+
+	p.iBlendmodulate = BLENDMODULATETEXTURE;
+	p.iBlendmodulate2 = BLENDMODULATETEXTURE2;
+	p.iBlendmodulate3 = BLENDMODULATETEXTURE3;
+	p.iBlendmodulateTransform = BLENDMASKTRANSFORM;
+	p.iBlendmodulateTransform2 = BLENDMASKTRANSFORM2;
+	p.iBlendmodulateTransform3 = BLENDMASKTRANSFORM3;
+	p.iMultiblend = MULTIBLEND;
+
+	p.SelfShadowedBumpFlag = SSBUMP;
+	p.BUMPMAP = BUMPMAP;
+
+	p.MRAOTEXTURE = MRAOTEXTURE;
+
+	p.iFresnelRanges = FRESNELRANGES;
+}
+
 bool DrawToGBuffer(IMaterialVar** params)
 {
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
@@ -185,6 +221,7 @@ SHADER_INIT_PARAMS()
 		SET_FLAGS2(MATERIAL_VAR2_LIGHTING_BUMPED_LIGHTMAP);
 
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	if (bDrawToGBuffer)
 	{
@@ -197,14 +234,25 @@ SHADER_INIT_PARAMS()
 		InitParmsShadowPass(parms_shadow, this, params);
 	}
 
-	defParms_composite parms_composite;
-	SetupParmsComposite(parms_composite);
-	InitParmsComposite(parms_composite, this, params);
+	if (!bTranslucent)
+	{
+		defParms_composite parms_composite;
+		SetupParmsComposite(parms_composite);
+		InitParmsComposite(parms_composite, this, params);
+	}
+	else
+	{
+		defParms_composite_translucent parms_composite_translucent;
+		SetupParmsComposite_translucent(parms_composite_translucent);
+		InitParmsComposite_translucent(parms_composite_translucent, this, params);
+	}
+	
 }
 
 SHADER_INIT
 {
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	if (bDrawToGBuffer)
 	{
@@ -217,9 +265,19 @@ SHADER_INIT
 		InitPassShadowPass(parms_shadow, this, params);
 	}
 
-	defParms_composite parms_composite;
-	SetupParmsComposite(parms_composite);
-	InitPassComposite(parms_composite, this, params);
+	if (!bTranslucent)
+	{
+		defParms_composite parms_composite;
+		SetupParmsComposite(parms_composite);
+		InitPassComposite(parms_composite, this, params);
+	}
+	else
+	{
+		defParms_composite_translucent parms_composite_translucent;
+		SetupParmsComposite_translucent(parms_composite_translucent);
+		InitPassComposite_translucent(parms_composite_translucent, this, params);
+	}
+	
 }
 
 SHADER_FALLBACK
@@ -253,6 +311,7 @@ SHADER_DRAW
 		: DEFERRED_RENDER_STAGE_INVALID;
 
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	Assert(pShaderAPI == NULL ||
 		iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID);
@@ -282,17 +341,33 @@ SHADER_DRAW
 			SkipPass();
 	}
 
-	if (pShaderShadow != NULL ||
-		iDeferredRenderStage == DEFERRED_RENDER_STAGE_COMPOSITION)
+	if (bTranslucent)
 	{
-		defParms_composite parms_composite;
-		SetupParmsComposite(parms_composite);
-		DrawPassComposite(parms_composite, this, params, pShaderShadow, pShaderAPI,
-			vertexCompression, pDefContext);
+		if (pShaderShadow != NULL ||
+		iDeferredRenderStage == DEFERRED_RENDER_STAGE_COMPOSITION)
+		{
+			defParms_composite_translucent parms_composite_translucent;
+			SetupParmsComposite_translucent(parms_composite_translucent);
+			DrawPassComposite_translucent(parms_composite_translucent, this, params, pShaderShadow, pShaderAPI,
+				vertexCompression, pDefContext);
+		}
+		else
+			SkipPass();
 	}
 	else
-		SkipPass();
-
+	{
+		if (pShaderShadow != NULL ||
+			iDeferredRenderStage == DEFERRED_RENDER_STAGE_COMPOSITION)
+		{
+			defParms_composite parms_composite;
+			SetupParmsComposite(parms_composite);
+			DrawPassComposite(parms_composite, this, params, pShaderShadow, pShaderAPI,
+				vertexCompression, pDefContext);
+		}
+		else
+			SkipPass();
+	}
+	
 	if (pShaderAPI != NULL && pDefContext->m_bMaterialVarsChanged)
 		pDefContext->m_bMaterialVarsChanged = false;
 }

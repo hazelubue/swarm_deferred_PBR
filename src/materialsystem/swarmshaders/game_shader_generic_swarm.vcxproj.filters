@@ -185,11 +185,11 @@
     <ClInclude Include="defpass_gbuffer_water.h">
       <Filter>Source Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="defpass_composite_translucent.h">
-      <Filter>Source Files\scene</Filter>
-    </ClInclude>
     <ClInclude Include="common_glass_pbr.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="defpass_composite_translucent.h">
+      <Filter>Source Files\scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

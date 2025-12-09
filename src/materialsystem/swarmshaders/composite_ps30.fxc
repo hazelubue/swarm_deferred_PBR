@@ -2,8 +2,8 @@
 // STATIC:		"ALPHATEST"			"0..1"
 // STATIC:		"TRANSLUCENT"		"0..1"
 // STATIC:		"READNORMAL"		"0..1"
-// STATIC:		"PHONGFRESNEL"		"0..1"
 // STATIC:		"NOCULL"			"0..1"
+// STATIC:		"PHONGFRESNEL"		"0..1"
 // STATIC:		"ENVMAP"			"0..1"
 // STATIC:		"ENVMAPMASK"		"0..1"
 // STATIC:		"ENVMAPFRESNEL"		"0..1"
@@ -45,12 +45,11 @@
 // SKIP:		$SELFILLUM_MASK && $ENVMAPMASK
 // SKIP:		$SELFILLUM_ENVMAP_ALPHA && !$ENVMAPMASK
 
-
 #include "common_ps_fxc.h"
 #include "common_deferred_fxc.h"
 #include "common_vertexlitgeneric_dx9.h"
 
-#include "common_glass_pbr.h"
+#include "pbr_common_ps2_3_x.h"
 
 
 sampler sAlbedo : register(s0);
@@ -64,11 +63,11 @@ sampler sNormals : register(s1);
 
 sampler sLightAccum : register(s2);
 
-const float g_flPhongScale : register(c4);
+const float2 g_vecFullScreenTexel : register(c1);
+const float4 g_vecFogParams : register(c2);
+const float3 g_vecOrigin : register(c3);
 
-static const int MAX_FORWARD_LIGHTS = 8;
-float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 4] : register(c50);
-float4 g_ForwardLightCount : register(c49);
+const float g_flPhongScale : register(c4);
 
 #if ENVMAP
 sampler sEnvmap								: register( s3 );
@@ -129,7 +128,7 @@ struct PS_INPUT
     float2 vTexCoord : TEXCOORD0;
 #endif
 
-    float3 vWorldNormal : TEXCOORD1;
+	//float3 vProjPosXYW				: TEXCOORD1;
     float3 vWorldPos : TEXCOORD2;
 
 #if ENVMAP || RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
@@ -154,7 +153,7 @@ struct PS_INPUT
 #if NOCULL
 	float vDir						: VFACE;
 #endif
-	
+
     float2 vScreenPos : VPOS;
 };
 
@@ -220,17 +219,12 @@ PS_OUTPUT main(const PS_INPUT In)
     float2 screenPos = (In.vScreenPos + 0.5f) * g_vecFullScreenTexel;
 
     float4 flLighting = ReadLighting(tex2D(sLightAccum, screenPos));
-	
-    float3 worldNormal = (float3) 0;
-#if !TRANSLUCENT
-    worldNormal = tex2D(sNormals, screenPos).xyz * 2.0f - 1.0f;
+
+#if READNORMAL
+	float3 worldNormal = tex2D( sNormals, screenPos ).xyz * 2.0f - 1.0f;
 #else
-    float3 dPdx = ddx(In.vWorldPos);
-    float3 dPdy = ddy(In.vWorldPos);
-    worldNormal = normalize(cross(dPdy, dPdx));
-    
+    float3 worldNormal = tex2D(sNormals, screenPos).xyz * 2.0f - 1.0f;
 #endif
-    worldNormal = normalize(worldNormal);
 
 #if RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye = normalize( In.worldToEye );
@@ -260,64 +254,13 @@ PS_OUTPUT main(const PS_INPUT In)
 	flSpecularLighting += rimLighting;
 #endif
 
-    float3 MRAO = tex2D(sMRAO, In.vTexCoord);
+    float3 MRAO = tex2D(sMRAO, screenPos);
+
     float roughness = MRAO.g;
-    float metallic = MRAO.r;
 
     float3 V = normalize(g_vecOrigin.xyz - In.vWorldPos);
-    float3 N = worldNormal;
+    float3 N = normalize(worldNormal);
     float NdotV = max(0.0f, dot(N, V));
-	
-    float3 compositeDiffuse = (float3) 0;
-    float3 compositeSpecular = (float3) 0;
-#if TRANSLUCENT    
-	
-    int LIGHT_COUNT = min((int) g_ForwardLightCount.x, MAX_FORWARD_LIGHTS);
-
-    [loop]
-    for (int i = 0; i < LIGHT_COUNT; i++)
-    {
-        int baseIdx = i * 2;
-    
-		//grab that farty data that is copied from deferred.
-        float4 lightPosRadius = g_ForwardLightData[baseIdx];
-        float3 lightPos = lightPosRadius.xyz;
-        float lightRadius = lightPosRadius.w;
-
-        float4 lightColorIntensity = g_ForwardLightData[baseIdx + 1];
-        float3 lightColor = lightColorIntensity.rgb;
-        float lightIntensity = lightColorIntensity.a;
-    
-		//calculate light against world
-        float3 toLight = lightPos - In.vWorldPos;
-        float distance = length(toLight);
-    
-		//check if we are outside light radius, if so stop rendering.
-        //if (distance > lightRadius)
-        //    continue;
-    
-		//normalize light.
-        float3 L = normalize(toLight);
-        
-        float attenuation = 1.0 - saturate(distance / lightRadius);
-        attenuation = attenuation * attenuation;
-        
-        float3 Diffuse, Specular;
-        
-		//run calculate light.
-        DoPointLightPBR(N, lightPos, lightColor, lightRadius,
-            distance, In.vWorldPos, metallic, roughness, flAlbedoSample.rgb, Diffuse, Specular);
-        
-		lightIntensity *= 10.0f;
-	
-		//composite the image.
-        compositeDiffuse += Diffuse;
-        compositeSpecular += Specular;
-    }
-    
-#endif
-	
-    flSpecularLighting += compositeSpecular;
 
 #if ENVMAP
 	float flSpecularFactor;
@@ -418,8 +361,6 @@ PS_OUTPUT main(const PS_INPUT In)
 		GAMMA_LIGHT_SCALE;
 #endif
 
-    flLighting += float4(compositeDiffuse, 0.0);
-	
     Out.vColor_0.xyzw = float4(((flAlbedoSample.xyz + flLighting.w * g_flPhongScale) * flLighting.xyz
 		+ flSpecularLighting) * flLightScale, flAlbedoSample.a);
 

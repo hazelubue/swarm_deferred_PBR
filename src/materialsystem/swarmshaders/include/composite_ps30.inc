@@ -40,8 +40,8 @@ class composite_ps30_Static_Index
 	unsigned int m_nALPHATEST : 2;
 	unsigned int m_nTRANSLUCENT : 2;
 	unsigned int m_nREADNORMAL : 2;
-	unsigned int m_nPHONGFRESNEL : 2;
 	unsigned int m_nNOCULL : 2;
+	unsigned int m_nPHONGFRESNEL : 2;
 	unsigned int m_nENVMAP : 2;
 	unsigned int m_nENVMAPMASK : 2;
 	unsigned int m_nENVMAPFRESNEL : 2;
@@ -57,8 +57,8 @@ class composite_ps30_Static_Index
 	bool m_bALPHATEST : 1;
 	bool m_bTRANSLUCENT : 1;
 	bool m_bREADNORMAL : 1;
-	bool m_bPHONGFRESNEL : 1;
 	bool m_bNOCULL : 1;
+	bool m_bPHONGFRESNEL : 1;
 	bool m_bENVMAP : 1;
 	bool m_bENVMAPMASK : 1;
 	bool m_bENVMAPFRESNEL : 1;
@@ -99,21 +99,21 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetPHONGFRESNEL( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nPHONGFRESNEL = i;
-#ifdef _DEBUG
-		m_bPHONGFRESNEL = true;
-#endif	// _DEBUG
-	}
-
 	void SetNOCULL( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
 		m_nNOCULL = i;
 #ifdef _DEBUG
 		m_bNOCULL = true;
+#endif	// _DEBUG
+	}
+
+	void SetPHONGFRESNEL( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nPHONGFRESNEL = i;
+#ifdef _DEBUG
+		m_bPHONGFRESNEL = true;
 #endif	// _DEBUG
 	}
 
@@ -221,8 +221,8 @@ public:
 		m_nALPHATEST = 0;
 		m_nTRANSLUCENT = 0;
 		m_nREADNORMAL = 0;
-		m_nPHONGFRESNEL = 0;
 		m_nNOCULL = 0;
+		m_nPHONGFRESNEL = 0;
 		m_nENVMAP = 0;
 		m_nENVMAPMASK = 0;
 		m_nENVMAPFRESNEL = 0;
@@ -238,8 +238,8 @@ public:
 		m_bALPHATEST = false;
 		m_bTRANSLUCENT = false;
 		m_bREADNORMAL = false;
-		m_bPHONGFRESNEL = false;
 		m_bNOCULL = false;
+		m_bPHONGFRESNEL = false;
 		m_bENVMAP = false;
 		m_bENVMAPMASK = false;
 		m_bENVMAPFRESNEL = false;
@@ -256,7 +256,7 @@ public:
 
 	int GetIndex() const
 	{
-		Assert( m_bALPHATEST && m_bTRANSLUCENT && m_bREADNORMAL && m_bPHONGFRESNEL && m_bNOCULL && m_bENVMAP && m_bENVMAPMASK && m_bENVMAPFRESNEL && m_bRIMLIGHT && m_bRIMLIGHTMODULATELIGHT && m_bBASETEXTURE2 && m_bBLENDMODULATE && m_bMULTIBLEND && m_bSELFILLUM && m_bSELFILLUM_MASK && m_bSELFILLUM_ENVMAP_ALPHA );
+		Assert( m_bALPHATEST && m_bTRANSLUCENT && m_bREADNORMAL && m_bNOCULL && m_bPHONGFRESNEL && m_bENVMAP && m_bENVMAPMASK && m_bENVMAPFRESNEL && m_bRIMLIGHT && m_bRIMLIGHTMODULATELIGHT && m_bBASETEXTURE2 && m_bBLENDMODULATE && m_bMULTIBLEND && m_bSELFILLUM && m_bSELFILLUM_MASK && m_bSELFILLUM_ENVMAP_ALPHA );
 		AssertMsg( !( m_nALPHATEST && m_nTRANSLUCENT ), "Invalid combo combination ( ALPHATEST && TRANSLUCENT )" );
 		AssertMsg( !( !m_nENVMAP && m_nENVMAPFRESNEL ), "Invalid combo combination ( !ENVMAP && ENVMAPFRESNEL )" );
 		AssertMsg( !( !m_nENVMAP && m_nENVMAPMASK ), "Invalid combo combination ( !ENVMAP && ENVMAPMASK )" );
@@ -274,11 +274,11 @@ public:
 		AssertMsg( !( m_nSELFILLUM_MASK && m_nSELFILLUM_ENVMAP_ALPHA ), "Invalid combo combination ( SELFILLUM_MASK && SELFILLUM_ENVMAP_ALPHA )" );
 		AssertMsg( !( m_nSELFILLUM_MASK && m_nENVMAPMASK ), "Invalid combo combination ( SELFILLUM_MASK && ENVMAPMASK )" );
 		AssertMsg( !( m_nSELFILLUM_ENVMAP_ALPHA && !m_nENVMAPMASK ), "Invalid combo combination ( SELFILLUM_ENVMAP_ALPHA && !ENVMAPMASK )" );
-		return ( 2 * m_nALPHATEST ) + ( 4 * m_nTRANSLUCENT ) + ( 8 * m_nREADNORMAL ) + ( 16 * m_nPHONGFRESNEL ) + ( 32 * m_nNOCULL ) + ( 64 * m_nENVMAP ) + ( 128 * m_nENVMAPMASK ) + ( 256 * m_nENVMAPFRESNEL ) + ( 512 * m_nRIMLIGHT ) + ( 1024 * m_nRIMLIGHTMODULATELIGHT ) + ( 2048 * m_nBASETEXTURE2 ) + ( 4096 * m_nBLENDMODULATE ) + ( 8192 * m_nMULTIBLEND ) + ( 16384 * m_nSELFILLUM ) + ( 32768 * m_nSELFILLUM_MASK ) + ( 65536 * m_nSELFILLUM_ENVMAP_ALPHA ) + 0;
+		return ( 2 * m_nALPHATEST ) + ( 4 * m_nTRANSLUCENT ) + ( 8 * m_nREADNORMAL ) + ( 16 * m_nNOCULL ) + ( 32 * m_nPHONGFRESNEL ) + ( 64 * m_nENVMAP ) + ( 128 * m_nENVMAPMASK ) + ( 256 * m_nENVMAPFRESNEL ) + ( 512 * m_nRIMLIGHT ) + ( 1024 * m_nRIMLIGHTMODULATELIGHT ) + ( 2048 * m_nBASETEXTURE2 ) + ( 4096 * m_nBLENDMODULATE ) + ( 8192 * m_nMULTIBLEND ) + ( 16384 * m_nSELFILLUM ) + ( 32768 * m_nSELFILLUM_MASK ) + ( 65536 * m_nSELFILLUM_ENVMAP_ALPHA ) + 0;
 	}
 };
 
-#define shaderStaticTest_composite_ps30 psh_forgot_to_set_static_ALPHATEST + psh_forgot_to_set_static_TRANSLUCENT + psh_forgot_to_set_static_READNORMAL + psh_forgot_to_set_static_PHONGFRESNEL + psh_forgot_to_set_static_NOCULL + psh_forgot_to_set_static_ENVMAP + psh_forgot_to_set_static_ENVMAPMASK + psh_forgot_to_set_static_ENVMAPFRESNEL + psh_forgot_to_set_static_RIMLIGHT + psh_forgot_to_set_static_RIMLIGHTMODULATELIGHT + psh_forgot_to_set_static_BASETEXTURE2 + psh_forgot_to_set_static_BLENDMODULATE + psh_forgot_to_set_static_MULTIBLEND + psh_forgot_to_set_static_SELFILLUM + psh_forgot_to_set_static_SELFILLUM_MASK + psh_forgot_to_set_static_SELFILLUM_ENVMAP_ALPHA
+#define shaderStaticTest_composite_ps30 psh_forgot_to_set_static_ALPHATEST + psh_forgot_to_set_static_TRANSLUCENT + psh_forgot_to_set_static_READNORMAL + psh_forgot_to_set_static_NOCULL + psh_forgot_to_set_static_PHONGFRESNEL + psh_forgot_to_set_static_ENVMAP + psh_forgot_to_set_static_ENVMAPMASK + psh_forgot_to_set_static_ENVMAPFRESNEL + psh_forgot_to_set_static_RIMLIGHT + psh_forgot_to_set_static_RIMLIGHTMODULATELIGHT + psh_forgot_to_set_static_BASETEXTURE2 + psh_forgot_to_set_static_BLENDMODULATE + psh_forgot_to_set_static_MULTIBLEND + psh_forgot_to_set_static_SELFILLUM + psh_forgot_to_set_static_SELFILLUM_MASK + psh_forgot_to_set_static_SELFILLUM_ENVMAP_ALPHA
 
 
 class composite_ps30_Dynamic_Index

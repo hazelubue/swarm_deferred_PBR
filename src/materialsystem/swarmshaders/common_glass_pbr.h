@@ -1,10 +1,7 @@
 
-sampler sMixedSampler[FREE_LIGHT_SAMPLERS] : register(FIRST_LIGHT_SAMPLER_FXC);
-const float4 g_flMixedData[112] : register(FIRST_SHARED_LIGHTDATA_CONSTANT_FXC);
-
-float g_SpecularBoost : register(c16);
-float g_DiffuseScale : register(c21);
-float g_SheenStrength : register(c23);
+float g_SpecularBoost = 0.5f;
+float g_DiffuseScale = 1.0f;
+float g_SheenStrength = 0.5f;
 
 const float2 g_vecFullScreenTexel : register(c1);
 const float4 g_vecFogParams : register(c2);
@@ -186,7 +183,7 @@ float3 Diffuse_OrenNayar(float3 DiffuseColor, float Roughness, float NoV, float 
     return DiffuseColor / 3.1456 * (C1 + C2) * (1 + Roughness * 0.5);
 }
 
-void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, float3 vWorldPos, float3 vEye, float roughness, float metalness, float lightDirectionAngle, float3 albedo, out float3 Diffuse, out float3 Specular)
+void calculateLight(float3 lightIn, float4 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, float3 vWorldPos, float3 vEye, float roughness, float metalness, float lightDirectionAngle, float3 albedo, out float3 Diffuse, out float3 Specular)
 {
     float3 L = normalize(lightIn);
     float3 V = normalize(lightOut);
@@ -254,7 +251,7 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
     float3 diffuseBRDF = Diffuse_OrenNayar(F, roughness, NV, LN, VoH) * g_DiffuseScale;
     float3 sheenBRDF = SheenBRDF_DreamWorks(N, V, L, albedo, g_SheenStrength, roughness);
 
-    float3 specularBRDF = (Fc * D * G) / max(0.00001, 4.0f);
+    float3 specularBRDF = (Fc * D * G) / max(0.00001, 4.0f * cosLightIn * lightDirectionAngle);
     //specularBRDF *= specAO;
     //float3 CompositeAmbient = Ambient;/*DoAmbient( UV, vWorldPos, normal, vEye, roughness, albedo, ambient, groundColor);*/
 
@@ -302,32 +299,28 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
 //}
 
 void DoPointLightPBR(float3 normal,
-    float3 lightPos, float3 lightColor, float lightRadius,
+    float4 lightPos, float4 lightColor,
     float lightToWorldDist, float3 worldPos,
     float metalScalar, float roughness, float3 albedo, out float3 Diffuse, out float3 Specular)
 {
     float3 L = normalize(lightPos - worldPos);
     float3 V = normalize(g_vecOrigin.xyz - worldPos);
-    float3 N = normalize(normal);
+    //float3 N = normalize(normal);
 
-    float NdotL = max(0.0f, dot(N, L));
+    float lightRadius = lightPos.w;
 
-    if (NdotL <= 0.0)
-    {
-        Diffuse = float3(0, 0, 0);
-        Specular = float3(0, 0, 0);
-        return;
-    }
+    float NdotL = max(0.0f, dot(normal, L));
+    float NdotV = max(0.0f, dot(normal, V));
 
     float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metalScalar);
 
-    calculateLight(L, lightColor, V, N, F0, worldPos, g_vecOrigin, roughness, metalScalar, NdotL, albedo, Diffuse, Specular);
+    calculateLight(L, lightColor, V, normal, F0, worldPos, g_vecOrigin, roughness, metalScalar, NdotV, albedo, Diffuse, Specular);
 
-    float distFade = 1.0f - saturate(lightToWorldDist / lightRadius);
+    float distFade = 1.0f - saturate(lightToWorldDist / max(lightRadius, 0.001));
     distFade *= distFade;
 
-    Diffuse *= distFade * NdotL; 
-    Specular *= distFade * NdotL;
+    Diffuse *= distFade; 
+    Specular *= distFade;
 }
 
 float mod(float x, float y)

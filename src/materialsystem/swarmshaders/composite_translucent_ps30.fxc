@@ -2,6 +2,7 @@
 // STATIC:		"ALPHATEST"			"0..1"
 // STATIC:		"TRANSLUCENT"		"0..1"
 // STATIC:		"READNORMAL"		"0..1"
+// STATIC:		"PHONGFRESNEL"		"0..1"
 // STATIC:		"NOCULL"			"0..1"
 // STATIC:		"ENVMAP"			"0..1"
 // STATIC:		"ENVMAPMASK"		"0..1"
@@ -61,12 +62,10 @@ const float g_flAlphaRef				: register( c0 );
 
 sampler sNormals : register(s1);
 
-sampler sLightAccum : register(s2);
-
 const float g_flPhongScale : register(c4);
 
-static const int MAX_FORWARD_LIGHTS = 8;
-float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 4] : register(c50);
+static const int MAX_FORWARD_LIGHTS = 16;
+float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c50);
 float4 g_ForwardLightCount : register(c49);
 
 #if ENVMAP
@@ -214,23 +213,15 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
     Out.vColor_0.w = 1;
 #endif
-
-	//float2 screenPos = GetLightAccumUVs( In.vProjPosXYW, g_vecHalfScreenTexel );
-    float2 screenPos = (In.vScreenPos + 0.5f) * g_vecFullScreenTexel;
-
-    float4 flLighting = ReadLighting(tex2D(sLightAccum, screenPos));
 	
     float3 worldNormal = (float3) 0;
 	
-#if !TRANSLUCENT
-    worldNormal = tex2D(sNormals, screenPos).xyz * 2.0f - 1.0f;
-#else
     float3 dPdx = ddx(In.vWorldPos);
     float3 dPdy = ddy(In.vWorldPos);
-    worldNormal = normalize(cross(dPdy, dPdx));
-    
-#endif
-
+    float3 geometricNormal = cross(dPdy, dPdx);
+    float len = length(geometricNormal);
+    worldNormal = len > 0.0001 ? geometricNormal / len : float3(0, 0, 1) * 0.5f + 0.5f;
+	
     worldNormal = normalize(worldNormal);
 
 #if RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
@@ -242,9 +233,9 @@ PS_OUTPUT main(const PS_INPUT In)
 	float flFresnel = saturate( Fresnel( worldNormal, worldToEye, g_flFresnelRanges ) );
 #endif
 
-#if PHONGFRESNEL
-	flLighting.w *= flFresnel;
-#endif
+//#if PHONGFRESNEL
+//	flLighting.w *= flFresnel;
+//#endif
 
     float3 flSpecularLighting = (float3) 0;
 
@@ -254,14 +245,15 @@ PS_OUTPUT main(const PS_INPUT In)
 	float3 rimLighting = pow( dotEyeVec, g_flRimLight_Exponent_AlbedoScale.x );
 	rimLighting *= lerp( 1, flAlbedoSample.rgb, g_flRimLight_Exponent_AlbedoScale.y );
 	rimLighting *= g_flRimLight_Tint;
-#if RIMLIGHTMODULATELIGHT
-	rimLighting *= dot( flLighting.rgb, float3( 0.299f, 0.587f, 0.114f ) );
-#endif
+//#if RIMLIGHTMODULATELIGHT
+//	rimLighting *= dot( flLighting.rgb, float3( 0.299f, 0.587f, 0.114f ) );
+//#endif
 
 	flSpecularLighting += rimLighting;
 #endif
-
-    float3 MRAO = tex2D(sMRAO, In.vTexCoord);
+	
+    float3 MRAO = tex2D(sMRAO, In.vTexCoord.xy);
+	
     float roughness = MRAO.g;
     float metallic = MRAO.r;
 
@@ -269,33 +261,34 @@ PS_OUTPUT main(const PS_INPUT In)
     float3 N = worldNormal;
     float NdotV = max(0.0f, dot(N, V));
 	
+    float3 worldPos = In.vWorldPos.xyz;
+	
     float3 compositeDiffuse = (float3) 0;
     float3 compositeSpecular = (float3) 0;
 #if TRANSLUCENT    
 	
-    int LIGHT_COUNT = min((int) g_ForwardLightCount.x, MAX_FORWARD_LIGHTS);
+    int LIGHT_COUNT = min(max((int)g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
 
     [loop]
     for (int i = 0; i < LIGHT_COUNT; i++)
     {
-        int baseIdx = i * 2;
+        int baseIdx = i * 2; 
     
 		//grab that farty data that is copied from deferred.
-        float4 lightPosRadius = g_ForwardLightData[baseIdx];
-        float3 lightPos = lightPosRadius.xyz;
-        float lightRadius = lightPosRadius.w;
+		float4 lightPosRadius = g_ForwardLightData[baseIdx];
+		float4 lightPos = lightPosRadius.xyzw;
+		float lightRadius = lightPosRadius.w;
 
-        float4 lightColorIntensity = g_ForwardLightData[baseIdx + 1];
-        float3 lightColor = lightColorIntensity.rgb;
-        float lightIntensity = lightColorIntensity.a;
+		float4 lightColorIntensity = g_ForwardLightData[baseIdx + 1];
+		float4 lightColor = lightColorIntensity.rgba;
     
 		//calculate light against world
-        float3 toLight = lightPos - In.vWorldPos;
+        float3 toLight = lightPos - worldPos;
         float distance = length(toLight);
     
 		//check if we are outside light radius, if so stop rendering.
-        if (distance > lightRadius)
-            continue;
+        //if (distance > lightRadius)
+        //    continue;
     
 		//normalize light.
         float3 L = normalize(toLight);
@@ -306,18 +299,24 @@ PS_OUTPUT main(const PS_INPUT In)
         float3 Diffuse, Specular;
         
 		//run calculate light.
-        DoPointLightPBR(N, lightPos, lightColor, lightRadius,
-            distance, In.vWorldPos, metallic, roughness, flAlbedoSample.rgb, Diffuse, Specular);
+        DoPointLightPBR(N, lightPos, lightColor, distance, worldPos, metallic, roughness, flAlbedoSample.rgb, Diffuse, Specular);
         
+		//lightIntensity *= 10.0f;
+	
 		//composite the image.
-        compositeDiffuse += Diffuse * lightIntensity * 0.001;
-        compositeSpecular += Specular * lightIntensity;
+        compositeDiffuse += Diffuse;
+        compositeSpecular += Specular;
     }
     
 #endif
 	
-    flSpecularLighting += compositeSpecular;
+//#if PHONGFRESNEL
+//	compositeSpecular *= flFresnel;
+//#endif
 
+
+    flSpecularLighting += compositeSpecular;
+	
 #if ENVMAP
 	float flSpecularFactor;
 #if ENVMAPMASK
@@ -406,8 +405,8 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
 	flSelfIllumAmount = flAlbedoSample.a;
 #endif
-	flLighting.rgb = max( flLighting.rgb,
-		flAlbedoSample.rgb * g_flSelfIllum_Tint * flSelfIllumAmount );
+	//flLighting.rgb = max( flLighting.rgb,
+	//	flAlbedoSample.rgb * g_flSelfIllum_Tint * flSelfIllumAmount );
 #endif
 
     float flLightScale =
@@ -416,11 +415,21 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
 		GAMMA_LIGHT_SCALE;
 #endif
-
-    flLighting += float4(compositeDiffuse, 0.0);
 	
-    Out.vColor_0.xyzw = float4(((flAlbedoSample.xyz + flLighting.w * g_flPhongScale) * flLighting.xyz
-		+ flSpecularLighting) * flLightScale, flAlbedoSample.a);
+    float3 diffuse = (float3) 0;
+    float3 specular = (float3) 0;
+	
+    float3 finalLighting = compositeDiffuse;
+    diffuse = flAlbedoSample.xyz * finalLighting;
+    specular = compositeSpecular + flSpecularLighting;
+	
+    //float3 diffuse = flAlbedoSample.xyz * flLighting.xyz;
+    //float3 specular = flLighting.w * g_flPhongScale + flSpecularLighting;
+    Out.vColor_0.xyzw = float4((diffuse + specular) * flLightScale, flAlbedoSample.a);
+	
+	//original
+    //Out.vColor_0.xyzw = float4(((flAlbedoSample.xyz + flLighting.w * g_flPhongScale) * flLighting.xyz
+	//	+ flSpecularLighting) * flLightScale, flAlbedoSample.a);
 
 #if PIXELFOGTYPE == 0
 	float fogAmt = CalcPixelFogFactor( PIXELFOGTYPE, g_vecFogParams, g_vecOrigin, In.vWorldPos, 0 );
