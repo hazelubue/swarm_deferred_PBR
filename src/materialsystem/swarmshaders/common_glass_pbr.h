@@ -7,9 +7,10 @@ const float2 g_vecFullScreenTexel : register(c1);
 const float4 g_vecFogParams : register(c2);
 const float3 g_vecOrigin : register(c3);
 
-static const int MAX_FORWARD_LIGHTS = 8;
-float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 4] : register(c45);
-float4 g_ForwardLightCount : register(c44);
+static const int MAX_FORWARD_LIGHTS = 16;
+float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c63);
+float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c31);
+float4 g_ForwardLightCount : register(c11);
 
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
 {
@@ -187,23 +188,26 @@ float3 Diffuse_OrenNayar(float3 DiffuseColor, float Roughness, float NoV, float 
     return DiffuseColor / 3.1456 * (C1 + C2) * (1 + Roughness * 0.5);
 }
 
-float ComputeSpotlightAttenuation(int dataIndex, float3 N, float3 L, float dist, float radius)
+float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightPos, float radius)
 {
-    // Distance attenuation
+    float3 toLight = lightPos - worldPos;
+    float dist = length(toLight);
+    float3 L = toLight / dist;
+
     float distNorm = dist / radius;
     float fade = saturate(1.0f - distNorm);
-    fade = fade * fade; 
+    fade = fade * fade;
 
-    // Spotlight cone attenuation
-    float3 spotDir = g_ForwardLightData[dataIndex + 2].xyz;
-    float coneInner = g_ForwardLightData[dataIndex + 2].w; // Cosine of inner angle
-    float coneOuter = g_ForwardLightData[dataIndex + 3].w; // Cosine of outer angle
+    int spotDataIndex = lightIndex * 2;
 
-    float spotDot = dot(normalize(spotDir), L);
+    float3 spotForwardDir = g_ForwardSpotLightData[spotDataIndex].xyz;
+    float coneInner = g_ForwardSpotLightData[spotDataIndex].w;
+    float coneOuter = g_ForwardSpotLightData[spotDataIndex + 1].w;
+
+    float spotDot = dot(normalize(spotForwardDir), -L);
     float spotAtten = smoothstep(coneOuter, coneInner, spotDot);
-    fade *= spotAtten;
 
-    return fade;
+    return fade * spotAtten;
 }
 
 float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float NdotH,
@@ -213,7 +217,7 @@ float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float Nd
 {
     float3 V = normalize(vEye - vWorldPos);
 
-    int dataIndex = index * 4;
+    int dataIndex = index * 2;
 
     float3 lightPos = g_ForwardLightData[dataIndex].xyz;
     float lightRadius = g_ForwardLightData[dataIndex].w;
@@ -251,7 +255,7 @@ float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float Nd
     }
     else if (lightType == 1.0)
     {
-        float spotAtten = ComputeSpotlightAttenuation(dataIndex, normal, L, lightToWorldDist, lightRadius);
+        float spotAtten = ComputeSpotlightAttenuation(index, vWorldPos, lightPos, lightRadius);
         diffuse *= spotAtten;
         specular *= spotAtten;
     }

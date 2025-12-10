@@ -247,10 +247,11 @@ PS_OUTPUT main(const PS_INPUT In)
     float3 compositeLighting = (float3) 0;
      
     int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
-
+	//[unroll(16)]
     for (int i = 0; i < LIGHT_COUNT; i++)
     {
-        int baseIdx = i * 4; 
+		
+        int baseIdx = i * 2; 
     
         float4 lightPosRadius = g_ForwardLightData[baseIdx];
         float3 lightPos = lightPosRadius.xyz;

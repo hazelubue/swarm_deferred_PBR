@@ -225,6 +225,8 @@
     <ClCompile Include="lighting_pass_volum.cpp" />
     <ClCompile Include="lighting_world.cpp" />
     <ClCompile Include="lighting_volume.cpp" />
+    <ClCompile Include="skydome_atmosphere.cpp" />
+    <ClCompile Include="skydome_atmosphere_helper.cpp" />
     <ClCompile Include="ssgi.cpp" />
     <ClCompile Include="volume_blend.cpp" />
     <ClCompile Include="volume_prepass.cpp" />
@@ -258,6 +260,7 @@
     <ClInclude Include="lighting_helper.h" />
     <ClInclude Include="lighting_pass_basic.h" />
     <ClInclude Include="lighting_pass_volum.h" />
+    <ClInclude Include="skydome_atmosphere_helper.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\dx9sdk\lib\d3dx9.lib" />

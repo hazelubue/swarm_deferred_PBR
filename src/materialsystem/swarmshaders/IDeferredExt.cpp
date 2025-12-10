@@ -150,10 +150,11 @@ void CDeferredExtension::CommitTexture_VolumePrePass( ITexture *pTexVolumePrePas
 void CDeferredExtension::ClearForwardLights()
 {
     m_vecForwardLights.RemoveAll();
+    m_vecForwardSpotLights.RemoveAll(); 
     m_vecForwardLightBuffer.RemoveAll();
+    m_vecForwardSpotLightBuffer.RemoveAll();
     m_bForwardLightsDirty = true;
 }
-
 void CDeferredExtension::AddForwardLight(const Vector& pos, float radius,
     const Vector& color, float intensity,
     int type, const Vector& dir,
@@ -164,6 +165,7 @@ void CDeferredExtension::AddForwardLight(const Vector& pos, float radius,
         return;
 
     ForwardLightData light;
+    ForwardSpotLightData SpotLight;
 
     // Position + radius
     light.position[0] = pos.x;
@@ -178,16 +180,16 @@ void CDeferredExtension::AddForwardLight(const Vector& pos, float radius,
     light.color[3] = (float)type;  // Store type here
 
     // Direction + inner cone
-    light.direction[0] = dir.x;
-    light.direction[1] = dir.y;
-    light.direction[2] = dir.z;
-    light.direction[3] = constantAtt;  // Can be used for inner cone cosine
+    SpotLight.direction[0] = dir.x;
+    SpotLight.direction[1] = dir.y;
+    SpotLight.direction[2] = dir.z;
+    SpotLight.direction[3] = constantAtt;  // Can be used for inner cone cosine
 
     // Attenuation + outer cone
-    light.attenuation[0] = linearAtt;
-    light.attenuation[1] = quadraticAtt;
-    light.attenuation[2] = 0.0f;  // Unused
-    light.attenuation[3] = spotCutoff;  // Outer cone cosine
+    SpotLight.attenuation[0] = linearAtt;
+    SpotLight.attenuation[1] = quadraticAtt;
+    SpotLight.attenuation[2] = 0.0f;  // Unused
+    SpotLight.attenuation[3] = spotCutoff;  // Outer cone cosine
 
     m_vecForwardLights.AddToTail(light);
     m_bForwardLightsDirty = true;
@@ -213,22 +215,34 @@ void CDeferredExtension::CommitForwardLightData(const ForwardLightData* pLights,
     m_bForwardLightsDirty = true;
 }
 
-float* CDeferredExtension::GetForwardLightData()
+void CDeferredExtension::CommitForwardSpotLightData(const ForwardSpotLightData* pLights, int numLights)
 {
-    // Return cached data if not dirty
-    if (!m_bForwardLightsDirty && m_vecForwardLightBuffer.Count() > 0)
+    m_vecForwardSpotLights.RemoveAll();
+    m_vecForwardSpotLightBuffer.RemoveAll();
+
+    if (!pLights || numLights <= 0)
     {
-        return m_vecForwardLightBuffer.Base();
+        m_bForwardLightsDirty = false;
+        return;
     }
 
-    // Clear and rebuild buffer
+    numLights = MIN(numLights, 16);
+    m_vecForwardSpotLights.AddMultipleToTail(numLights, pLights);
+    m_bForwardLightsDirty = true;
+}
+
+float* CDeferredExtension::GetForwardLightData()
+{
+    if (!m_bForwardLightsDirty && m_vecForwardLightBuffer.Count() > 0)
+        return m_vecForwardLightBuffer.Base();
+
     m_vecForwardLightBuffer.RemoveAll();
 
     if (m_vecForwardLights.Count() == 0)
         return NULL;
 
-    // Each light needs 16 floats (4 float4s)
-    int floatsPerLight = 16;
+    // Each light needs 8 floats (2 float4s)
+    int floatsPerLight = 8;
     m_vecForwardLightBuffer.EnsureCapacity(m_vecForwardLights.Count() * floatsPerLight);
 
     for (int i = 0; i < m_vecForwardLights.Count(); i++)
@@ -241,23 +255,11 @@ float* CDeferredExtension::GetForwardLightData()
         m_vecForwardLightBuffer.AddToTail(light.position[2]);
         m_vecForwardLightBuffer.AddToTail(light.position[3]);
 
-        // float4[1]: Color (xyz) + light type (w) - 0=point, 1=spot
+        // float4[1]: Color (xyz) + type (w)
         m_vecForwardLightBuffer.AddToTail(light.color[0]);
         m_vecForwardLightBuffer.AddToTail(light.color[1]);
         m_vecForwardLightBuffer.AddToTail(light.color[2]);
         m_vecForwardLightBuffer.AddToTail(light.color[3]);
-
-        // float4[2]: Spotlight direction (xyz) + inner cone angle cosine (w)
-        m_vecForwardLightBuffer.AddToTail(light.direction[0]);
-        m_vecForwardLightBuffer.AddToTail(light.direction[1]);
-        m_vecForwardLightBuffer.AddToTail(light.direction[2]);
-        m_vecForwardLightBuffer.AddToTail(light.direction[3]);
-
-        // float4[3]: Unused (xyz) + outer cone angle cosine (w)
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[0]);
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[1]);
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[2]);
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[3]);
     }
 
     m_bForwardLightsDirty = false;
@@ -266,53 +268,54 @@ float* CDeferredExtension::GetForwardLightData()
 
 float* CDeferredExtension::GetForwardSpotlightData()
 {
-    // Return cached data if not dirty
-    if (!m_bForwardLightsDirty && m_vecForwardLightBuffer.Count() > 0)
-    {
-        return m_vecForwardLightBuffer.Base();
-    }
+    if (!m_bForwardLightsDirty && m_vecForwardSpotLightBuffer.Count() > 0)
+        return m_vecForwardSpotLightBuffer.Base();
 
-    // Clear and rebuild buffer
-    m_vecForwardLightBuffer.RemoveAll();
+    m_vecForwardSpotLightBuffer.RemoveAll(); 
 
-    if (m_vecForwardLights.Count() == 0)
+    if (m_vecForwardSpotLights.Count() == 0)
         return NULL;
 
-    // Each light needs 16 floats (4 float4s)
-    int floatsPerLight = 16;
-    m_vecForwardLightBuffer.EnsureCapacity(m_vecForwardLights.Count() * floatsPerLight);
+    // Each spotlight needs 8 floats (2 float4s)
+    int floatsPerLight = 8;
+    m_vecForwardSpotLightBuffer.EnsureCapacity(m_vecForwardSpotLights.Count() * floatsPerLight);
 
-    for (int i = 0; i < m_vecForwardLights.Count(); i++)
+    for (int i = 0; i < m_vecForwardSpotLights.Count(); i++)
     {
-        const ForwardLightData& light = m_vecForwardLights[i];
+        const ForwardSpotLightData& light = m_vecForwardSpotLights[i];
 
-        // float4[0]: Position (xyz) + radius (w)
-        m_vecForwardLightBuffer.AddToTail(light.direction[0]);
-        m_vecForwardLightBuffer.AddToTail(light.direction[1]);
-        m_vecForwardLightBuffer.AddToTail(light.direction[2]);
-        m_vecForwardLightBuffer.AddToTail(light.direction[3]);
+        // float4[0]: Direction (xyz) + inner cone (w)
+        m_vecForwardSpotLightBuffer.AddToTail(light.direction[0]);
+        m_vecForwardSpotLightBuffer.AddToTail(light.direction[1]);
+        m_vecForwardSpotLightBuffer.AddToTail(light.direction[2]);
+        m_vecForwardSpotLightBuffer.AddToTail(light.direction[3]);
 
-        // float4[1]: Color (xyz) + light type (w) - 0=point, 1=spot
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[0]);
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[1]);
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[2]);
-        m_vecForwardLightBuffer.AddToTail(light.attenuation[3]);
-
-
+        // float4[1]: unused (xyz) + outer cone (w)
+        m_vecForwardSpotLightBuffer.AddToTail(light.attenuation[0]);
+        m_vecForwardSpotLightBuffer.AddToTail(light.attenuation[1]);
+        m_vecForwardSpotLightBuffer.AddToTail(light.attenuation[2]);
+        m_vecForwardSpotLightBuffer.AddToTail(light.attenuation[3]);
     }
 
     m_bForwardLightsDirty = false;
-    return m_vecForwardLightBuffer.Base();
+    return m_vecForwardSpotLightBuffer.Base();
 }
 
 int CDeferredExtension::GetForwardLights_NumRows()
 {
-    // Each light uses 4 float4 rows
-    return m_vecForwardLights.Count() * 4;
+    // Each light uses 2 float4 rows (8 floats)
+    return m_vecForwardLights.Count() * 2;
+}
+
+int CDeferredExtension::GetForwardSpotLights_NumRows()
+{
+    // Each spotlight uses 2 float4 rows (8 floats)
+    return m_vecForwardSpotLights.Count() * 2;
 }
 
 int CDeferredExtension::GetNumActiveForwardLights()
 {
     return m_vecForwardLights.Count();
 }
+
 

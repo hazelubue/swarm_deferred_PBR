@@ -446,26 +446,26 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		int numForwardLights = pExt->GetNumActiveForwardLights();
 
 		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(44, forwardLightCount);
+		pShaderAPI->SetPixelShaderConstant(11, forwardLightCount);
 
 		if (numForwardLights > 0)
 		{
 			float* pLightData = pExt->GetForwardLightData();
 			if (pLightData)
 			{
-				pShaderAPI->SetPixelShaderConstant(45,
+				pShaderAPI->SetPixelShaderConstant(63,
 					pLightData,
 					pExt->GetForwardLights_NumRows());
 			}
 		}
 
-		/*float* pSpotlightData = pExt->GetForwardSpotlightData();
+		float* pSpotlightData = pExt->GetForwardSpotlightData();
 		if (pSpotlightData)
 		{
-			pShaderAPI->SetPixelShaderConstant(67,
+			pShaderAPI->SetPixelShaderConstant(31,
 				pSpotlightData,
-				pExt->GetForwardLights_NumRows());
-		}*/
+				pExt->GetForwardSpotLights_NumRows());
+		}
 
 		if (bWorldEyeVec)
 		{

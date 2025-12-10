@@ -1442,7 +1442,7 @@
     <ClCompile Include="nav_simplify.cpp">
       <Filter>Source Files\Nav Mesh</Filter>
     </ClCompile>
-<ClCompile Include="hl2\ai_behavior_actbusy.cpp">
+    <ClCompile Include="hl2\ai_behavior_actbusy.cpp">
       <Filter>Source Files\From HL2</Filter>
     </ClCompile>
     <ClCompile Include="hl2\ai_spotlight.cpp">
@@ -1550,7 +1550,6 @@
     <ClCompile Include="..\shared\predicted_viewmodel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-
     <ClCompile Include="..\shared\deferred\CDefLight.cpp">
       <Filter>Source Files\deferred\shared</Filter>
     </ClCompile>
@@ -1565,6 +1564,9 @@
     </ClCompile>
     <ClCompile Include="..\shared\deferred\CDefLightGlobal.cpp">
       <Filter>Source Files\deferred\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="env_skydome.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -3200,7 +3202,7 @@
     <ClInclude Include="toolframework_server.h">
       <Filter>Tools Framework</Filter>
     </ClInclude>
-<ClInclude Include="sdk\sdk_player.h">
+    <ClInclude Include="sdk\sdk_player.h">
       <Filter>Source Files\sdk</Filter>
     </ClInclude>
     <ClInclude Include="sdk\sdk_fire.h">
@@ -3236,7 +3238,6 @@
     <ClInclude Include="..\shared\predicted_viewmodel.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-
     <ClInclude Include="deferred\deferred_server_common.h">
       <Filter>Source Files\deferred</Filter>
     </ClInclude>
@@ -3256,7 +3257,6 @@
       <Filter>Source Files\deferred\shared</Filter>
     </ClInclude>
   </ItemGroup>
-
   <ItemGroup>
     <Library Include="..\..\lib\public\bonesetup.lib">
       <Filter>Link Libraries</Filter>

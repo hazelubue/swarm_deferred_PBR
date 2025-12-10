@@ -19,6 +19,8 @@ public:
 
 	virtual void	RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw );
 
+	CMaterialReference	m_SkydomeMaterial;
+
 public:
 
 	void			LevelInit( void );
@@ -49,10 +51,13 @@ public:
 
 	void			DrawLightShadowView( const CViewSetup &view, int iDesiredShadowmap, def_light_t *l );
 
+	void			DrawSky(const CViewSetup& view);
+
+	
+	
 protected:
 
 	void			DrawViewModels( const CViewSetup &view, bool drawViewmodel, bool bGBuffer );
-
 
 private:
 

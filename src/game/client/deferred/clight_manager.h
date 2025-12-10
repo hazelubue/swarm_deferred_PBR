@@ -69,14 +69,18 @@ public:
 #endif
 
 	void CollectForwardLights();
+	void CollectSpotlightData();
 	void CommitForwardLightsToExtension();
-	int GetNumForwardLights() const { return m_vecForwardLights.Count(); }
+	void CommitForwardSpotLightsToExtension();
+	int GetNumActiveForwardLights() const { return m_vecForwardLights.Count(); }
 	const ForwardLightData* GetForwardLightData(int index) const;
+	const ForwardSpotLightData* GetForwardSpotLightData(int index) const;
 
 	const CUtlVector<def_light_t*>& GetRenderLights() const { return m_hRenderLights; }
 private:
 
 	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
 	bool m_bForwardLightsDirty;
 

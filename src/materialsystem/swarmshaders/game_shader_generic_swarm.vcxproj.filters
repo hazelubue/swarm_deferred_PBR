@@ -108,6 +108,12 @@
     <ClCompile Include="defpass_composite_translucent.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
+    <ClCompile Include="skydome_atmosphere.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="skydome_atmosphere_helper.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h">
@@ -189,6 +195,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="defpass_composite_translucent.h">
+      <Filter>Source Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="skydome_atmosphere_helper.h">
       <Filter>Source Files\scene</Filter>
     </ClInclude>
   </ItemGroup>

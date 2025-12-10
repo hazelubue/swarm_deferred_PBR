@@ -1,3 +1,6 @@
+skydome_ps30.fxc
+skydome_vs30.fxc
+
 composite_vs30.fxc
 composite_ps30.fxc
 

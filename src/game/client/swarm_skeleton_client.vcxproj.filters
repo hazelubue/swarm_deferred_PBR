@@ -1931,6 +1931,9 @@
     <ClCompile Include="deferred\deferred_screenspace_effects_order.cpp">
       <Filter>Source Files\deferred</Filter>
     </ClCompile>
+    <ClCompile Include="c_env_skydome.cpp">
+      <Filter>Source Files\deferred</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="achievement_notification_panel.h">
@@ -4190,6 +4193,9 @@
       <Filter>Source Files\deferred</Filter>
     </ClInclude>
     <ClInclude Include="deferred\flashlighteffect_deferred.h">
+      <Filter>Source Files\deferred</Filter>
+    </ClInclude>
+    <ClInclude Include="c_env_skydome.h">
       <Filter>Source Files\deferred</Filter>
     </ClInclude>
   </ItemGroup>

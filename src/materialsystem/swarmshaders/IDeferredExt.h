@@ -13,9 +13,14 @@ struct ForwardLightData
 {
 	float position[4];      // xyz = position, w = radius
 	float color[4];         // xyz = color, w = intensity  
+};
+
+struct ForwardSpotLightData
+{
 	float direction[4];     // xyz = direction, w = type (0=point, 1=spot, 2=directional)
 	float attenuation[4];   // x = constant, y = linear, z = quadratic, w = spotCutoff
 };
+
 
 struct lightData_Global_t
 {
@@ -124,14 +129,18 @@ public:
 	virtual float* GetForwardSpotlightData() = 0;
 
 	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights) = 0;
+	virtual void CommitForwardSpotLightData(const ForwardSpotLightData* pLights, int numLights) = 0;
 	virtual int GetForwardLights_NumRows() = 0;
+	virtual int GetForwardSpotLights_NumRows() = 0;
 	virtual int GetNumActiveForwardLights() = 0;
 
 private:
 	
 
 	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
+	CUtlVector<float> m_vecForwardSpotLightBuffer;
 	bool m_bForwardLightsDirty;
 };
 
@@ -216,17 +225,21 @@ public:
 		float quadraticAtt = 0.0f, float spotCutoff = 45.0f);
 
 	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights);
+	virtual void CommitForwardSpotLightData(const ForwardSpotLightData* pLights, int numLights);
 
 	virtual float* GetForwardLightData();
 	virtual float* GetForwardSpotlightData();
 	virtual int GetForwardLights_NumRows();
+	virtual int GetForwardSpotLights_NumRows();
 	virtual int GetNumActiveForwardLights();
 
 private:
 
 	
 	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
+	CUtlVector<float> m_vecForwardSpotLightBuffer;
 	bool m_bForwardLightsDirty;
 
 	bool m_bDefLightingEnabled;
