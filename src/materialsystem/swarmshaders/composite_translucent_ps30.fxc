@@ -1,0 +1,397 @@
+
+// STATIC:		"READNORMAL"		"0..1"
+// STATIC:		"PHONGFRESNEL"		"0..1"
+// STATIC:		"NOCULL"			"0..1"
+// STATIC:		"ENVMAP"			"0..1"
+// STATIC:		"ENVMAPMASK"		"0..1"
+// STATIC:		"ENVMAPFRESNEL"		"0..1"
+
+// STATIC:		"RIMLIGHT"						"0..1"
+// STATIC:		"RIMLIGHTMODULATELIGHT"			"0..1"
+
+// STATIC:		"BASETEXTURE2"		"0..1"
+// STATIC:		"BLENDMODULATE"		"0..1"
+// STATIC:		"MULTIBLEND"		"0..1"
+
+// STATIC:		"SELFILLUM"					"0..1"
+// STATIC:		"SELFILLUM_MASK"			"0..1"
+// STATIC:		"SELFILLUM_ENVMAP_ALPHA"	"0..1"
+
+// DYNAMIC:		"PIXELFOGTYPE"		"0..1"
+
+
+// SKIP:		$ALPHATEST && $TRANSLUCENT
+// SKIP:		!$ENVMAP && $ENVMAPFRESNEL
+// SKIP:		!$ENVMAP && $ENVMAPMASK
+
+// SKIP:		$ENVMAP && !$READNORMAL
+// SKIP:		$ENVMAPFRESNEL && !$READNORMAL
+// SKIP:		$PHONGFRESNEL && !$READNORMAL
+// SKIP:		$RIMLIGHT && !$READNORMAL
+// SKIP:		!$RIMLIGHT && $RIMLIGHTMODULATELIGHT
+
+// SKIP:		!$BASETEXTURE2 && !$MULTIBLEND && $BLENDMODULATE
+// SKIP:		$MODEL && $BASETEXTURE2
+// SKIP:		$MODEL && $MULTIBLEND
+// SKIP:		$BASETEXTURE2 && $MULTIBLEND
+// SKIP:		$ENVMAPMASK && $MULTIBLEND
+// SKIP:		$SELFILLUM_MASK && $MULTIBLEND
+
+// SKIP:		!$SELFILLUM && $SELFILLUM_MASK
+// SKIP:		!$SELFILLUM && $SELFILLUM_ENVMAP_ALPHA
+// SKIP:		$SELFILLUM_MASK && $SELFILLUM_ENVMAP_ALPHA
+// SKIP:		$SELFILLUM_MASK && $ENVMAPMASK
+// SKIP:		$SELFILLUM_ENVMAP_ALPHA && !$ENVMAPMASK
+
+#include "common_ps_fxc.h"
+#include "common_deferred_fxc.h"
+#include "common_vertexlitgeneric_dx9.h"
+
+#include "common_glass_pbr.h"
+
+
+sampler sAlbedo : register(s0);
+
+#if ALPHATEST
+const float g_flAlphaRef				: register( c0 );
+#endif
+
+
+sampler sNormals : register(s1);
+
+const float g_flPhongScale : register(c4);
+
+#if ENVMAP
+sampler sEnvmap								: register( s3 );
+const float3 g_flEnvmapTint					: register( c5 );
+const float2 g_flEnvmapSaturationContrast	: register( c6 );
+
+#if ENVMAPMASK
+sampler sEnvmapMask							: register( s4 );
+#endif
+#endif
+
+#if BASETEXTURE2
+sampler sAlbedo2							: register( s5 );
+#endif
+
+#if BLENDMODULATE
+sampler sBlendmodulate						: register( s6 );
+#endif
+
+#if PHONGFRESNEL || ENVMAPFRESNEL
+const float3 g_flFresnelRanges				: register( c7 );
+#endif
+
+#if RIMLIGHT
+const float3 g_flRimLight_Tint						: register( c8 );
+const float2 g_flRimLight_Exponent_AlbedoScale		: register( c9 );
+#endif
+
+#if ENVMAPMASK && BASETEXTURE2
+sampler sEnvmapMask2						: register( s7 );
+#endif
+
+#if MULTIBLEND
+sampler sAlbedo2							: register( s5 );
+sampler sAlbedo3							: register( s7 );
+sampler sAlbedo4							: register( s8 );
+
+#if BLENDMODULATE
+sampler sBlendmodulate2						: register( s9 );
+sampler sBlendmodulate3						: register( s10 );
+#endif
+#endif
+
+#if SELFILLUM
+const float3 g_flSelfIllum_Tint				: register( c10 );
+#if SELFILLUM_MASK
+sampler sSelfIllumMask						: register( s4 ); // override envmap mask
+#endif
+#endif
+
+struct PS_INPUT
+{
+#if BLENDMODULATE
+	float4 vTexCoord				: TEXCOORD0;
+#else
+    float2 vTexCoord : TEXCOORD0;
+#endif
+
+    float3 vWorldNormal : TEXCOORD1;
+    float3 vWorldPos : TEXCOORD2;
+
+#if ENVMAP || RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
+	float3 worldToEye				: TEXCOORD3;
+#endif
+
+#if BASETEXTURE2
+	float4 vColor_0					: COLOR0;
+#endif
+
+#if MULTIBLEND
+#if BLENDMODULATE
+	float4 vTexCoordBlendmod23			: TEXCOORD4;
+#endif
+	float3 vAlphaBlend					: TEXCOORD5;
+	float4 vColorBlend1					: COLOR0;
+	float4 vColorBlend2					: COLOR1;
+	float4 vColorBlend3					: TEXCOORD6;
+	float3 vColorBlend4					: TEXCOORD7;
+#endif
+
+#if NOCULL
+	float vDir						: VFACE;
+#endif
+	
+    float2 vScreenPos : VPOS;
+};
+
+
+struct PS_OUTPUT
+{
+    float4 vColor_0 : COLOR0;
+};
+
+
+PS_OUTPUT main(const PS_INPUT In)
+{
+    PS_OUTPUT Out;
+
+    float4 flAlbedoSample = tex2D(sAlbedo, In.vTexCoord.xy);
+
+#if BASETEXTURE2
+	float4 flAlbedoSample2 = tex2D( sAlbedo2, In.vTexCoord.xy );
+	float flBlendfactor = In.vColor_0.w;
+#if BLENDMODULATE
+	flBlendfactor = GetModulatedBlend( flBlendfactor, tex2D( sBlendmodulate, In.vTexCoord.zw ).rg );
+#endif
+	flAlbedoSample = lerp( flAlbedoSample, flAlbedoSample2, flBlendfactor );
+#endif
+
+#if MULTIBLEND
+	float remaining = 1;
+	float4 flBlendFactors;
+
+#if BLENDMODULATE
+	flBlendFactors.x = GetMultiBlendModulated( tex2D( sBlendmodulate, In.vTexCoord.zw ).rg, In.vColorBlend1.a, In.vAlphaBlend.x, remaining );
+	flBlendFactors.y = GetMultiBlendModulated( tex2D( sBlendmodulate2, In.vTexCoordBlendmod23.xy ).rg, In.vColorBlend2.a, In.vAlphaBlend.y, remaining );
+	flBlendFactors.z = GetMultiBlendModulated( tex2D( sBlendmodulate3, In.vTexCoordBlendmod23.zw ).rg, In.vColorBlend3.a, In.vAlphaBlend.z, remaining );
+#else
+	flBlendFactors.x = GetMultiBlend( In.vColorBlend1.a, remaining );
+	flBlendFactors.y = GetMultiBlend( In.vColorBlend2.a, remaining );
+	flBlendFactors.z = GetMultiBlend( In.vColorBlend3.a, remaining );
+#endif
+	flBlendFactors.w = remaining;
+
+	flAlbedoSample = flAlbedoSample * flBlendFactors.x
+		+ tex2D( sAlbedo2, In.vTexCoord.xy ) * flBlendFactors.y
+		+ tex2D( sAlbedo3, In.vTexCoord.xy ) * flBlendFactors.z
+		+ tex2D( sAlbedo4, In.vTexCoord.xy ) * flBlendFactors.w;
+
+	flAlbedoSample.rgb *= In.vColorBlend1.rgb * flBlendFactors.x
+		+ In.vColorBlend2.rgb * flBlendFactors.y
+		+ In.vColorBlend3.rgb * flBlendFactors.z
+		+ In.vColorBlend4.rgb * flBlendFactors.w;
+#endif
+
+#if ALPHATEST
+	clip( flAlbedoSample.a - g_flAlphaRef );
+#endif
+	
+    float3 worldNormal = (float3) 0;
+	
+    float3 dPdx = ddx(In.vWorldPos);
+    float3 dPdy = ddy(In.vWorldPos);
+    float3 geometricNormal = cross(dPdy, dPdx);
+    float len = length(geometricNormal);
+    worldNormal = len > 0.0001 ? geometricNormal / len : float3(0, 0, 1) * 0.5f + 0.5f;
+	
+    worldNormal = normalize(worldNormal);
+
+#if RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
+	float3 worldToEye = normalize( In.worldToEye );
+	worldNormal = normalize( worldNormal );
+#endif
+
+#if PHONGFRESNEL || ENVMAPFRESNEL
+	float flFresnel = saturate( Fresnel( worldNormal, worldToEye, g_flFresnelRanges ) );
+#endif
+
+    float3 flSpecularLighting = (float3) 0;
+
+#if RIMLIGHT
+	float dotEyeVec = 1.0f - saturate( dot( worldNormal, worldToEye ) );
+
+	float3 rimLighting = pow( dotEyeVec, g_flRimLight_Exponent_AlbedoScale.x );
+	rimLighting *= lerp( 1, flAlbedoSample.rgb, g_flRimLight_Exponent_AlbedoScale.y );
+	rimLighting *= g_flRimLight_Tint;
+
+	flSpecularLighting += rimLighting;
+#endif
+	
+    float roughness = 0.0f;
+    float GenRoughness = customTex2D(GenerateRoughness(worldNormal, flAlbedoSample), In.vTexCoord.xy);
+    roughness = GenRoughness;
+
+    float metallic = 0.0f;
+    float GenMetallic = customTex2D(GenerateMetallic(worldNormal, flAlbedoSample), In.vTexCoord.xy);
+    metallic = GenMetallic;
+
+    float3 V = normalize(g_vecOrigin.xyz - In.vWorldPos);
+    float3 N = worldNormal;
+    float NdotV = max(0.0f, dot(N, V));
+	
+    float3 worldPos = In.vWorldPos.xyz;
+	
+    float3 compositeLighting = (float3) 0;
+     
+    int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
+
+    for (int i = 0; i < LIGHT_COUNT; i++)
+    {
+        int baseIdx = i * 4; 
+    
+        float4 lightPosRadius = g_ForwardLightData[baseIdx];
+        float3 lightPos = lightPosRadius.xyz;
+        float lightRadius = max(lightPosRadius.w, 0.001);
+
+        float4 lightColorIntensity = g_ForwardLightData[baseIdx + 1];
+        float3 lightColor = lightColorIntensity.rgb;
+        float lightType = lightColorIntensity.w;
+        //float lightIntensity = max(lightColorIntensity.a, 0.001);
+    
+        float3 toLight = lightPos - worldPos;
+        float distance = length(toLight);
+    
+        // Skip lights outside radius
+        if (distance > lightRadius)
+            continue;
+    
+        float3 L = normalize(toLight);
+        
+        float distFade = 1.0 - saturate(distance / lightRadius);
+        float attenuation = distFade * distFade;
+   
+        float3 effectiveLightColor = lightColor;
+        
+        float3 H = normalize(L + V);
+        float NdotL = max(0.0f, dot(N, L));
+        float NdotH = max(0.0f, dot(N, H));
+        float VdotH = max(0.0f, dot(V, H));
+	
+        float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, effectiveLightColor, attenuation, lightType);
+	
+		compositeLighting += flLighting;
+    }
+	
+#if ENVMAP
+	float flSpecularFactor;
+#if ENVMAPMASK
+	float4 vecEnvmapmaskColor = tex2D( sEnvmapMask, In.vTexCoord.xy );
+#if BASETEXTURE2
+	vecEnvmapmaskColor = lerp( vecEnvmapmaskColor,
+		tex2D( sEnvmapMask2, In.vTexCoord.xy ),
+		flBlendfactor );
+#endif
+	flSpecularFactor = vecEnvmapmaskColor.r;
+#else
+	flSpecularFactor = flAlbedoSample.a;
+#endif
+
+#if RIMLIGHT
+	float3 reflectVect = reflect( -V, N );
+#else
+	float3 reflectVect = CalcReflectionVectorUnnormalized( N, normalize(In.worldToEye) );
+#endif
+
+	// IBL Prefiltering
+	static const int SAMPLE_COUNT = 12;
+	float totalWeight = 0.0;   
+	float3 prefilteredColor = float3(0.0, 0.0, 0.0);
+	float A = 0.0;
+	float B = 0.0;
+	
+	[unroll(12)]
+	for(int i = 0; i < SAMPLE_COUNT; ++i)
+	{
+		float2 Xi = Hammersley(i, 1024);
+		float3 H = ImportanceSampleGGX(Xi, N, roughness);
+		float3 L = normalize(2.0 * dot(V, H) * H - V);
+		
+		float NdotL = max(dot(N, L), 0.0);
+		float NdotH = max(dot(N, H), 0.0);
+		float VdotH = max(dot(V, H), 0.0);
+		
+		if(NdotL > 0.0)
+		{
+			float3 sampleColor = texCUBE(sEnvmap, L).rgb;
+			prefilteredColor += sampleColor * NdotL;
+			totalWeight += NdotL;
+			
+			float G = GeometrySmith(N, V, L, roughness);
+			float G_Vis = (G * VdotH) / (NdotH * NdotV);
+			float Fc = pow(1.0 - VdotH, 5.0);
+			
+			A += (1.0 - Fc) * G_Vis;
+			B += Fc * G_Vis;
+		}
+	}
+	
+	A /= float(SAMPLE_COUNT);
+	B /= float(SAMPLE_COUNT);
+	
+	float3 flCubemap = (prefilteredColor / max(totalWeight, 0.001)) * ENV_MAP_SCALE;
+	
+	flCubemap *= flSpecularFactor;
+	flCubemap *= g_flEnvmapTint;
+	
+#if ENVMAPFRESNEL
+	flCubemap *= flFresnel;
+#endif
+	
+	float3 specularLightingSquared = flCubemap * flCubemap;
+	flCubemap = lerp( flCubemap, specularLightingSquared, g_flEnvmapSaturationContrast.y );
+	float3 greyScale = dot( flCubemap, float3( 0.299f, 0.587f, 0.114f ) );
+	flCubemap = lerp( greyScale, flCubemap, g_flEnvmapSaturationContrast.x );
+	
+	float3 F0 = float3(0.04, 0.04, 0.04);
+	float3 F = F0 + (1.0 - F0) * pow(1.0 - NdotV, 5.0);
+	float3 kS = F * A + B;
+	
+	flSpecularLighting += flCubemap * kS;
+#endif
+
+#if SELFILLUM
+	float flSelfIllumAmount;
+#if SELFILLUM_MASK
+	flSelfIllumAmount = tex2D( sSelfIllumMask, In.vTexCoord.xy ).r;
+#elif SELFILLUM_ENVMAP_ALPHA
+	flSelfIllumAmount = vecEnvmapmaskColor.a;
+#else
+	flSelfIllumAmount = flAlbedoSample.a;
+#endif
+#endif
+
+    float flLightScale =
+#if DEFCFG_USE_SRGB_CONVERSION
+		LINEAR_LIGHT_SCALE;
+#else
+		GAMMA_LIGHT_SCALE;
+#endif
+	
+    float3 diffuse_specular = (float3) 0;
+    
+    float3 finalLighting = compositeLighting;
+    diffuse_specular = flAlbedoSample.xyz * finalLighting + flSpecularLighting;
+	
+    Out.vColor_0.xyzw = float4((diffuse_specular) * flLightScale, flAlbedoSample.a);
+
+#if PIXELFOGTYPE == 0
+	float fogAmt = CalcPixelFogFactor( PIXELFOGTYPE, g_vecFogParams, g_vecOrigin, In.vWorldPos, 0 );
+
+	Out.vColor_0.xyz = lerp( Out.vColor_0.xyz, g_LinearFogColor, fogAmt );
+#endif
+
+    return Out;
+}

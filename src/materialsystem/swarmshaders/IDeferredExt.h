@@ -106,6 +106,29 @@ public:
 	virtual void CommitTexture_ProjectedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
 	virtual void CommitTexture_Cookie( const int &index, ITexture *pTexCookie ) = 0;
 	virtual void CommitTexture_VolumePrePass( ITexture *pTexVolumePrePass ) = 0;
+<<<<<<< Updated upstream
+=======
+
+	virtual void ClearForwardLights() = 0;
+	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
+		float intensity, int type = 0, const Vector& dir = vec3_origin,
+		float constantAtt = 1.0f, float linearAtt = 0.0f,
+		float quadraticAtt = 0.0f, float spotCutoff = 45.0f) = 0;
+
+	virtual float* GetForwardLightData() = 0;
+	virtual float* GetForwardSpotlightData() = 0;
+
+	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights) = 0;
+	virtual int GetForwardLights_NumRows() = 0;
+	virtual int GetNumActiveForwardLights() = 0;
+
+private:
+	
+
+	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<float> m_vecForwardLightBuffer;
+	bool m_bForwardLightsDirty;
+>>>>>>> Stashed changes
 };
 
 #define DEFERRED_EXTENSION_VERSION "DeferredExtensionVersion001"
@@ -182,6 +205,22 @@ public:
 	inline ITexture *GetTexture_Cookie( const int &index );
 	inline ITexture *GetTexture_VolumePrePass();
 
+<<<<<<< Updated upstream
+=======
+	virtual void ClearForwardLights();
+	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
+		float intensity, int type = 0, const Vector& dir = vec3_origin,
+		float constantAtt = 1.0f, float linearAtt = 0.0f,
+		float quadraticAtt = 0.0f, float spotCutoff = 45.0f);
+
+	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights);
+
+	virtual float* GetForwardLightData();
+	virtual float* GetForwardSpotlightData();
+	virtual int GetForwardLights_NumRows();
+	virtual int GetNumActiveForwardLights();
+
+>>>>>>> Stashed changes
 private:
 	bool m_bDefLightingEnabled;
 

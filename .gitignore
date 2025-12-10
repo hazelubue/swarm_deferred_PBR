@@ -63,3 +63,6 @@ mono_crash.*
 *.tlog
 *.exp
 *.FileListAbsolute.txt
+game/deferred/cfg/video.txt
+game/deferred/cfg/video.txt
+game/deferred/maps/graphs/sp_a1_intro2_d.ain

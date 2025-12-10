@@ -553,6 +553,7 @@ void CLightingManager::RenderLights( const CViewSetup &view, CDeferredViewRender
 		IMaterial *pMatVolumeWorld;
 		int constCount_simple;
 		int constCount_advanced;
+		int pMatLighType;
 	};
 
 	Lightpass_t lightTypes[] =
@@ -1015,4 +1016,100 @@ void CLightingManager::DebugLights_Draw_DebugMeshes()
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->PopMatrix();
 }
+<<<<<<< Updated upstream
 #endif
+=======
+#endif
+
+void CLightingManager::CollectForwardLights()
+{
+	m_vecForwardLights.RemoveAll();
+	m_bForwardLightsDirty = true;
+
+	FOR_EACH_VEC_FAST(def_light_t*, m_hRenderLights, l)
+	{
+		if (l->flDistance_ViewOrigin > (l->iVisible_Dist + l->iVisible_Range))
+			continue;
+
+		// Calculate light style fade
+		float flLightstyle = DoLightStyle(l);
+		float flMasterFade = flLightstyle * (1.0f - SATURATE((l->flDistance_ViewOrigin - l->iVisible_Dist) / l->iVisible_Range));
+
+		ForwardLightData lightData;
+
+		// [0]: position.xyz + radius.w
+		lightData.position[0] = l->pos.x;
+		lightData.position[1] = l->pos.y;
+		lightData.position[2] = l->pos.z;
+		lightData.position[3] = l->flRadius;
+
+		// [1]: color.xyz + intensity.w  
+		lightData.color[0] = l->col_diffuse.x * flMasterFade;
+		lightData.color[1] = l->col_diffuse.y * flMasterFade;
+		lightData.color[2] = l->col_diffuse.z * flMasterFade;
+		lightData.color[3] = l->IsSpot() ? 1.0f : 0.0f;  // Type in .w
+
+		// [2]: direction.xyz + type.w
+		if (l->IsSpot())
+		{
+			// Spot light
+			lightData.direction[0] = l->backDir.x;
+			lightData.direction[1] = l->backDir.y;
+			lightData.direction[2] = l->backDir.z;
+			lightData.direction[3] = 1.0f;  // Type = spot
+		}
+		else
+		{
+			// Point light
+			lightData.direction[0] = 0.0f;
+			lightData.direction[1] = 0.0f;
+			lightData.direction[2] = 0.0f;
+			lightData.direction[3] = 0.0f;  // Type = point
+		}
+
+		// [3]: attenuation.xyz + spotCutoff.w
+		if (l->IsSpot())
+		{
+			// For spot lights, store cutoff angle in degrees
+			lightData.attenuation[0] = 1.0f;  // Constant attenuation
+			lightData.attenuation[1] = 0.0f;  // Linear attenuation  
+			lightData.attenuation[2] = 0.0f;  // Quadratic attenuation
+			lightData.attenuation[3] = l->flSpotCone_Outer;  // Outer cutoff (in radians or degrees)
+		}
+		else
+		{
+			// For point lights
+			lightData.attenuation[0] = 1.0f;  // Constant attenuation
+			lightData.attenuation[1] = 0.0f;  // Linear attenuation
+			lightData.attenuation[2] = 0.0f;  // Quadratic attenuation
+			lightData.attenuation[3] = 0.0f;  // Unused for point lights
+		}
+
+		m_vecForwardLights.AddToTail(lightData);
+	}
+	FOR_EACH_VEC_FAST_END
+}
+
+const ForwardLightData* CLightingManager::GetForwardLightData(int index) const
+{
+	if (index < 0 || index >= m_vecForwardLights.Count())
+		return NULL;
+	return &m_vecForwardLights[index];
+}
+
+void CLightingManager::CommitForwardLightsToExtension()
+{
+	if (m_vecForwardLights.Count() > 0)
+	{
+		GetDeferredExt()->CommitForwardLightData(
+			m_vecForwardLights.Base(),
+			m_vecForwardLights.Count()
+		);
+	}
+	else
+	{
+		// Clear forward lights if none available
+		GetDeferredExt()->CommitForwardLightData(NULL, 0);
+	}
+}
+>>>>>>> Stashed changes
