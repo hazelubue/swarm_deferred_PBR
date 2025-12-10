@@ -29,10 +29,16 @@ public:
 	void			ViewDrawSceneDeferred( const CViewSetup &view, int nClearFlags, view_id_t viewID,
 		bool bDrawViewModel );
 
+	void			ViewDrawForward(const CViewSetup& view, bool& bDrew3dSkybox,
+		SkyboxVisibility_t& nSkyboxVisible, bool bDrawViewModel);
+
 	void			ViewDrawGBuffer( const CViewSetup &view, bool &bDrew3dSkybox, SkyboxVisibility_t &nSkyboxVisible,
 		bool bDrawViewModel );
 
 	void			ViewDrawGBufferWater(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
+		bool bDrawViewModel);
+
+	void			ViewDrawGBufferTranslucent(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
 		bool bDrawViewModel);
 
 	void			ViewDrawComposite( const CViewSetup &view, bool &bDrew3dSkybox, SkyboxVisibility_t &nSkyboxVisible,

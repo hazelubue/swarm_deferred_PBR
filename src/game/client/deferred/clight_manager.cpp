@@ -1016,9 +1016,6 @@ void CLightingManager::DebugLights_Draw_DebugMeshes()
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->PopMatrix();
 }
-<<<<<<< Updated upstream
-#endif
-=======
 #endif
 
 void CLightingManager::CollectForwardLights()
@@ -1112,4 +1109,3 @@ void CLightingManager::CommitForwardLightsToExtension()
 		GetDeferredExt()->CommitForwardLightData(NULL, 0);
 	}
 }
->>>>>>> Stashed changes

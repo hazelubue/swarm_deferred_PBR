@@ -146,9 +146,6 @@ void CDeferredExtension::CommitTexture_Cookie( const int &index, ITexture *pTexC
 void CDeferredExtension::CommitTexture_VolumePrePass( ITexture *pTexVolumePrePass )
 {
 	m_pTexVolumePrePass = pTexVolumePrePass;
-<<<<<<< Updated upstream
-}
-=======
 }
 void CDeferredExtension::ClearForwardLights()
 {
@@ -319,4 +316,3 @@ int CDeferredExtension::GetNumActiveForwardLights()
     return m_vecForwardLights.Count();
 }
 
->>>>>>> Stashed changes

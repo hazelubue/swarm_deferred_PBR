@@ -6,6 +6,7 @@
 
 #include "include/gbuffer_vs30.inc"
 #include "include/gbuffer_ps30.inc"
+#include "include/gbuffer_translucent_ps30.inc"
 #include "shaderapi\ishaderapi.h"
 #include "tier0/memdbgon.h"
 
@@ -91,8 +92,6 @@ void InitParmsGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMa
 void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
 
-	const bool bWater = info.bWater;
-
 	//bool bModel = info.bModel;
 	if (PARM_DEFINED(info.iBumpmap))
 		pShader->LoadBumpMap(info.iBumpmap);
@@ -109,15 +108,6 @@ void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	if (PARM_DEFINED(info.iAlbedo2)) pShader->LoadTexture(info.iAlbedo2);
 #endif
 
-	if (bWater)
-	{
-		/*if (params[info.iAlbedo]->IsDefined())
-			params[info.iAlbedo]->SetStringValue("dev/graygrid");*/
-
-
-		if (params[info.iBumpmap]->IsDefined())
-			params[info.iBumpmap]->SetStringValue("dev/graygrid");
-	}
 
 	if (params[info.m_nMRAO]->IsDefined())
 	{
@@ -172,10 +162,10 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	SHADOW_STATE
 	{
 		pShaderShadow->SetDefaultState();
-		if (bTranslucent)
+		/*if (bTranslucent)
 		{
 			pShaderShadow->EnableBlending(true);
-		}
+		}*/
 
 		pShaderShadow->EnableSRGBWrite(false);
 
@@ -257,18 +247,36 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		SET_STATIC_VERTEX_SHADER_COMBO(TREESWAY, nTreeSwayMode);
 		SET_STATIC_VERTEX_SHADER(gbuffer_vs30);
 
-		DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
-		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
-		SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
-		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
-		SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
-		SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
-		SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
-		SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
-		SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
-		//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
-		SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
+		/*if (!bTranslucent)
+		{*/
+			DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
+			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
+			SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
+			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
+			SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
+			SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
+			SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
+			SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+			SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+			SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
+			//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
+			SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
+		//}
+		//else
+		//{
+		//	DECLARE_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+		//	SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
+		//	//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
+		//	SET_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		//}
 	}
 
 		DYNAMIC_STATE
@@ -381,8 +389,17 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 		SET_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 #else
-		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
-		SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+		/*if (!bTranslucent)
+		{*/
+			DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+			SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+		/*}
+		else
+		{
+			DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+			SET_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		}*/
+		
 #endif
 
 		if (bModel && bFastVTex)

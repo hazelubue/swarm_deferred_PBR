@@ -305,6 +305,232 @@ float ShadowColor_5x5SoftwareBilinear_Gauss( sampler depthMap, float3 uvw, float
 	return flLight;
 }
 
+float EstimatePenumbra(sampler depthMap, float3 uvw, float2 searchRadius)
+{
+	float blockerSum = 0.0f;
+	float numBlockers = 0.0f;
+
+	static const float2 searchPattern[8] = {
+		float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
+		float2(-0.09418410, -0.92938870), float2(0.34495938, 0.29387760),
+		float2(-0.91588581, 0.45771432), float2(-0.81544232, -0.87912464),
+		float2(-0.38277543, 0.27676845), float2(0.97484398, 0.75648379),
+
+	};
+
+	for (int i = 0; i < 8; i++)
+	{
+		float2 sampleUV = uvw.xy + searchPattern[i] * searchRadius;
+		float blockerDepth = tex2D(depthMap, sampleUV).r;
+
+		if (blockerDepth < uvw.z - 0.001f)
+		{
+			blockerSum += blockerDepth;
+			numBlockers += 1.0f;
+		}
+	}
+
+	if (numBlockers < 1.0f) return 0.0f;
+
+	float avgBlockerDepth = blockerSum / numBlockers;
+	float penumbra = (uvw.z - avgBlockerDepth) / avgBlockerDepth;
+	return saturate(penumbra * 50.0f);
+}
+float2 Hash22(float2 p)
+{
+	float3 p3 = frac(float3(p.xyx) * float3(443.897, 441.423, 437.195));
+	p3 += dot(p3, p3.yzx + 19.19);
+	return frac((p3.xx + p3.yz) * p3.zy);
+}
+
+float Hash(float2 p)
+{
+	return frac(sin(dot(p, float2(500.9898, 78.233))) * 43758.5453);
+}
+
+float BlueNoise(float2 uv)
+{
+	float n1 = Hash(uv);
+	float n2 = Hash(uv * 2.0 + 10.37);
+	float n3 = Hash(uv * 4.0 - 12.12);
+
+	return frac((n1 + n2 + n3) / 40.0);
+}
+
+float WhiteNoise(float2 uv)
+{
+	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+float InterleavedGradientNoise(float2 uv)
+{
+	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
+	return frac(magic.z * frac(dot(uv, magic.xy)));
+}
+
+
+float GetDistanceBlurFactor(float depth)
+{
+	float normalizedDepth = saturate(depth);
+	float blurFactor = 1.0f - exp(-normalizedDepth * 1.5f);
+
+	blurFactor = smoothstep(0.0f, 1.0f, blurFactor);
+
+	return 1.0f + blurFactor * 1.0f;
+}
+
+float2 Rand(float2 uv)
+{
+	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+float rand_white(in float2 uv)
+{
+	float2 noise = (frac(sin(dot(uv, float2(6.9898, 32.233) * 1.0)) * 21324.5453));
+	return abs(noise.x + noise.y) * 0.5;
+}
+
+
+float ShadowColor_4x4SoftwareBilinear_PenumbraNoise(sampler depthMap, float3 uvw, float4 offsets_0, float4 offsets_1)
+{
+
+	float distanceScale = GetDistanceBlurFactor(uvw.z);
+	uvw.xy *= offsets_1.xy;
+	// avoid floor() snapping — use continuous UVs so hardware bilinear/PCF can smooth properly
+	float2 rand = Rand(uvw.xy);
+	float2 rotatedOffset = offsets_0.xy * (rand.x - 0.5f) + offsets_0.yz * (rand.y - 0.5f);
+
+	float2 texel_min = uvw.xy / offsets_1.xy + rotatedOffset * distanceScale;
+	float2 frac_uv = frac(uvw.xy);
+
+#define TWEAK_SUBTRACT_SELF 8333.3f
+#define TWEAK_SUBTRACT_SELF_FAR 8333.3f
+#define TWEAK_SUBTRACT_SELF_FAR_MAX 4166.6f
+	const float DEPTH_BIAS = 0.0015f; // tune slightly if you get shadow acne / detachment
+
+	float4x4 pcf_samples = saturate(
+		float4x4(float4(uvw.z - tex2D(depthMap, texel_min + float2(-offsets_0.x, -offsets_0.y)).r,
+			uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.z, -offsets_0.y)).r,
+			uvw.z - tex2D(depthMap, texel_min + float2(-offsets_0.x, offsets_0.w)).r,
+			uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.z, offsets_0.w)).r)
+			* TWEAK_SUBTRACT_SELF_FAR_MAX,
+
+			float4(uvw.z - tex2D(depthMap, texel_min + float2(0, -offsets_0.y)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.x, -offsets_0.y)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(-offsets_0.x, 0)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.z, 0)).r)
+			* TWEAK_SUBTRACT_SELF_FAR,
+
+			float4(uvw.z - tex2D(depthMap, texel_min + float2(-offsets_0.x, offsets_0.y)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.z, offsets_0.y)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(0, offsets_0.w)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.x, offsets_0.w)).r)
+			* TWEAK_SUBTRACT_SELF_FAR,
+
+			float4(uvw.z - tex2D(depthMap, texel_min).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.x, 0)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(0, offsets_0.y)).r,
+				uvw.z - tex2D(depthMap, texel_min + float2(offsets_0.x, offsets_0.y)).r)
+			* TWEAK_SUBTRACT_SELF
+		)
+	);
+
+	float2 frac_uv_inv = 1.0f - frac_uv;
+
+	float4 weights =
+		float4(frac_uv.x * frac_uv.y,
+			frac_uv_inv.x * frac_uv.y,
+			frac_uv.x * frac_uv_inv.y,
+			frac_uv_inv.x * frac_uv_inv.y);
+
+	float flLight = dot(weights, float4(
+		pcf_samples[2][2], pcf_samples[0][2], pcf_samples[1][0], pcf_samples[0][0]))
+		+ dot(weights, float4(
+			pcf_samples[2][3], pcf_samples[2][2], pcf_samples[1][1], pcf_samples[1][0]))
+		+ dot(weights, float4(
+			pcf_samples[0][3], pcf_samples[2][3], pcf_samples[0][1], pcf_samples[1][1]))
+
+		+ dot(weights, pcf_samples[3][0])
+		+ dot(weights, pcf_samples[3][1])
+		+ dot(weights, float4(
+			pcf_samples[1][3], pcf_samples[1][2], pcf_samples[1][3], pcf_samples[1][2]))
+
+		+ dot(weights, pcf_samples[3][2])
+		+ dot(weights, pcf_samples[3][3])
+		+ dot(weights, float4(
+			pcf_samples[2][1], pcf_samples[2][0], pcf_samples[2][1], pcf_samples[2][0]));
+
+	flLight *= 1.0f / 9.0f;
+
+	static const float2 poissonDisk[32] = {
+		float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
+		float2(-0.09418410, -0.92938870), float2(0.34495938, 0.29387760),
+		float2(-0.91588581, 0.45771432), float2(-0.81544232, -0.87912464),
+		float2(-0.38277543, 0.27676845), float2(0.97484398, 0.75648379),
+		float2(-0.15300845, 0.58071113), float2(0.68180464, -0.19486278),
+		float2(0.26575993, 0.74764085), float2(-0.53742909, -0.47373420),
+		float2(0.89132898, 0.35857890), float2(-0.71915442, 0.23895057),
+		float2(0.45525315, -0.54746658), float2(-0.25234789, 0.89764521),
+		float2(-0.63680227, 0.14549147), float2(0.14807814, -0.28745039),
+		float2(0.59766323, 0.11853144), float2(-0.84075239, -0.08738724),
+		float2(0.30645928, -0.83930749), float2(-0.71698458, 0.66778630),
+		float2(0.87613220, -0.40059934), float2(-0.40208414, -0.71104700),
+		float2(0.18090531, 0.94938154), float2(0.71494067, 0.61670959),
+		float2(-0.25788117, 0.36127573), float2(-0.99039023, 0.12448689),
+		float2(0.42770064, 0.51747394), float2(-0.05075629, -0.13149844),
+		float2(0.63387454, -0.27338242), float2(-0.18652373, -0.51248652)
+	};
+
+	float penumbraSize = EstimatePenumbra(depthMap, uvw, offsets_0.xy * 4.0f);
+
+	float blurOffsetScale = lerp(1.0f, 4.0f, saturate(penumbraSize)); // tuneable
+	float2 blurOffsetUV = offsets_0.xy * blurOffsetScale * distanceScale;
+
+	//float2 blurOffsetUV = offsets_0.xy * (2.0f + penumbraSize * 3.0f) * distanceScale;
+
+	float blurredShadow = 0.0f;
+
+	for (int i = 0; i < 8; i++) {
+		float2 sampleUV = texel_min + poissonDisk[i] * blurOffsetUV;
+		float depthSample = tex2D(depthMap, sampleUV).r;
+
+		float shadowFactor = saturate((uvw.z - depthSample) / 0.02f);
+		blurredShadow += shadowFactor * 0.125f; // 1/8 average
+	}
+
+	float Guass = tex2Dproj(depthMap, float4(uvw, 1)).x * 0.162103f;
+
+	float noise = 0.0f;
+	float2 baseBlurRadius = float2(0.5f, 0.5f);
+	float2 blurRadius = baseBlurRadius * (1.0f + penumbraSize * 3.0f) * distanceScale; // penumbra increases radius
+
+	for (int i = 0; i < 8; ++i)
+	{
+		noise += rand_white(float3(uvw.xy, 0.0)) * 1.0;
+		//noise += BlueNoise(uvw.xy - 5.0f * Guass + poissonDisk[i] * blurRadius);
+	}
+	noise *= (1.0f / 8.0f); // average
+
+	flLight = saturate(blurredShadow);
+	float edgeDistance = abs(flLight - 0.5f);
+	float isEdge = 1.0f - smoothstep(0.0f, 0.3f, edgeDistance); // adjust 0.3f for edge width
+
+	float distanceFromEdge = abs(flLight - 0.5f) * 2.0f; // 0 at edges, 1 at extremes
+
+	const float PENUMBRA_EPS = 1e-4f;
+	float safePenumbra = max(penumbraSize, PENUMBRA_EPS);
+	float penumbraNoise = noise / safePenumbra;
+
+	flLight += (penumbraNoise - 0.5f) * 0.008f * distanceFromEdge * isEdge;
+	flLight = saturate(flLight);
+
+	float noisyEdge = smoothstep(0.3f, 0.7f, penumbraNoise);
+	flLight = lerp(flLight, noisyEdge, isEdge * 0.05f); // Much smaller blend
+
+	return 1.0f - flLight;
+}
+
+
 float2 poissonDisk[16] = 
 {
 	float2( -0.94201624, -0.39906216 ),
@@ -525,6 +751,8 @@ float PerformShadowMapping( sampler depthMap, float3 uvw, float4 offsets_0, floa
 	return ShadowDepth_5x5Gauss_Nvidia( depthMap, uvw, offsets_0, offsets_1 );
 #elif SHADOWMAPPING_METHOD == SHADOWMAPPING_DEPTH_COLOR__PCSS_4X4_PCF_4X4
 	return ShadowColor_PCSS4X4_PCF4X4( depthMap, uvw, 10, 0.15 ); //hijack offsets_0
+#elif SHADOWMAPPING_METHOD == SHADOWMAPPING_DEPTH_COLOR__4X4_SOFTWARE_BILINEAR_PENUMBRA
+	return ShadowColor_4x4SoftwareBilinear_PenumbraNoise( depthMap, uvw, offsets_0, offsets_1 );
 #else
 	unknown_shadow_mapping_method
 #endif

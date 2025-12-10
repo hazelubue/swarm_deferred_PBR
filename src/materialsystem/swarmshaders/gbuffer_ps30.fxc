@@ -621,22 +621,12 @@ PS_OUTPUT main(const PS_INPUT In)
     float metallic = 0.0f;
     float GenMetallic = customTex2D(GenerateMetallic(worldNormal, flAlbedoSample), correctedTexCoord);
     metallic = GenMetallic;
-
-    //float3 GenMRAO = GenerateSpecular(worldNormal, flAlbedoSample, correctedTexCoord);
-    
-    //float metallic = GenMRAO.r;
-    //float roughness = GenMRAO.g;
     
     float3 CompositeGenerated = float3(metallic, roughness, 0.0f);
     
     float alpha = flAlbedoSample.a;
     
-//#if SPECULAR
-//        float3 specular = tex2D(sSpecular, correctedTexCoord).rgb;
-//#else
-//    float3 specular = lerp(0.0, flAlbedoSample.rgb, mrao.x);
-//#endif
-
+#if !TRANSLUCENT
     Out.vColor_Normal = float4(worldNormal, 1.0f);
     Out.vColor_Cubemap = float4(flAlbedoSample.rgba);
     //Out.vColor_Alpha = float4(0, 0, 0, alpha);
@@ -646,18 +636,18 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
     Out.vColor_LightCtrl = float4(CompositeGenerated.rgb, 0.0f);
 #endif
-    
-//#if TRANSLUCENT
-//    clip(alpha - g_flAlphaRef);
-//       if(alpha >= 0.99)
-//            discard;
-//    Out.vColor_Normal = float4(worldNormal, alpha);
-//    Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, alpha);
-//    //Out.vColor_LightCtrl = float4(mrao.rgb, alpha);
-    
-//#endif
-
+#else
+    Out.vColor_Normal = float4(worldNormal, alpha);
+    Out.vColor_Cubemap = float4(0, 0, 0, alpha);
+    //Out.vColor_Alpha = float4(0, 0, 0, alpha);
+    Out.vColor_Depth = (float4) alpha;
+#if DEDICATEDMRAO
+    Out.vColor_LightCtrl = float4(0, 0, 0, alpha);
+#else
+    Out.vColor_LightCtrl = float4(0, 0, 0, alpha);
 #endif
 
+#endif
+#endif
     return Out;
 }

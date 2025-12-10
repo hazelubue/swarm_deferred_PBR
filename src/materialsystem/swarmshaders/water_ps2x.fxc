@@ -60,7 +60,7 @@
 sampler NormalSampler				: register( s2 );
 sampler LightmapSampler				: register( s3 );
 sampler sLightAccum					: register( s12 );
-
+sampler sMRAO : register(s13);
 sampler BaseTextureSampler		: register( s10 );
 
 
@@ -89,7 +89,7 @@ sampler BaseTextureSampler		: register( s10 );
 sampler DepthSampler 				: register( s9 );
 #endif
 
-sampler sMRAO						: register( s13 );
+
 
 const float4 g_vRefractTint			: register( c1 );
 const float4 g_vReflectTint			: register( c4 );

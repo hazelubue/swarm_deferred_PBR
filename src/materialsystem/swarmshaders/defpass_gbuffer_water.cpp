@@ -26,6 +26,7 @@ extern ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 extern ConVar mat_pbr_force_20b("mat_pbr_force_20b", "0", FCVAR_CHEAT);
 extern ConVar mat_pbr_iblIntensity("mat_pbr_iblIntensity", "1000.0", FCVAR_CHEAT);
 
+ConVar mat_gbuffer_noise_amount("mat_gbuffer_noise_amount", "0.39", FCVAR_CHEAT);
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
@@ -258,7 +259,7 @@ void DrawPassGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader,
 		SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
 		SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
 		SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, 0);
+		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
 		SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
 		SET_STATIC_PIXEL_SHADER(gbuffer_water_ps30);
 	}
@@ -506,6 +507,10 @@ void DrawPassGBufferWater(const defParms_gBuffer1& info, CBaseVSShader* pShader,
 		pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, vPos);
 		pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_1, GetDeferredExt()->GetForwardBase());
 		pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, zScale);
+
+		float flNoiseAmount[1];
+		UTIL_StringToFloatArray(flNoiseAmount, 1, mat_gbuffer_noise_amount.GetString());
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_39, flNoiseAmount);
 
 		CommitBaseDeferredConstants_Origin(pShaderAPI, 1);
 		pShader->SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_13, BASETEXTURETRANSFORM);

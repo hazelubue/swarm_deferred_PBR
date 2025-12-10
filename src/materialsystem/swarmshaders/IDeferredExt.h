@@ -9,6 +9,13 @@
 #include "deferred_global_common.h"
 #endif
 
+struct ForwardLightData
+{
+	float position[4];      // xyz = position, w = radius
+	float color[4];         // xyz = color, w = intensity  
+	float direction[4];     // xyz = direction, w = type (0=point, 1=spot, 2=directional)
+	float attenuation[4];   // x = constant, y = linear, z = quadratic, w = spotCutoff
+};
 
 struct lightData_Global_t
 {
@@ -106,8 +113,6 @@ public:
 	virtual void CommitTexture_ProjectedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
 	virtual void CommitTexture_Cookie( const int &index, ITexture *pTexCookie ) = 0;
 	virtual void CommitTexture_VolumePrePass( ITexture *pTexVolumePrePass ) = 0;
-<<<<<<< Updated upstream
-=======
 
 	virtual void ClearForwardLights() = 0;
 	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
@@ -128,7 +133,6 @@ private:
 	CUtlVector<ForwardLightData> m_vecForwardLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
 	bool m_bForwardLightsDirty;
->>>>>>> Stashed changes
 };
 
 #define DEFERRED_EXTENSION_VERSION "DeferredExtensionVersion001"
@@ -205,8 +209,6 @@ public:
 	inline ITexture *GetTexture_Cookie( const int &index );
 	inline ITexture *GetTexture_VolumePrePass();
 
-<<<<<<< Updated upstream
-=======
 	virtual void ClearForwardLights();
 	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
 		float intensity, int type = 0, const Vector& dir = vec3_origin,
@@ -220,8 +222,13 @@ public:
 	virtual int GetForwardLights_NumRows();
 	virtual int GetNumActiveForwardLights();
 
->>>>>>> Stashed changes
 private:
+
+	
+	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<float> m_vecForwardLightBuffer;
+	bool m_bForwardLightsDirty;
+
 	bool m_bDefLightingEnabled;
 
 	Vector4D m_vecOrigin;

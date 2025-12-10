@@ -20,8 +20,12 @@
 
 #include "defpass_gbuffer.h"
 #include "defpass_gbuffer_water.h"
+#include "defpass_gbuffer_translucent.h"
+
 #include "defpass_shadow.h"
+
 #include "defpass_composite.h"
+#include "defpass_composite_translucent.h"
 
 #include "lighting_pass_basic.h"
 #include "lighting_pass_volum.h"

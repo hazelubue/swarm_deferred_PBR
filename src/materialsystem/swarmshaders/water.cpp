@@ -18,6 +18,7 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 
 #include "include/Water_vs20.inc"
 #include "include/water_ps30.inc"
+#include "include/water_deferred_ps30.inc";
 
 #include "shaderlib/commandbuilder.h"
 #include "deferred_water.h"
@@ -49,10 +50,10 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 			params[info.SCROLL1]->SetVecValue( 0.0f, 0.0f, 0.0f );
 		}
 
-		//if (!params[info.TRANSLUCENT]->IsDefined())
-		//{
-		//	params[info.TRANSLUCENT]->SetIntValue(1);
-		//}
+		if (!params[info.TRANSLUCENT]->IsDefined())
+		{
+			params[info.TRANSLUCENT]->SetIntValue(1);
+		}
 
 		//MATERIAL_VAR_TRANSLUCENT;
 
@@ -212,6 +213,10 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 		bool bLightmapWaterFog = ( params[info.LIGHTMAPWATERFOG]->GetIntValue() != 0 );
 		bool bHasSimpleOverlay = params[info.SIMPLEOVERLAY]->IsTexture();
 		bool bForceFresnel = ( params[info.FORCEFRESNEL]->GetFloatValue() != -1.0f );
+
+		bool bIsTranslucent = params[info.TRANSLUCENT]->GetIntValue() != 0;
+		//bool bHasFlowAlpha = params[info.BASETEXTURE]->IsDefined() && params[info.FLOWMAP]->IsDefined();
+		//bool bBuildingForWorld = r_buildingmapforworld.GetBool() ? 1 : 0;
 		//bool bHasMRAO = IsTextureSet(info.MRAO, params);
 		/*if (pDeferredContext) {
 			pDeferredContext->bWaterHasMRAO = (info.MRAO != -1 && params[info.MRAO]->IsDefined());
@@ -223,7 +228,11 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 			bHasMultiTexture = false;
 		}
 
-		
+		//if (bIsTranslucent || bHasFlowAlpha)
+		//{
+		//	SET_FLAGS(MATERIAL_VAR_TRANSLUCENT);
+		//	SET_FLAGS(MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY); // Helps with sorting
+		//}
 
 		// LIGHTMAP - needed either with basetexture or lightmapwaterfog.  Not sure where the bReflection restriction comes in.
 		//bool bUsingLightmap = bLightmapWaterFog || ( bReflection && bHasBaseTexture );
@@ -303,9 +312,14 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER11, true );
 			}
 
+			if (bIsTranslucent)
+			{
+				pShader->EnableAlphaBlending(SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA);
+			}
+
 			pShaderShadow->EnableBlending(true);
 			pShaderShadow->BlendFunc(SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA);
-			pShaderShadow->EnableDepthWrites(true);
+			pShaderShadow->EnableDepthWrites(!bIsTranslucent);
 
 			int fmt = VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TANGENT_S | VERTEX_TANGENT_T;
 
@@ -331,7 +345,7 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 			// "REFLECT" "0..1"
 			// "REFRACT" "0..1"
 
-			DECLARE_STATIC_PIXEL_SHADER(water_ps30);
+			/*DECLARE_STATIC_PIXEL_SHADER(water_ps30);
 			SET_STATIC_PIXEL_SHADER_COMBO( REFLECT,  bReflection );
 			SET_STATIC_PIXEL_SHADER_COMBO( REFRACT,  bRefraction );
 			SET_STATIC_PIXEL_SHADER_COMBO( ABOVEWATER,  params[info.ABOVEWATER]->GetIntValue() );
@@ -342,7 +356,20 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 			SET_STATIC_PIXEL_SHADER_COMBO( FORCEFRESNEL, bForceFresnel );
 			SET_STATIC_PIXEL_SHADER_COMBO( SIMPLEOVERLAY, bHasSimpleOverlay );\
 			SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPWATERFOG, bLightmapWaterFog);
-			SET_STATIC_PIXEL_SHADER(water_ps30);
+			SET_STATIC_PIXEL_SHADER(water_ps30);*/
+
+			DECLARE_STATIC_PIXEL_SHADER(water_deferred_ps30);
+			SET_STATIC_PIXEL_SHADER_COMBO(REFLECT, bReflection);
+			SET_STATIC_PIXEL_SHADER_COMBO(REFRACT, bRefraction);
+			SET_STATIC_PIXEL_SHADER_COMBO(ABOVEWATER, params[info.ABOVEWATER]->GetIntValue());
+			SET_STATIC_PIXEL_SHADER_COMBO(MULTITEXTURE, bHasMultiTexture);
+			SET_STATIC_PIXEL_SHADER_COMBO(BASETEXTURE, bHasBaseTexture);
+			SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
+			SET_STATIC_PIXEL_SHADER_COMBO(FLOW_DEBUG, clamp(params[info.FLOW_DEBUG]->GetIntValue(), 0, 2));
+			SET_STATIC_PIXEL_SHADER_COMBO(FORCEFRESNEL, bForceFresnel);
+			SET_STATIC_PIXEL_SHADER_COMBO(SIMPLEOVERLAY, bHasSimpleOverlay); \
+			SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAPWATERFOG, bLightmapWaterFog);
+			SET_STATIC_PIXEL_SHADER(water_deferred_ps30);
 
 			pShader->FogToFogColor();
 
@@ -624,9 +651,14 @@ ConVar r_buildingmapforworld( "r_buildingmapforworld", "0" );
 			vViewportMad[3] = ( float )nViewportY / ( float )nRtHeight;
 			DynamicCmdsOut.SetPixelShaderConstant( 24, vViewportMad, 1 );
 
-			DECLARE_DYNAMIC_PIXEL_SHADER(water_ps30);
+			/*DECLARE_DYNAMIC_PIXEL_SHADER(water_ps30);
 			SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
-			SET_DYNAMIC_PIXEL_SHADER(water_ps30);
+			SET_DYNAMIC_PIXEL_SHADER(water_ps30);*/
+
+			DECLARE_DYNAMIC_PIXEL_SHADER(water_deferred_ps30);
+			//(BUILDWORLDIMPOSTER, bBuildingForWorld);
+			//SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, bFlashlightShadows);
+			SET_DYNAMIC_PIXEL_SHADER(water_deferred_ps30);
 			
 
 			DynamicCmdsOut.End();

@@ -8,8 +8,8 @@ const float4 g_vecFogParams : register(c2);
 const float3 g_vecOrigin : register(c3);
 
 static const int MAX_FORWARD_LIGHTS = 8;
-float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 4] : register(c50);
-float4 g_ForwardLightCount : register(c49);
+float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 4] : register(c45);
+float4 g_ForwardLightCount : register(c44);
 
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
 {

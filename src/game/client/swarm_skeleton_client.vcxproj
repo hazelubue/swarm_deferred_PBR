@@ -212,12 +212,12 @@
       </Command>
     </PostBuildEvent>
     <CustomBuildStep>
-      <Command>if exist "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll" attrib -r "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll"
-copy "$(TargetDir)"$(ProjectName).dll "$(appsDir)\Sourcemods\$(modName)\bin"
-if exist "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).pdb" attrib -r "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).pdb"
-if exist "$(TargetDir)"$(ProjectName).pdb copy "$(TargetDir)"$(ProjectName).pdb "$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).pdb"</Command>
-      <Outputs>$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).dll;$(appsDir)\Sourcemods\$(modName)\bin\$(ProjectName).pdb;%(Outputs)</Outputs>
-      <Inputs>$(TargetPath) $(appsDir) $(modName) $(ProjectName)</Inputs>
+      <Command>
+      </Command>
+      <Outputs>
+      </Outputs>
+      <Inputs>
+      </Inputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
