@@ -99,9 +99,6 @@
     <ClCompile Include="deferred_water.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="defpass_gbuffer_water.cpp">
-      <Filter>Source Files\scene</Filter>
-    </ClCompile>
     <ClCompile Include="ssgi.cpp">
       <Filter>Source Files\lighting</Filter>
     </ClCompile>
@@ -188,9 +185,6 @@
     <ClInclude Include="deferred_water.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="defpass_gbuffer_water.h">
-      <Filter>Source Files\scene</Filter>
-    </ClInclude>
     <ClInclude Include="common_glass_pbr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -199,6 +193,9 @@
     </ClInclude>
     <ClInclude Include="skydome_atmosphere_helper.h">
       <Filter>Source Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="common_water_pbr.h">
+      <Filter>Shader Source\fxc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
