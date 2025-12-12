@@ -249,13 +249,13 @@ float ShadowColor_SoftwareBilinear_SingleRow_4Tap( sampler depthMap, float objDe
 
 float ShadowColor_SoftwareBilinear_SingleRow_5Tap( sampler depthMap, float objDepth, float2 uv_start, float texelsize, float frac_x )
 {
-	float flLast = ceil(tex2Dlod( depthMap, float4(uv_start, 0, 0)).r - objDepth );
+	float flLast = ceil( tex2D( depthMap, uv_start ).r - objDepth );
 	float flLight = 0.0f;
 	for ( int x = 0; x < 4; x++ )
 	{
 		uv_start.x += texelsize;
 
-		float flNext = ceil(tex2Dlod( depthMap, float4(uv_start, 0, 0)).r - objDepth );
+		float flNext = ceil( tex2D( depthMap, uv_start ).r - objDepth );
 		flLight += lerp( flLast, flNext, frac_x ) * gauss4[x];
 
 		flLast = flNext;

@@ -21,12 +21,11 @@
 			"Game"	"swarm_base"
 			"Game"	"platform"	
 
-			"Game"	"C:\Program Files (x86)\Steam\steamapps\common\Portal 2/xlsppatch"
-			"Game"	"C:\Program Files (x86)\Steam\steamapps\common\Portal 2/update"
-			"Game"	"C:\Program Files (x86)\Steam\steamapps\common\Portal 2/portal2_dlc2"
-			"Game"	"C:\Program Files (x86)\Steam\steamapps\common\Portal 2/portal2_dlc1"
-			"Game"	"C:\Program Files (x86)\Steam\steamapps\common\Portal 2/portal2"
-			"Game"  "C:\Portal2Remastered\game\portal2asw"
+			"Game"  "Z:\Home\hazel\.local\share\Steam\steamapps\common\Portal 2\xlsppatch"
+			"Game"  "Z:\Home\hazel\.local\share\Steam\steamapps\common\Portal 2/update"
+			"Game"  "Z:\Home\hazel\.local\share\Steam\steamapps\common\Portal 2/portal2_dlc2"
+			"Game"  "Z:\Home\hazel\.local\share\Steam\steamapps\common\Portal 2/portal2_dlc1"
+			"Game"  "Z:\Home\hazel\.local\share\Steam\steamapps\common\Portal 2/portal2"
 			//"Game"	"..\..\..\#Portal2Remastered\P2ASW\game\portal2asw"
 			// Portal 2 code mounts this, but it isn't used by Valve
 			"Game"	"/mnt/temp/SteamLibrary/steamapps/common/SourceFilmmaker/game/hl2/"

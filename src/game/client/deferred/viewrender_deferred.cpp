@@ -833,7 +833,7 @@ void CDeferredViewRender::ViewDrawSceneDeferred(const CViewSetup& view, int nCle
 	}
 
 
-	//ViewDrawForward(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
+	ViewDrawForward(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
 
 	ViewDrawComposite(view, bDrew3dSkybox, nSkyboxVisible, nClearFlags, viewID, bDrawViewModel);
 
@@ -1085,20 +1085,27 @@ void CDeferredViewRender::DrawWorldComposite(const CViewSetup& view, int nClearF
 	{
 		fogVolumeInfo.m_nVisibleFogVolumeLeaf = -1;
 	}
-	//cubemapped
-	CRefPtr<CSimpleWorldViewDeferred> pNoWaterView = new CSimpleWorldViewDeferred(this);
-	pNoWaterView->Setup(view, nClearFlags, bDrawSkybox, fogVolumeInfo, info);
-	AddViewToScene(pNoWaterView);
-	return;
-	
+
+	// Cheap water or no water - use simple rendering
+	if (info.m_bCheapWater)
+	{
+		CRefPtr<CSimpleWorldViewDeferred> pNoWaterView = new CSimpleWorldViewDeferred(this);
+		pNoWaterView->Setup(view, nClearFlags, bDrawSkybox, fogVolumeInfo, info);
+		AddViewToScene(pNoWaterView);
+		return;
+	}
+
+	// Expensive water - check if eye is in water
 	if (!fogVolumeInfo.m_bEyeInFogVolume)
 	{
+		// Eye above water - render reflection and refraction
 		CRefPtr<CAboveWaterDeferredView> pAboveWaterView = new CAboveWaterDeferredView(this);
 		pAboveWaterView->Setup(view, bDrawSkybox, fogVolumeInfo, info);
 		AddViewToScene(pAboveWaterView);
 	}
 	else
 	{
+		// Eye underwater - render refraction of above-water scene
 		CRefPtr<CUnderWaterDeferredView> pUnderWaterView = new CUnderWaterDeferredView(this);
 		pUnderWaterView->Setup(view, bDrawSkybox, fogVolumeInfo, info);
 		AddViewToScene(pUnderWaterView);
@@ -1484,7 +1491,7 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 
 	CLightingEditor* pLightEditor = GetLightingEditor();
 
-	if (pLightEditor->IsEditorActive() && !building_cubemaps.GetBool())
+	if (pLightEditor->IsEditorActive())
 		pLightEditor->GetEditorView(&worldView.origin, &worldView.angles);
 	else
 		pLightEditor->SetEditorView(&worldView.origin, &worldView.angles);
@@ -1578,28 +1585,27 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 		}
 #endif
 
-		if (!building_cubemaps.GetBool())
+		
+		if (IsDepthOfFieldEnabled())
 		{
-			if (IsDepthOfFieldEnabled())
+			pRenderContext.GetFrom(materials);
 			{
-				pRenderContext.GetFrom(materials);
-				{
-					PIXEVENT(pRenderContext, "DoDepthOfField()");
-					DoDepthOfField(worldView);
-				}
-				pRenderContext.SafeRelease();
+				PIXEVENT(pRenderContext, "DoDepthOfField()");
+				DoDepthOfField(worldView);
 			}
-
-			if ((worldView.m_nMotionBlurMode != MOTION_BLUR_DISABLE) && (mat_motion_blur_enabled.GetInt()))
-			{
-				pRenderContext.GetFrom(materials);
-				{
-					PIXEVENT(pRenderContext, "DoImageSpaceMotionBlur()");
-					DoImageSpaceMotionBlur(worldView);
-				}
-				pRenderContext.SafeRelease();
-			}
+			pRenderContext.SafeRelease();
 		}
+
+		if ((worldView.m_nMotionBlurMode != MOTION_BLUR_DISABLE) && (mat_motion_blur_enabled.GetInt()))
+		{
+			pRenderContext.GetFrom(materials);
+			{
+				PIXEVENT(pRenderContext, "DoImageSpaceMotionBlur()");
+				DoImageSpaceMotionBlur(worldView);
+			}
+			pRenderContext.SafeRelease();
+		}
+		
 
 #if defined( _X360 )
 		{
@@ -1648,7 +1654,7 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 			pRenderContext.SafeRelease();
 		}
 
-		if (!building_cubemaps.GetBool() && worldView.m_bDoBloomAndToneMapping)
+		if (worldView.m_bDoBloomAndToneMapping)
 		{
 			pRenderContext.GetFrom(materials);
 			{
@@ -3985,7 +3991,7 @@ void CAboveWaterDeferredView::Setup(const CViewSetup& view, bool bDrawSkybox, co
 
 
 
-	if (bDrawSkybox)
+	if (!fogInfo.m_bEyeInFogVolume && bDrawSkybox)
 	{
 		m_DrawFlags |= DF_DRAWSKYBOX;
 	}
@@ -4252,6 +4258,10 @@ void CUnderWaterDeferredView::Setup(const CViewSetup& view, bool bDrawSkybox, co
 	if (!waterInfo.m_bRefract && !waterInfo.m_bOpaqueWater)
 	{
 		m_DrawFlags |= DF_RENDER_ABOVEWATER;
+	}
+	if (!fogInfo.m_bEyeInFogVolume && bDrawSkybox)
+	{
+		m_DrawFlags |= DF_DRAWSKYBOX;
 	}
 
 	m_fogInfo = fogInfo;

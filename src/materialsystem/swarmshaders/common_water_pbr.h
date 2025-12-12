@@ -1,16 +1,12 @@
 
 float g_SpecularBoost = 0.5f;
-float g_DiffuseScale = 10.0f;
+float g_DiffuseScale = 1.0f;
 float g_SheenStrength = 0.5f;
 
 static const int MAX_FORWARD_LIGHTS = 16;
 float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c69);
 float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c37);
 float4 g_ForwardLightCount : register(c11);
-
-const float4 g_vecShadowMappingTweaks_0 : register(c31);
-const float4 g_vecShadowMappingTweaks_1 : register(c32);
-
 
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
 {
@@ -210,35 +206,11 @@ float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightP
     return fade * spotAtten;
 }
 
-float3 PerformPointlightShadow(sampler sShadow, int idx, float rad, float d)
-{
-    int dataIndex = idx * 2;
-
-    //int samp = 16 + dataIndex;
-
-    float3 Out;
-    Out = PerformDualParaboloidShadow(
-        sShadow,(float3) 0.0,
-        g_vecShadowMappingTweaks_0,
-        g_vecShadowMappingTweaks_1,
-        d, rad, g_ForwardSpotLightData[dataIndex].w);
-
-    return Out;
-}
-
-//float3 PerformSpotlightShadow(float4 depthPos, sampler sShadow, int litIdx, float rad, float3 vecDelta, float dist, float3 worldNormal)
-//{
-//    //float atten = ComputeSpotlightAttenuation(litIdx, worldNormal, -vecDelta, dist, true);
-//    float shadow = PerformProjectedShadow(sShadow, depthPos, g_vecShadowMappingTweaks_0, g_vecShadowMappingTweaks_1, g_ForwardLightData[litIdx + 1].x);
-//    return shadow;
-//}
-
 float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float NdotH,
     float3 L, float3 normal, float3 vWorldPos, float3 vEye,
     float roughness, float metalness, float3 albedo,
     float3 effectiveLightColor, float attenuation, float lightType)
 {
-
     float3 V = normalize(vEye - vWorldPos);
 
     int dataIndex = index * 2;
@@ -274,8 +246,6 @@ float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float Nd
 
     if (lightType == 0.0)
     {
-        //float3 flShadow = PerformShadow(sShadow, index, lightRadius, lightToWorldDist);
-
         diffuse *= attenuation;
         specular *= attenuation;
     }

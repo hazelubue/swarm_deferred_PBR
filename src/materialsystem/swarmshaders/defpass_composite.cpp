@@ -8,7 +8,7 @@
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
-ConVar building_cubemaps("building_cubemaps", "0");
+ConVar building_cubemaps("building_cubemaps", "1");
 
 void InitParmsComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
@@ -280,15 +280,15 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 
 			if (bEnvmap)
 			{
-				if (building_cubemaps.GetBool())
+				/*if (building_cubemaps.GetBool())
 					tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_BLACK);
 				else
-				{
+				{*/
 					if (PARM_TEX(info.iEnvmap) && !bModel)
 						tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iEnvmap);
 					else
 						tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_LOCAL_ENV_CUBEMAP);
-				}
+				//}
 
 				if (bEnvmapMask)
 					tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iEnvmapMask);
