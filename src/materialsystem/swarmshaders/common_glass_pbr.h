@@ -1,7 +1,9 @@
 
 float g_SpecularBoost = 0.5f;
-float g_DiffuseScale = 1.0f;
+float g_DiffuseScale = 10.0f;
 float g_SheenStrength = 0.5f;
+
+sampler sMixedSampler[FREE_LIGHT_SAMPLERS] : register(FIRST_LIGHT_SAMPLER_FXC);
 
 const float2 g_vecFullScreenTexel : register(c1);
 const float4 g_vecFogParams : register(c2);
@@ -208,6 +210,25 @@ float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightP
     float spotAtten = smoothstep(coneOuter, coneInner, spotDot);
 
     return fade * spotAtten;
+}
+
+float3 PerformShadow(int samp, int idx, float rad, float3 local, float d /*,float3 vWorldNormal*/)
+{
+    float3 Out;
+    Out = PerformDualParaboloidShadow(
+        sMixedSampler[samp], local,
+        g_vecShadowMappingTweaks_0,
+        g_vecShadowMappingTweaks_1,
+        d, rad, g_flMixedData[idx + 2].w);
+
+    return Out;
+}
+
+float3 PerformShadow(float4 depthPos, int samp, int litIdx, float rad, float3 vecDelta, float dist, float3 worldNormal)
+{
+    //float atten = ComputeSpotlightAttenuation(litIdx, worldNormal, -vecDelta, dist, true);
+    float shadow = PerformProjectedShadow(sMixedSampler[samp], depthPos, g_vecShadowMappingTweaks_0, g_vecShadowMappingTweaks_1, g_flMixedData[litIdx + 4].x);
+    return shadow;
 }
 
 float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float NdotH,

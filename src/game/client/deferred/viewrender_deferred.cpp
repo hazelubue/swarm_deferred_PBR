@@ -833,7 +833,7 @@ void CDeferredViewRender::ViewDrawSceneDeferred(const CViewSetup& view, int nCle
 	}
 
 
-	ViewDrawForward(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
+	//ViewDrawForward(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
 
 	ViewDrawComposite(view, bDrew3dSkybox, nSkyboxVisible, nClearFlags, viewID, bDrawViewModel);
 
@@ -1085,27 +1085,20 @@ void CDeferredViewRender::DrawWorldComposite(const CViewSetup& view, int nClearF
 	{
 		fogVolumeInfo.m_nVisibleFogVolumeLeaf = -1;
 	}
-
-	// Cheap water or no water - use simple rendering
-	if (info.m_bCheapWater)
-	{
-		CRefPtr<CSimpleWorldViewDeferred> pNoWaterView = new CSimpleWorldViewDeferred(this);
-		pNoWaterView->Setup(view, nClearFlags, bDrawSkybox, fogVolumeInfo, info);
-		AddViewToScene(pNoWaterView);
-		return;
-	}
-
-	// Expensive water - check if eye is in water
+	//cubemapped
+	CRefPtr<CSimpleWorldViewDeferred> pNoWaterView = new CSimpleWorldViewDeferred(this);
+	pNoWaterView->Setup(view, nClearFlags, bDrawSkybox, fogVolumeInfo, info);
+	AddViewToScene(pNoWaterView);
+	return;
+	
 	if (!fogVolumeInfo.m_bEyeInFogVolume)
 	{
-		// Eye above water - render reflection and refraction
 		CRefPtr<CAboveWaterDeferredView> pAboveWaterView = new CAboveWaterDeferredView(this);
 		pAboveWaterView->Setup(view, bDrawSkybox, fogVolumeInfo, info);
 		AddViewToScene(pAboveWaterView);
 	}
 	else
 	{
-		// Eye underwater - render refraction of above-water scene
 		CRefPtr<CUnderWaterDeferredView> pUnderWaterView = new CUnderWaterDeferredView(this);
 		pUnderWaterView->Setup(view, bDrawSkybox, fogVolumeInfo, info);
 		AddViewToScene(pUnderWaterView);

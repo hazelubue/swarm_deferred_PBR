@@ -38,7 +38,7 @@
 
 #include "shader_constant_register_map.h"
 #include "common_flashlight_fxc.h"
-
+#include "common_deferred_fxc.h"
 #include "common_water_pbr.h"
 
 #if REFRACT
@@ -64,6 +64,7 @@ sampler BaseTextureSampler		: register( s10 );
 
 	sampler sLightAccum				: register( s9 );
 	sampler sMRAO					: register( s11 );
+	sampler shadowSampler			: register( s12 );
 	
 const float4 g_vRefractTint : register(c1);
 const float4 g_vReflectTint : register(c4);
@@ -498,7 +499,7 @@ float4 main(PS_INPUT i) : COLOR
 		float NdotV = max(0.0f, dot(N, V));
      
 		int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
-		//[unroll(16)]
+		[loop]
 		for (int i = 0; i < LIGHT_COUNT; i++)
 		{
 		
@@ -531,6 +532,23 @@ float4 main(PS_INPUT i) : COLOR
 			float NdotL = max(0.0f, dot(N, L));
 			float NdotH = max(0.0f, dot(N, H));
 			float VdotH = max(0.0f, dot(V, H));
+			
+			float3 flShadow;
+			
+			if(lightType == 0.0)
+			{
+				flShadow = PerformPointlightShadow(shadowSampler, i, lightRadius, distance);
+			}
+			//else if (lightType == 1.0)
+			//{
+				
+			//	float viewDot = 1.0f - abs(dot(toLight / distance, N));
+			//	float3 localPos = worldPos + N * (viewDot + distance * 0.0075f);
+			//	float4 depthPos = mul(float4(localPos, 1.0f), w2t);
+			//	depthPos.xyz /= depthPos.w;
+	
+			//	flShadow = PerformSpotlightShadow(depthPos, shadowSampler, i, lightRadius, toLight, distance, N)
+			//}
 	
 			float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, baseSampleAlpha.rgb, effectiveLightColor, attenuation, lightType);
 	
