@@ -2804,17 +2804,15 @@ void CGBufferView::Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRe
 	BaseClass::Setup(view);
 	m_bDrawWorldNormal = false;
 
-	m_DrawFlags |= DF_RENDER_WATER;
+	m_ClearFlags = 0;
+	m_DrawFlags = DF_DRAW_ENTITITES;
+
+	m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
 
 	if (waterInfo.m_bDrawWaterSurface)
 	{
 		m_DrawFlags |= DF_RENDER_WATER;
 	}
-
-	m_ClearFlags = 0;
-	m_DrawFlags = DF_DRAW_ENTITITES;
-
-	m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
 }
 
 void CGBufferView::Draw()
@@ -4058,10 +4056,13 @@ void CAboveWaterDeferredView::Draw()
 	}
 
 	// render the world
+	CGBufferView::PushGBuffer;
+
 	PushComposite();
 	DrawSetup(m_waterHeight, m_DrawFlags, m_waterZAdjust);
 	EnableWorldFog();
 	DrawExecute(m_waterHeight, CurrentViewID(), m_waterZAdjust);
+	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	if (m_waterInfo.m_bRefract)
@@ -4121,18 +4122,17 @@ void CAboveWaterDeferredView::CReflectionView::Draw()
 	bool bVisOcclusion = r_visocclusion.GetBool();
 	r_visocclusion.SetValue(0);
 
+	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0.0f, GetOuter()->m_fogInfo.m_nVisibleFogVolumeLeaf);
 
 	EnableWorldFog();
 	DrawExecute(GetOuter()->m_fogInfo.m_flWaterHeight, VIEW_REFLECTION, 0.0f);
-
+	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	r_visocclusion.SetValue(bVisOcclusion);
-
-
 
 	// finish off the view and restore the previous view.
 	SetupCurrentView(origin, angles, (view_id_t)nSaveViewID);
@@ -4169,6 +4169,7 @@ void CAboveWaterDeferredView::CRefractionView::Draw()
 	int nSaveViewID = CurrentViewID();
 	SetupCurrentView(origin, angles, VIEW_REFRACTION);
 
+	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust);
@@ -4177,6 +4178,7 @@ void CAboveWaterDeferredView::CRefractionView::Draw()
 	SetClearColorToFogColor();
 	DrawExecute(GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust);
 
+	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	// finish off the view.  restore the previous view.
@@ -4204,6 +4206,7 @@ void CAboveWaterDeferredView::CIntersectionView::Setup()
 //-----------------------------------------------------------------------------
 void CAboveWaterDeferredView::CIntersectionView::Draw()
 {
+	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0);
@@ -4214,6 +4217,7 @@ void CAboveWaterDeferredView::CIntersectionView::Draw()
 	CMatRenderContextPtr pRenderContext(materials);
 	pRenderContext->ClearColor4ub(0, 0, 0, 255);
 
+	CGBufferView::PopGBuffer;
 	PopComposite();
 }
 
@@ -4296,6 +4300,7 @@ void CUnderWaterDeferredView::Draw()
 		pRenderContext->ClearColor4ub(ucFogColor[0], ucFogColor[1], ucFogColor[2], 255);
 	}
 
+	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(m_waterHeight, m_DrawFlags, m_waterZAdjust);
@@ -4303,6 +4308,7 @@ void CUnderWaterDeferredView::Draw()
 	DrawExecute(m_waterHeight, CurrentViewID(), m_waterZAdjust);
 	m_ClearFlags = 0;
 
+	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	if (m_waterZAdjust != 0.0f && m_bSoftwareUserClipPlane && m_waterInfo.m_bRefract)
@@ -4349,6 +4355,7 @@ void CUnderWaterDeferredView::CRefractionView::Draw()
 	pRenderContext->GetFogColor(ucFogColor);
 	pRenderContext->ClearColor4ub(ucFogColor[0], ucFogColor[1], ucFogColor[2], 255);
 
+	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust);
@@ -4356,6 +4363,7 @@ void CUnderWaterDeferredView::CRefractionView::Draw()
 	EnableWorldFog();
 	DrawExecute(GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust);
 
+	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	Rect_t srcRect;

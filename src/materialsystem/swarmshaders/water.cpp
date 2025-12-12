@@ -169,6 +169,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 
 		SHADOW_STATE
 		{
+		    pShaderShadow->EnableCulling(false);
 			pShader->SetInitialShadowState( );
 			if ( bRefraction )
 			{

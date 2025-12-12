@@ -72,6 +72,7 @@ SHADER_PARAM(PARALLAX, SHADER_PARAM_TYPE_FLOAT, "", "");
 SHADER_PARAM(ALPHATEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "a alpha texture!");
 SHADER_PARAM(TRANSPARENCY, SHADER_PARAM_TYPE_INTEGER, "", "");
 SHADER_PARAM(TRANSLUCENT, SHADER_PARAM_TYPE_INTEGER, "", "");
+SHADER_PARAM(SELFILLUM, SHADER_PARAM_TYPE_INTEGER, "", "");
 END_SHADER_PARAMS
 
 void SetupParmsGBuffer0(defParms_gBuffer0& p)
@@ -164,6 +165,7 @@ void SetupParmsComposite(defParms_composite& p)
 	p.BUMPMAP = BUMPMAP;
 
 	p.MRAOTEXTURE = MRAOTEXTURE;
+	p.SELFILLUM = SELFILLUM;
 
 	p.iFresnelRanges = FRESNELRANGES;
 }
@@ -220,10 +222,11 @@ SHADER_INIT_PARAMS()
 	if (PARM_DEFINED(BUMPMAP))
 		SET_FLAGS2(MATERIAL_VAR2_LIGHTING_BUMPED_LIGHTMAP);
 
-	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	//const bool bDrawToGBuffer = DrawToGBuffer(params);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-	if (bDrawToGBuffer)
+	if (bDeferredActive)
 	{
 		defParms_gBuffer0 parms_gbuffer;
 		SetupParmsGBuffer0(parms_gbuffer);
@@ -251,10 +254,11 @@ SHADER_INIT_PARAMS()
 
 SHADER_INIT
 {
-	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	//const bool bDrawToGBuffer = DrawToGBuffer(params);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-	if (bDrawToGBuffer)
+	if (bDeferredActive)
 	{
 		defParms_gBuffer0 parms_gbuffer;
 		SetupParmsGBuffer0(parms_gbuffer);
@@ -310,13 +314,14 @@ SHADER_DRAW
 		pShaderAPI->GetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE)
 		: DEFERRED_RENDER_STAGE_INVALID;
 
-	const bool bDrawToGBuffer = DrawToGBuffer(params);
+	//const bool bDrawToGBuffer = DrawToGBuffer(params);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
 	Assert(pShaderAPI == NULL ||
 		iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID);
 
-	if (bDrawToGBuffer)
+	if (bDeferredActive)
 	{
 		if (pShaderShadow != NULL ||
 			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER)

@@ -225,6 +225,10 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
     float3 worldNormal = tex2D(sNormals, screenPos).xyz * 2.0f - 1.0f;
 #endif
+	
+#if NOCULL
+    worldNormal *= In.vDir;
+#endif
 
 #if RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye = normalize( In.worldToEye );

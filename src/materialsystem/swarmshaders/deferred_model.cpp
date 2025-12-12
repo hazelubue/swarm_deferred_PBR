@@ -65,6 +65,7 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 		SHADER_PARAM(ALPHATEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "a alpha texture!");
 		SHADER_PARAM(TRANSPARENCY, SHADER_PARAM_TYPE_INTEGER, "", "");
 		SHADER_PARAM(TRANSLUCENT, SHADER_PARAM_TYPE_INTEGER, "", "");
+		SHADER_PARAM(SELFILLUM, SHADER_PARAM_TYPE_INTEGER, "", "");
 	END_SHADER_PARAMS
 
 	void SetupParmsGBuffer0(defParms_gBuffer0& p)
@@ -169,6 +170,7 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 
 		//p.SelfShadowedBumpFlag = SSBUMP;
 		p.BUMPMAP = BUMPMAP;
+		p.SELFILLUM = SELFILLUM;
 
 		p.iFresnelRanges = FRESNELRANGES;
 	}
@@ -200,6 +202,7 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 
 	bool DrawToGBuffer( IMaterialVar **params )
 	{
+
 		const bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
 		const bool bTranslucent = IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT );
 
@@ -213,10 +216,11 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 		if ( g_pHardwareConfig->HasFastVertexTextures() )
 			SET_FLAGS2( MATERIAL_VAR2_USES_VERTEXID );
 
-		const bool bDrawToGBuffer = DrawToGBuffer( params );
+		//const bool bDrawToGBuffer = DrawToGBuffer( params );
 		const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+		bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-		if ( bDrawToGBuffer )
+		if (bDeferredActive)
 		{
 			defParms_gBuffer0 parms_gbuffer;
 			SetupParmsGBuffer0( parms_gbuffer );
@@ -243,10 +247,11 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 
 	SHADER_INIT
 	{
-		const bool bDrawToGBuffer = DrawToGBuffer( params );
+		//const bool bDrawToGBuffer = DrawToGBuffer( params );
 		const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+		bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 		
-		if ( bDrawToGBuffer )
+		if (bDeferredActive)
 		{
 			defParms_gBuffer0 parms_gbuffer;
 			SetupParmsGBuffer0( parms_gbuffer );
@@ -296,13 +301,15 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 			pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_DEFERRED_RENDER_STAGE )
 			: DEFERRED_RENDER_STAGE_INVALID;
 
-		const bool bDrawToGBuffer = DrawToGBuffer( params );
+		//const bool bDrawToGBuffer = DrawToGBuffer( params );
 		const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 		Assert( pShaderAPI == NULL ||
 			iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID );
 
-		if ( bDrawToGBuffer )
+		bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+
+		if (bDeferredActive)
 		{
 			if ( pShaderShadow != NULL ||
 				iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER )

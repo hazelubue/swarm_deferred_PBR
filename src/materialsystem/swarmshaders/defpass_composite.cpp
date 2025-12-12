@@ -40,6 +40,9 @@ void InitPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	if (PARM_DEFINED(info.iAlbedo))
 		pShader->LoadTexture(info.iAlbedo);
 
+	if (PARM_DEFINED(info.SELFILLUM))
+		params[info.SELFILLUM]->SetIntValue(1);
+
 	if (PARM_DEFINED(info.iEnvmap))
 		pShader->LoadCubeMap(info.iEnvmap);
 
@@ -100,7 +103,7 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	const bool bBlendmodulate2 = bBlendmodulate && PARM_TEX(info.iBlendmodulate2);
 	const bool bBlendmodulate3 = bBlendmodulate && PARM_TEX(info.iBlendmodulate3);
 
-	const bool bSelfIllum = !bAlbedo2 && IS_FLAG_SET(MATERIAL_VAR_SELFILLUM);
+	const bool bSelfIllum = !bAlbedo2 && PARM_TEX(info.SELFILLUM);
 	const bool bSelfIllumMaskInEnvmapMask = bSelfIllum && bEnvmapMask && PARM_SET(info.iSelfIllumMaskInEnvmapAlpha);
 	const bool bSelfIllumMask = bSelfIllum && !bSelfIllumMaskInEnvmapMask && !bEnvmapMask && PARM_TEX(info.iSelfIllumMask);
 

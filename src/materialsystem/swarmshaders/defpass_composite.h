@@ -14,6 +14,7 @@ struct defParms_composite
 
 	int BUMPMAP;
 	int MRAOTEXTURE;
+	int SELFILLUM;
 
 	int SelfShadowedBumpFlag;
 
