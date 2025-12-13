@@ -216,11 +216,11 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 		if ( g_pHardwareConfig->HasFastVertexTextures() )
 			SET_FLAGS2( MATERIAL_VAR2_USES_VERTEXID );
 
-		//const bool bDrawToGBuffer = DrawToGBuffer( params );
+		const bool bDrawToGBuffer = DrawToGBuffer( params );
 		const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-		bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+		//bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-		if (bDeferredActive)
+		if (bDrawToGBuffer)
 		{
 			defParms_gBuffer0 parms_gbuffer;
 			SetupParmsGBuffer0( parms_gbuffer );
@@ -247,11 +247,11 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 
 	SHADER_INIT
 	{
-		//const bool bDrawToGBuffer = DrawToGBuffer( params );
+		const bool bDrawToGBuffer = DrawToGBuffer( params );
 		const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-		bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+		//bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 		
-		if (bDeferredActive)
+		if (bDrawToGBuffer)
 		{
 			defParms_gBuffer0 parms_gbuffer;
 			SetupParmsGBuffer0( parms_gbuffer );
@@ -301,15 +301,15 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 			pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_DEFERRED_RENDER_STAGE )
 			: DEFERRED_RENDER_STAGE_INVALID;
 
-		//const bool bDrawToGBuffer = DrawToGBuffer( params );
+		const bool bDrawToGBuffer = DrawToGBuffer( params );
 		const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 		Assert( pShaderAPI == NULL ||
 			iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID );
 
-		bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+		//bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-		if (bDeferredActive)
+		if (bDrawToGBuffer)
 		{
 			if ( pShaderShadow != NULL ||
 				iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER )

@@ -222,11 +222,11 @@ SHADER_INIT_PARAMS()
 	if (PARM_DEFINED(BUMPMAP))
 		SET_FLAGS2(MATERIAL_VAR2_LIGHTING_BUMPED_LIGHTMAP);
 
-	//const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bDrawToGBuffer = DrawToGBuffer(params);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-	bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+	//bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-	if (bDeferredActive)
+	if (bDrawToGBuffer)
 	{
 		defParms_gBuffer0 parms_gbuffer;
 		SetupParmsGBuffer0(parms_gbuffer);
@@ -254,11 +254,11 @@ SHADER_INIT_PARAMS()
 
 SHADER_INIT
 {
-	//const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bDrawToGBuffer = DrawToGBuffer(params);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-	bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+	//bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
-	if (bDeferredActive)
+	if (bDrawToGBuffer)
 	{
 		defParms_gBuffer0 parms_gbuffer;
 		SetupParmsGBuffer0(parms_gbuffer);
@@ -314,14 +314,14 @@ SHADER_DRAW
 		pShaderAPI->GetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE)
 		: DEFERRED_RENDER_STAGE_INVALID;
 
-	//const bool bDrawToGBuffer = DrawToGBuffer(params);
+	const bool bDrawToGBuffer = DrawToGBuffer(params);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-	bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
+	//bool bDeferredActive = GetDeferredExt()->IsDeferredLightingEnabled();
 
 	Assert(pShaderAPI == NULL ||
 		iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID);
 
-	if (bDeferredActive)
+	if (bDrawToGBuffer)
 	{
 		if (pShaderShadow != NULL ||
 			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER)

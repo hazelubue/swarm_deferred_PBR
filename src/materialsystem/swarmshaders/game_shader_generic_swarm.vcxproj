@@ -226,7 +226,6 @@
     <ClCompile Include="lighting_volume.cpp" />
     <ClCompile Include="skydome_atmosphere.cpp" />
     <ClCompile Include="skydome_atmosphere_helper.cpp" />
-    <ClCompile Include="ssgi.cpp" />
     <ClCompile Include="volume_blend.cpp" />
     <ClCompile Include="volume_prepass.cpp" />
     <ClCompile Include="water.cpp" />

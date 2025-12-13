@@ -17,6 +17,8 @@ CDeferredExtension::CDeferredExtension()
 	m_pTexWaterNormals = NULL;
 	m_pTexDepth = NULL;
 	m_pTexLightAccum = NULL;
+    m_pRefraction = NULL;
+    m_pReflection = NULL;
 #if ( DEFCFG_LIGHTCTRL_PACKING == 0 )
 	m_pTexLightCtrl = NULL;
 #endif
@@ -113,13 +115,15 @@ float *CDeferredExtension::CommitLightData_Common( float *pFlData, int numRows,
 	return pReturn;
 }
 
-void CDeferredExtension::CommitTexture_General( ITexture *pTexNormals, ITexture *pTexWaterNormals, ITexture *pTexDepth,
+void CDeferredExtension::CommitTexture_General( ITexture *pTexNormals, ITexture *pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction, ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum )
 {
 	m_pTexWaterNormals = pTexWaterNormals;
 	m_pTexNormals = pTexNormals;
 	m_pTexDepth = pTexDepth;
+    m_pRefraction = pTexRefraction;
+    m_pReflection = pTexReflection;
 	m_pTexLightAccum = pTexLightAccum;
 	m_pTexLightCtrl = pTexLightingCtrl;
 }

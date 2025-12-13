@@ -11,6 +11,8 @@ ITexture *GetDefRT_Normals();
 ITexture *GetDefRT_WaterNormals();
 ITexture *GetDefRT_Depth();
 ITexture *GetDefRT_LightCtrl();
+ITexture* GetDefRT_Reflection();
+ITexture* GetDefRT_Refraction();
 ITexture *GetDefRT_Lightaccum();
 
 ITexture *GetDefRT_VolumePrepass();

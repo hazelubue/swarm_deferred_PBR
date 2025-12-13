@@ -19,8 +19,7 @@
 // STATIC:		"SELFILLUM_MASK"			"0..1"
 // STATIC:		"SELFILLUM_ENVMAP_ALPHA"	"0..1"
 
-// DYNAMIC:		"PIXELFOGTYPE"		"0..1"
-
+// DYNAMIC:		"PIXELFOGTYPE"				"0..1"
 
 // SKIP:		$ALPHATEST && $TRANSLUCENT
 // SKIP:		!$ENVMAP && $ENVMAPFRESNEL
@@ -120,6 +119,10 @@ sampler sSelfIllumMask						: register( s4 ); // override envmap mask
 
 sampler sMRAO : register(s11);
 
+float4 g_vShaderControls : register(c12);
+
+#define g_fWriteDepthToAlpha g_vShaderControls.y
+
 struct PS_INPUT
 {
 #if BLENDMODULATE
@@ -130,6 +133,8 @@ struct PS_INPUT
 
 	//float3 vProjPosXYW				: TEXCOORD1;
     float3 vWorldPos : TEXCOORD2;
+	
+    float4 worldPos_projPosZ : TEXCOORD1;
 
 #if ENVMAP || RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye				: TEXCOORD3;
@@ -365,6 +370,29 @@ PS_OUTPUT main(const PS_INPUT In)
 		GAMMA_LIGHT_SCALE;
 #endif
 
+//    float alpha = flAlbedoSample.a;
+	
+//    float3 result = (float3) 0;
+	
+//    float fogFactor;
+//    float flVertexFogFactor = 0.0f;
+	
+//    fogFactor = CalcPixelFogFactorSupportsVertexFog(PIXELFOGTYPE, g_vecFogParams, g_vecOrigin.xyz, In.worldPos_projPosZ.xyz, In.worldPos_projPosZ.w, flVertexFogFactor);
+	
+//    if (PIXELFOGTYPE == PIXEL_FOG_TYPE_HEIGHT && WRITEWATERFOGTODESTALPHA)
+//    {
+//        alpha = fogFactor;
+//    }
+	
+//    result += float4(((flAlbedoSample.xyz + flLighting.w * g_flPhongScale) * flLighting.xyz
+//		+ flSpecularLighting) * flLightScale, 0.0);
+	
+//    Out.vColor_0.xyzw = float4(result.rgb, alpha);
+	
+//#if PIXELFOGTYPE == 0
+//	Out.vColor_0.xyz = lerp( Out.vColor_0.xyz, g_LinearFogColor, fogFactor );
+//#endif
+	
     Out.vColor_0.xyzw = float4(((flAlbedoSample.xyz + flLighting.w * g_flPhongScale) * flLighting.xyz
 		+ flSpecularLighting) * flLightScale, flAlbedoSample.a);
 

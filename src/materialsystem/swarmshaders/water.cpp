@@ -29,6 +29,12 @@ void InitParamsWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, const ch
 			Warning( "***need to set $abovewater for material %s\n", pMaterialName );
 			params[info.ABOVEWATER]->SetIntValue( 1 );
 		}
+		if (!params[info.LIGHTMAPWATERFOG]->IsDefined())
+		{
+			Warning("***need to set $LIGHTMAPWATERFOG for material %s\n", pMaterialName);
+			params[info.LIGHTMAPWATERFOG]->SetIntValue(1);
+		}
+		
 		SET_FLAGS2( MATERIAL_VAR2_NEEDS_TANGENT_SPACES );
 		if( !params[info.CHEAPWATERSTARTDISTANCE]->IsDefined() )
 		{
@@ -170,6 +176,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 		SHADOW_STATE
 		{
 		    pShaderShadow->EnableCulling(false);
+			//pShaderShadow->EnableDepthWrites(true);
 			pShader->SetInitialShadowState( );
 			if ( bRefraction )
 			{
@@ -473,7 +480,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 			float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
 			DynamicCmdsOut.SetPixelShaderConstant(11, forwardLightCount);
 
-			if (numForwardLights > 0)
+			if (pShaderAPI != NULL && numForwardLights > 0 && numForwardLights < 14)
 			{
 				float* pLightData = pExt->GetForwardLightData();
 				if (pLightData)

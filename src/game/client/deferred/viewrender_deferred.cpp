@@ -3186,7 +3186,7 @@ void CForwardView::Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRe
 	m_bDrewSkybox = bDrewSkybox;
 
 	BaseClass::Setup(view);
-	m_bDrawWorldNormal = false;
+	m_bDrawWorldNormal = true;
 
 	// Different draw flags for forward rendering
 	m_ClearFlags = VIEW_CLEAR_DEPTH;  // Clear depth but NOT color (we composite over existing)
@@ -3275,7 +3275,7 @@ bool CBaseWorldViewDeferred::AdjustView(float waterHeight)
 {
 	if (m_DrawFlags & DF_RENDER_REFRACTION)
 	{
-		ITexture* pTexture = GetWaterRefractionTexture();
+		ITexture* pTexture = GetDefRT_Refraction();
 
 		// Use the aspect ratio of the main view! So, don't recompute it here
 		x = y = 0;
@@ -3287,7 +3287,7 @@ bool CBaseWorldViewDeferred::AdjustView(float waterHeight)
 
 	if (m_DrawFlags & DF_RENDER_REFLECTION)
 	{
-		ITexture* pTexture = GetWaterReflectionTexture();
+		ITexture* pTexture = GetDefRT_Reflection();
 
 		// Use the aspect ratio of the main view! So, don't recompute it here
 		x = y = 0;
@@ -3339,15 +3339,23 @@ void CBaseWorldViewDeferred::PushView(float waterHeight)
 		pRenderContext->SetHeightClipZ(waterHeight);
 		pRenderContext->SetHeightClipMode(clipMode);
 
-		// Have to re-set up the view since we reset the size
-		render->Push3DView(*this, m_ClearFlags, GetWaterRefractionTexture(), GetFrustum());
+		ITexture* pTexture = GetDefRT_Refraction();
 
+		pRenderContext->PushRenderTargetAndViewport(pTexture);
+		//create transparent refract.
+		pRenderContext->ClearColor4ub(0, 0, 0, 128); 
+		pRenderContext->ClearBuffers(true, false, false);
+
+		pRenderContext->PopRenderTargetAndViewport();
+
+		// Push the 3D view
+		render->Push3DView(*this, 0, pTexture, GetFrustum());
 		return;
 	}
 
 	if (m_DrawFlags & DF_RENDER_REFLECTION)
 	{
-		ITexture* pTexture = GetWaterReflectionTexture();
+		ITexture* pTexture = GetDefRT_Reflection();
 
 		pRenderContext->SetFogZ(waterHeight);
 
@@ -3356,6 +3364,14 @@ void CBaseWorldViewDeferred::PushView(float waterHeight)
 		{
 			waterHeight = origin[2] + r_eyewaterepsilon.GetFloat();
 		}
+
+		pRenderContext->PushRenderTargetAndViewport(pTexture);
+
+		pRenderContext->ClearColor4ub(0, 0, 0, 255);
+
+		pRenderContext->ClearBuffers(true, true, false);
+
+		pRenderContext->PopRenderTargetAndViewport();
 
 		pRenderContext->SetHeightClipZ(waterHeight);
 		pRenderContext->SetHeightClipMode(clipMode);
@@ -3399,11 +3415,11 @@ void CBaseWorldViewDeferred::PopView()
 			// these renders paths used their surfaces, so blit their results
 			if (m_DrawFlags & DF_RENDER_REFRACTION)
 			{
-				pRenderContext->CopyRenderTargetToTextureEx(GetWaterRefractionTexture(), NULL, NULL);
+				pRenderContext->CopyRenderTargetToTextureEx(GetDefRT_Refraction(), NULL, NULL);
 			}
 			if (m_DrawFlags & DF_RENDER_REFLECTION)
 			{
-				pRenderContext->CopyRenderTargetToTextureEx(GetWaterReflectionTexture(), NULL, NULL);
+				pRenderContext->CopyRenderTargetToTextureEx(GetDefRT_Reflection(), NULL, NULL);
 			}
 		}
 
@@ -4349,29 +4365,66 @@ void CUnderWaterDeferredView::CRefractionView::Setup()
 //-----------------------------------------------------------------------------
 void CUnderWaterDeferredView::CRefractionView::Draw()
 {
+	int nSaveViewID = CurrentViewID();
+	SetupCurrentView(origin, angles, VIEW_REFRACTION);
 	CMatRenderContextPtr pRenderContext(materials);
+	ITexture* pRefraction = GetDefRT_Refraction();
+
+	pRenderContext->PushRenderTargetAndViewport(pRefraction);
+
 	SetFogVolumeState(GetOuter()->m_fogInfo, true);
 	unsigned char ucFogColor[3];
 	pRenderContext->GetFogColor(ucFogColor);
 	pRenderContext->ClearColor4ub(ucFogColor[0], ucFogColor[1], ucFogColor[2], 255);
 
+	pRenderContext->ClearBuffers(true, true, false);
+
+	pRenderContext->PopRenderTargetAndViewport();
+
 	CGBufferView::PushGBuffer;
 	PushComposite();
-
 	DrawSetup(GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust);
-
 	EnableWorldFog();
 	DrawExecute(GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust);
-
 	CGBufferView::PopGBuffer;
 	PopComposite();
 
-	Rect_t srcRect;
-	srcRect.x = x;
-	srcRect.y = y;
-	srcRect.width = width;
-	srcRect.height = height;
 
-	ITexture* pTexture = GetWaterRefractionTexture();
-	pRenderContext->CopyRenderTargetToTextureEx(pTexture, 0, &srcRect, NULL);
+	pRenderContext->PushRenderTargetAndViewport(pRefraction);
+
+	static IMaterial* pTransparentOverlay = NULL;
+	if (!pTransparentOverlay)
+	{
+		KeyValues* pVMT = new KeyValues("UnlitGeneric");
+		pVMT->SetString("$basetexture", "white");
+		pVMT->SetInt("$vertexcolor", 1);
+		pVMT->SetInt("$vertexalpha", 1);
+		pVMT->SetInt("$translucent", 1);
+		pTransparentOverlay = materials->CreateMaterial("__transparent_overlay", pVMT);
+	}
+
+	float alpha = 0.5f;
+	pRenderContext->Bind(pTransparentOverlay);
+	pTransparentOverlay->ColorModulate(1.0f, 1.0f, 1.0f);
+	pTransparentOverlay->AlphaModulate(alpha);
+
+	pRenderContext->OverrideDepthEnable(true, false);
+
+	pRenderContext->DrawScreenSpaceRectangle(
+		pTransparentOverlay,
+		0, 0,
+		pRefraction->GetActualWidth(),
+		pRefraction->GetActualHeight(),
+		0, 0,
+		pRefraction->GetActualWidth() - 1,
+		pRefraction->GetActualHeight() - 1,
+		pRefraction->GetActualWidth(),
+		pRefraction->GetActualHeight());
+
+	pRenderContext->OverrideDepthEnable(false, true);
+
+	pRenderContext->PopRenderTargetAndViewport();
+
+
+	SetupCurrentView(origin, angles, (view_id_t)nSaveViewID);
 }

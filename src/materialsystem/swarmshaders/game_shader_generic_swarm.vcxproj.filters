@@ -99,9 +99,6 @@
     <ClCompile Include="deferred_water.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ssgi.cpp">
-      <Filter>Source Files\lighting</Filter>
-    </ClCompile>
     <ClCompile Include="defpass_composite_translucent.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>

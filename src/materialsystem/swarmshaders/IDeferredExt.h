@@ -110,7 +110,8 @@ public:
 		int numShadowedCookied, int numShadowed,
 		int numCookied, int numSimple ) = 0;
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture *pTexDepth,
+	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
+		ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum ) = 0;
 	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
@@ -174,7 +175,8 @@ public:
 		int numShadowedCookied, int numShadowed,
 		int numCookied, int numSimple );
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture *pTexDepth,
+	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction, 
+		ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum );
 	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth );
@@ -211,6 +213,8 @@ public:
 	inline ITexture *GetTexture_LightAccum();
 
 	inline ITexture *GetTexture_LightCtrl();
+	inline ITexture* GetTexture_Reflection();
+	inline ITexture* GetTexture_Refraction();
 
 	inline ITexture *GetTexture_ShadowDepth_Ortho( const int &index );
 	inline ITexture *GetTexture_ShadowDepth_DP( const int &index );
@@ -268,6 +272,8 @@ private:
 	ITexture *m_pTexDepth;
 	ITexture *m_pTexLightAccum;
 	ITexture *m_pTexLightCtrl;
+	ITexture * m_pReflection;
+	ITexture* m_pRefraction;
 
 	ITexture *m_pTexShadowDepth_Ortho[ MAX_SHADOW_ORTHO ];
 	ITexture *m_pTexShadowDepth_DP[ MAX_SHADOW_DP ];
@@ -372,6 +378,16 @@ ITexture *CDeferredExtension::GetTexture_LightAccum()
 ITexture *CDeferredExtension::GetTexture_LightCtrl()
 {
 	return m_pTexLightCtrl;
+}
+
+ITexture* CDeferredExtension::GetTexture_Reflection()
+{
+	return m_pReflection;
+}
+
+ITexture* CDeferredExtension::GetTexture_Refraction()
+{
+	return m_pRefraction;
 }
 ITexture *CDeferredExtension::GetTexture_ShadowDepth_Ortho( const int &index )
 {

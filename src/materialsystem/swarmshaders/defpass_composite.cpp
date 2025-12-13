@@ -40,8 +40,8 @@ void InitPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	if (PARM_DEFINED(info.iAlbedo))
 		pShader->LoadTexture(info.iAlbedo);
 
-	if (PARM_DEFINED(info.SELFILLUM))
-		params[info.SELFILLUM]->SetIntValue(1);
+	/*if (PARM_DEFINED(info.SELFILLUM))
+		params[info.SELFILLUM]->SetIntValue(1);*/
 
 	if (PARM_DEFINED(info.iEnvmap))
 		pShader->LoadCubeMap(info.iEnvmap);
@@ -114,8 +114,8 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	const bool bGBufferNormal = bEnvmap || bRimLight || bNeedsFresnel;
 	const bool bWorldEyeVec = bGBufferNormal;
 
-	//const bool bMRAO = PARM_SET(info.MRAOTEXTURE);
-
+	
+	
 
 	AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
 		"blended albedo not supported by gbuffer pass!");
@@ -388,6 +388,26 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy());
 		}
 
+		/*MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
+
+		bool bWriteDepthToAlpha;
+		bool bWriteWaterFogToAlpha;
+		
+		bWriteDepthToAlpha = pShaderAPI->ShouldWriteDepthToDestAlpha();
+		bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
+		AssertMsg(!(bWriteDepthToAlpha && bWriteWaterFogToAlpha),
+			"Can't write two values to alpha at the same time.");
+		
+		float fWriteDepthToAlpha = bWriteDepthToAlpha && IsPC() ? 1.0f : 0.0f;
+		float fWriteWaterFogToDestAlpha = bWriteWaterFogToAlpha ? 1.0f : 0.0f;
+		float vShaderControls[4] = {
+			0.0,
+			fWriteDepthToAlpha,
+			fWriteWaterFogToDestAlpha,
+			0.0
+		};
+		pShaderAPI->SetPixelShaderConstant(12, vShaderControls, 1);*/
+
 		pShaderAPI->SetDefaultState();
 
 		if (bModel && bFastVTex)
@@ -401,6 +421,7 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 
 		DECLARE_DYNAMIC_PIXEL_SHADER(composite_ps30);
 		SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+		//SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, false);
 		SET_DYNAMIC_PIXEL_SHADER(composite_ps30);
 
 		if (bModel && bFastVTex)

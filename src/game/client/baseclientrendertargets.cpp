@@ -18,7 +18,7 @@
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-ConVar cl_disable_water_render_targets( "cl_disable_water_render_targets", "0" );
+ConVar cl_disable_water_render_targets( "cl_disable_water_render_targets", "1" );
 
 ITexture* CBaseClientRenderTargets::CreateWaterReflectionTexture( IMaterialSystem* pMaterialSystem, int iSize )
 {
