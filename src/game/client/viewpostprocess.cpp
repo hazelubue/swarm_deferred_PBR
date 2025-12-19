@@ -1145,6 +1145,7 @@ IMaterial *CBloomAddMaterialProxy::GetMaterial()
 
 EXPOSE_MATERIAL_PROXY( CBloomAddMaterialProxy, BloomAdd );
 
+
 //void CSSGI::Init(void)
 //{
 //	m_bEnabled = true;

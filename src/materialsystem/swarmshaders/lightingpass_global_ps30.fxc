@@ -287,8 +287,8 @@ float3 calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, fl
 
     float3 Diffuse, Specular;
     
-    Diffuse = (diffuseBRDF + sheenBRDF) * lightIntensity * LN;
-    Specular = specularBRDF * g_SpecularBoost * lightIntensity;
+    Diffuse = (diffuseBRDF + sheenBRDF) * lightIntensity * g_light_diffuse *LN;
+    Specular = specularBRDF * g_SpecularBoost * g_light_diffuse * lightIntensity;
 
     float3 finalColor = Diffuse + Specular;
     
@@ -396,10 +396,10 @@ PS_OUTPUT main(const PS_INPUT In)
     //viewFwdDot = saturate(viewFwdDot);
     
     float3 ambient = lerp(g_light_ambient_low_half, g_light_ambient_high, viewFwdDot);
-    float3 finalColor = directLighting * shadowMult;
+    float3 finalColor = directLighting;
     
-    float3 ambientLight = lerp(ambient * shadowMult, radiance * litDot, lightAmount);
-    float3 combinedLighting = (finalColor + ambientLight);
+    float3 ambientLight = lerp(ambient, radiance * litDot, lightAmount);
+    float3 combinedLighting = (finalColor + ambientLight) * shadowMult;
     Out.vColor_0 = float4(combinedLighting, 1.0f);
     
     return Out;

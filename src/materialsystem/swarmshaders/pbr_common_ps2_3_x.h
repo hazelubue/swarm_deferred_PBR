@@ -309,25 +309,25 @@ float3 AmbientLookupLightmap(float3 worldPos,
 
 
 
-//float3 AmbientLookup(float3 worldPos, float3 normal, float3 ambientCube[6], float3 textureNormal, float4 lightmapTexCoord1And2, float4 lightmapTexCoord3, sampler LightmapSampler, float4 modulation)
-//{
-//#if ( LIGHTMAPPED )
-//	{
-//		return AmbientLookupLightmap(worldPos,
-//			normal,
-//			textureNormal,
-//			lightmapTexCoord1And2,
-//			lightmapTexCoord3,
-//			LightmapSampler,
-//			modulation);
-//	}
+float3 AmbientLookup(float3 worldPos, float3 normal, float3 ambientCube[6], float3 textureNormal, float4 lightmapTexCoord1And2, float4 lightmapTexCoord3, sampler LightmapSampler, float4 modulation)
+{
+
+		return AmbientLookupLightmap(worldPos,
+			normal,
+			textureNormal,
+			lightmapTexCoord1And2,
+			lightmapTexCoord3,
+			LightmapSampler,
+			modulation);
+	
 //#else
 //	{
 //		return PixelShaderAmbientLight(normal, ambientCube);
 //	}
-//#endif
-//}
-//
+
+}
+
+
 //float3 AmbientCubeLookup(float3 normal, float3 ambientCube[6])
 //{
 //    return PixelShaderAmbientLight(normal, ambientCube);

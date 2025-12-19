@@ -17,8 +17,8 @@
 // STATIC:		"SELFILLUM_MASK"			"0..1"
 // STATIC:		"SELFILLUM_ENVMAP_ALPHA"	"0..1"
 
-// DYNAMIC:		"PIXELFOGTYPE"		"0..1"
 
+// DYNAMIC:		"PIXELFOGTYPE"		"0..1"
 
 // SKIP:		$ALPHATEST && $TRANSLUCENT
 // SKIP:		!$ENVMAP && $ENVMAPFRESNEL
@@ -109,6 +109,11 @@ const float3 g_flSelfIllum_Tint				: register( c10 );
 sampler sSelfIllumMask						: register( s4 ); // override envmap mask
 #endif
 #endif
+
+const float4 g_GlobalLightDir				: register(c12); // xyz = direction, w = has shadow
+const float4 g_GlobalLightDiffuse		    : register(c13); // xyz = diffuse color
+const float4 g_GlobalLightAmbHigh			: register(c14); // xyz = ambient high color
+const float4 g_GlobalLightAmbLow			: register(c15); // xyz = ambient low color
 
 struct PS_INPUT
 {
@@ -281,11 +286,22 @@ PS_OUTPUT main(const PS_INPUT In)
         float NdotH = max(0.0f, dot(N, H));
         float VdotH = max(0.0f, dot(V, H));
 	
-        float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, effectiveLightColor, attenuation, lightType);
+        float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, effectiveLightColor, attenuation, lightType, lightPos, lightRadius);
 	
 		compositeLighting += flLighting;
     }
+
+    float3 L_global = normalize(g_GlobalLightDir.xyz);
+    float NdotL_global = max(0.0f, dot(N, L_global));
+
+    float3 H_global = normalize(L_global + V);
+    float NdotH_global = max(0.0f, dot(N, H_global));
+    float VdotH_global = max(0.0f, dot(V, H_global));
+
+    float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
 	
+    compositeLighting += globalLighting;
+
 #if ENVMAP
 	float flSpecularFactor;
 #if ENVMAPMASK

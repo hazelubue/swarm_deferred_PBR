@@ -7,6 +7,7 @@
 // STATIC:       "TRANSLUCENT"       "0..1"
 // STATIC:       "FLOWMAP"           "0..1"
 // STATIC:       "DEDICATEDMRAO"     "0..1"
+// STATIC:       "LIGHTMAP"          "0..1"
 
 
 // SKIP:         !$BUMPMAP2 && $BLENDMODULATE
@@ -16,6 +17,7 @@
 #include "common_ps_fxc.h"
 #include "common_deferred_fxc.h"
 #include "pbr_common_ps2_3_x.h"
+#include "shader_constant_register_map.h"
 
 // Samplers
 sampler sAlbedo : register(s0);
@@ -24,16 +26,15 @@ const float g_flAlphaRef : register(c0);
 
 
 
-sampler sBumpmap : register(s1);
+sampler sBumpmap                            : register(s1);
 
-sampler sCubemap : register(s8);
-sampler sMRAO : register(s15);
+sampler sMRAO                               : register(s15);
 #if BUMPMAP2
-sampler sBumpmap2 : register(s3);
+sampler sBumpmap2                           : register(s3);
 #endif
 
 #if BLENDMODULATE
-sampler sBlendmodulate : register(s4);
+sampler sBlendmodulate                      : register(s4);
 #endif
 
 #if SPECULAR
@@ -41,13 +42,15 @@ sampler sSpecular							: register( s5 );
 #endif
 
 #if FLOWMAP
-	sampler FlowmapSampler			: register( s6 );
-	sampler FlowNoiseSampler		: register( s7 );
+	sampler FlowmapSampler			        : register( s6 );
+	sampler FlowNoiseSampler		        : register( s7 );
 #endif
 
-const float g_flSSSScale : register(c7);
-const float g_ParallaxDepth : register(c8);
-const float g_ParallaxCenter : register(c9);
+sampler sLightmap                           : register(s8);
+
+const float g_flSSSScale                    : register(c7);
+const float g_ParallaxDepth                 : register(c8);
+const float g_ParallaxCenter                : register(c9);
 
 
 #if PARALLAXOCCLUSION
@@ -86,6 +89,10 @@ const float4 g_WaterFogParams : register(c37);
 #define g_Reflect_OverBright	g_WaterFogParams.z
 
 const float g_flTime : register(c38);
+
+const float3 cAmbientCube[6] : register(c39);
+
+const float4 g_DiffuseModulation : register(PSREG_DIFFUSE_MODULATION);
 
 
 float NormalToHeight(float3 normalSample)
@@ -370,8 +377,10 @@ struct PS_INPUT
 #endif
 
     float3 worldPos : TEXCOORD4;
-    float4 worldPos_Projz : TEXCOORD5;
     float2 baseTexCoord : TEXCOORD6;
+    
+    float4 lightmapTexCoord1And2 : TEXCOORD5;
+    float4 lightmapTexCoord3 : TEXCOORD7;
 };
 
 
@@ -379,7 +388,7 @@ struct PS_OUTPUT
 {
     float4 vColor_Normal : COLOR0;
     float4 vColor_Depth : COLOR1;
-    float4 vColor_Cubemap : COLOR2;
+    float4 vColor_Lightmap : COLOR2;
     float4 vColor_LightCtrl : COLOR3;
     //float4 vColor_MRAO : COLOR3;
 };
@@ -397,6 +406,13 @@ PS_OUTPUT main(const PS_INPUT In)
 
     float4 vNormalWs;
     float4 vFlowColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+#if USEENVAMBIENT && ENVMAP
+    float3 EnvAmbientCube[6];
+    setupEnvMapAmbientCube(EnvAmbientCube, sEnvmap);
+#else
+    #define EnvAmbientCube cAmbientCube
+#endif
     
 #if FLOWMAP
 		float flWorldUvScale				= g_flWorldUvScale;
@@ -608,7 +624,9 @@ PS_OUTPUT main(const PS_INPUT In)
 
     worldNormal = worldNormal * 0.5f + 0.5f;
     
-    float3 cubemap = tex2D(sCubemap, correctedTexCoord).rgb;
+    float3 textureNormal = tex2D(sBumpmap, In.vTexCoord);
+    
+    //float3 cubemap = tex2D(sCubemap, correctedTexCoord).rgb;
     
     float3 mrao = tex2D(sMRAO, correctedTexCoord).rgb;
     
@@ -626,9 +644,16 @@ PS_OUTPUT main(const PS_INPUT In)
     
     float alpha = flAlbedoSample.a;
     
-#if !TRANSLUCENT
+    float3 lightmapSample = (float3) 0;
+    
+#if LIGHTMAP
+    lightmapSample = AmbientLookup(In.worldPos.xyz, worldNormal, EnvAmbientCube,
+        textureNormal, In.lightmapTexCoord1And2, In.lightmapTexCoord3, sLightmap, g_DiffuseModulation);
+#endif
+    
+
     Out.vColor_Normal = float4(worldNormal, 1.0f);
-    Out.vColor_Cubemap = float4(flAlbedoSample.rgba);
+    Out.vColor_Lightmap = float4(lightmapSample.rgb, alpha);
     //Out.vColor_Alpha = float4(0, 0, 0, alpha);
     Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, 1);
 #if DEDICATEDMRAO
@@ -636,18 +661,7 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
     Out.vColor_LightCtrl = float4(CompositeGenerated.rgb, 0.0f);
 #endif
-#else
-    Out.vColor_Normal = float4(worldNormal, alpha);
-    Out.vColor_Cubemap = float4(0, 0, 0, alpha);
-    //Out.vColor_Alpha = float4(0, 0, 0, alpha);
-    Out.vColor_Depth = (float4) alpha;
-#if DEDICATEDMRAO
-    Out.vColor_LightCtrl = float4(0, 0, 0, alpha);
-#else
-    Out.vColor_LightCtrl = float4(0, 0, 0, alpha);
 #endif
-
-#endif
-#endif
+    
     return Out;
 }

@@ -21,7 +21,6 @@
 ConVar r_updaterefracttexture( "r_updaterefracttexture", "1", FCVAR_CHEAT );
 ConVar r_depthoverlay( "r_depthoverlay", "0", FCVAR_CHEAT, "Replaces opaque objects with their grayscaled depth values. r_showz_power scales the output." );
 
-
 int g_viewscene_refractUpdateFrame = 0;
 bool g_bAllowMultipleRefractUpdatesPerScenePerFrame = false;
 

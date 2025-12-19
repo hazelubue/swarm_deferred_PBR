@@ -1,0 +1,12 @@
+"Deferred_screenspace"
+{
+	"$pixshader" "ssr_ps30"
+	"$vertexshader" "screenspaceeffect_vs30"
+	"$basetexture" "_rt_defprojdepth"
+	"$TEXTURE1" "_rt_fullframefb"
+	"$TEXTURE2" "_rt_def_UnpackedLightControl"
+	"$TEXTURE3" "_rt_defnormals"
+	"$USES_VIEWPROJ" "1"
+
+	"$additive" "0"
+}

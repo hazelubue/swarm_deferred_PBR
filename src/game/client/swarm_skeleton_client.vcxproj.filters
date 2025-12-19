@@ -4198,6 +4198,9 @@
     <ClInclude Include="c_env_skydome.h">
       <Filter>Source Files\deferred</Filter>
     </ClInclude>
+    <ClInclude Include="c_env_global_light.h">
+      <Filter>Source Files\deferred</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\lib\public\bitmap.lib">

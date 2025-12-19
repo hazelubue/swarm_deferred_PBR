@@ -24,39 +24,7 @@ ConVar cl_light_Sheen_strength("cl_light_Sheen_strength", "0.01", FCVAR_CHEAT);
 ConVar cl_light_MRAO_blue("cl_light_MRAO_blue", "2.0");
 
 static ConVar cl_light_MRAO_green("cl_light_MRAO_green", "10.0");
-static ConVar cl_light_MRAO_green2("cl_light_MRAO_green2", "18.66"); // 8.66 for REMASTERED
-
-static void UTIL_StringToFloatArray(float* pVector, int count, const char* pString)
-{
-	char* pstr, * pfront, tempString[128];
-	int	j;
-
-	Q_strncpy(tempString, pString, sizeof(tempString));
-	pstr = pfront = tempString;
-
-	for (j = 0; j < count; j++)			// lifted from pr_edict.c
-	{
-		pVector[j] = atof(pfront);
-
-		// skip any leading whitespace
-		while (*pstr && *pstr <= ' ')
-			pstr++;
-
-		// skip to next whitespace
-		while (*pstr && *pstr > ' ')
-			pstr++;
-
-		if (!*pstr)
-			break;
-
-		pstr++;
-		pfront = pstr;
-	}
-	for (j++; j < count; j++)
-	{
-		pVector[j] = 0;
-	}
-}
+static ConVar cl_light_MRAO_green2("cl_light_MRAO_green2", "18.66");
 
 void InitParmsLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
@@ -110,7 +78,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 			{
 				DECLARE_STATIC_PIXEL_SHADER(lightingpass_pbr_point_ps30);
 				SET_STATIC_PIXEL_SHADER_COMBO(USEWORLDTRANSFORM, bWorldProjection ? 1 : 0);
-				//SET_STATIC_PIXEL_SHADER_COMBO(DISABLE_MRAO, false);
 				SET_STATIC_PIXEL_SHADER(lightingpass_pbr_point_ps30);
 			}
 			break;
@@ -118,7 +85,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 			{
 				DECLARE_STATIC_PIXEL_SHADER(lightingpass_spot_ps30);
 				SET_STATIC_PIXEL_SHADER_COMBO(USEWORLDTRANSFORM, bWorldProjection ? 1 : 0);
-				//SET_STATIC_PIXEL_SHADER_COMBO(DISABLE_MRAO, disaleMRAO);
 				SET_STATIC_PIXEL_SHADER(lightingpass_spot_ps30);
 			}
 			break;
@@ -149,8 +115,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_SHADOWED, iNumShadowed);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_COOKIE, iNumCookied);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_SIMPLE, pExt->GetNumActiveLights_Simple());
-				//SET_DYNAMIC_PIXEL_SHADER_COMBO(SMOOTHNESS, bUseSmoothness);
-				//SET_DYNAMIC_PIXEL_SHADER_COMBO(SPECULAR_AFFECTS_ROUGHNESS, iSpecRough);
 				SET_DYNAMIC_PIXEL_SHADER(lightingpass_pbr_point_ps30);
 			}
 			break;
@@ -160,7 +124,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_SHADOWED_COOKIE, iNumShadowedCookied);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_SHADOWED, iNumShadowed);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_COOKIE, iNumCookied);
-				//SET_DYNAMIC_PIXEL_SHADER_COMBO( SMOOTHNESS, bUseSmoothness);
 				SET_DYNAMIC_PIXEL_SHADER_COMBO(NUM_SIMPLE, pExt->GetNumActiveLights_Simple());
 				SET_DYNAMIC_PIXEL_SHADER(lightingpass_spot_ps30);
 			}
@@ -170,12 +133,7 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 
 		pShader->BindTexture(SHADER_SAMPLER0, GetDeferredExt()->GetTexture_Normals());
 		pShader->BindTexture(SHADER_SAMPLER1, GetDeferredExt()->GetTexture_Depth());
-
-		//implement later on!
 		pShader->BindTexture(SHADER_SAMPLER15, GetDeferredExt()->GetTexture_LightCtrl());
-
-		//implement later on!
-		//pShader->BindTexture(SHADER_SAMPLER14, GetDeferredExt()->GetTexture_Alpha());
 
 		int iSampler = 0;
 		int iShadow = 0;
@@ -236,10 +194,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 			CommitHalfScreenTexel(pShaderAPI, 6);
 		}
 
-		/*float LightSpecFact[1];
-		UTIL_StringToFloatArray(LightSpecFact, 1, cl_light_specular_factor.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_10, LightSpecFact);*/
-
 		float LightSpotBoost[1];
 		UTIL_StringToFloatArray(LightSpotBoost, 1, cl_light_specular_spot_boost.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_13, LightSpotBoost);
@@ -256,10 +210,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 		UTIL_StringToFloatArray(LightPointBoost, 1, cl_light_specular_point_boost.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_16, LightPointBoost);
 
-		/*float LightSpecScale[1];
-		UTIL_StringToFloatArray(LightSpecScale, 1, cl_light_specular_scale.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_20, LightSpecScale);*/
-
 		float lightDiffuseStrengthPoint[1];
 		UTIL_StringToFloatArray(lightDiffuseStrengthPoint, 1, cl_light_diffuse_strength_point.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_21, lightDiffuseStrengthPoint);
@@ -268,10 +218,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 		UTIL_StringToFloatArray(LightBrightnessSpot, 1, cl_light_specular_brightness_spot.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_24, LightBrightnessSpot);
 
-		/*float LightFresnelStrength[1];
-		UTIL_StringToFloatArray(LightFresnelStrength, 1, cl_light_fresnel_strength.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_22, LightFresnelStrength);*/
-
 		float lightSheenStrength[1];
 		UTIL_StringToFloatArray(lightSheenStrength, 1, cl_light_Sheen_strength.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_23, lightSheenStrength);
@@ -279,18 +225,6 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 		float LightDiffuseStrengthSpot[1];
 		UTIL_StringToFloatArray(LightDiffuseStrengthSpot, 1, cl_light_diffuse_strength_spot.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_25, LightDiffuseStrengthSpot);
-
-		/*float LightMRAOGreen[1];
-		UTIL_StringToFloatArray(LightMRAOGreen, 1, cl_light_MRAO_green.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_27, LightMRAOGreen);
-
-		float lightMRAOBlue[1];
-		UTIL_StringToFloatArray(lightMRAOBlue, 1, cl_light_MRAO_blue.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_28, lightMRAOBlue);
-
-		float lightMRAOGreen2[1];
-		UTIL_StringToFloatArray(lightMRAOGreen2, 1, cl_light_MRAO_green2.GetString());
-		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_30, lightMRAOGreen2);*/
 
 	}
 

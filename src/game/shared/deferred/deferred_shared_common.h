@@ -3,6 +3,10 @@
 
 #include "cbase.h"
 
+class IViewRender;
+
+extern IViewRender* g_pCurrentViewRender;
+
 #define FOR_EACH_VEC_FAST( vecType, vecName, keyName ) { vecType *keyName##_p = vecName.Base();\
 	for ( int keyName##_size = vecName.Count(); keyName##_size > 0; keyName##_size--, keyName##_p++ )\
 	{ vecType keyName = *keyName##_p;

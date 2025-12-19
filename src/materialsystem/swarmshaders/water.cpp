@@ -499,6 +499,23 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 					pExt->GetForwardSpotLights_NumRows());
 			}
 
+			const lightData_Global_t& globalLight = pExt->GetLightData_Global();
+
+			if (globalLight.bEnabled)
+			{
+				float globalLightData[4];
+
+				globalLightData[0] = globalLight.vecLight.x;
+				globalLightData[1] = globalLight.vecLight.y;
+				globalLightData[2] = globalLight.vecLight.z;
+				globalLightData[3] = globalLight.bShadow ? 1.0f : 0.0f;
+				pShaderAPI->SetPixelShaderConstant(34, globalLightData, 1);
+
+				pShaderAPI->SetPixelShaderConstant(35, globalLight.diff.Base(), 1);
+				pShaderAPI->SetPixelShaderConstant(32, globalLight.ambh.Base(), 1);
+				pShaderAPI->SetPixelShaderConstant(33, globalLight.ambl.Base(), 1);
+			}
+
 			pShader->BindTexture(SHADER_SAMPLER9, GetDeferredExt()->GetTexture_LightAccum(), 0);
 
 			int x, y, w, t;
@@ -510,6 +527,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 			DECLARE_DYNAMIC_PIXEL_SHADER( water_deferred_ps30 );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO(FLASHLIGHTSHADOWS, false ); 
 			SET_DYNAMIC_PIXEL_SHADER_COMBO(USE_FORWARD_RENDERING, bForwardRendered);
+			//SET_DYNAMIC_PIXEL_SHADER_COMBO(USE_GLOBAL_LIGHT, globalLight.bEnabled);
 			SET_DYNAMIC_PIXEL_SHADER(water_deferred_ps30);
 
 			DynamicCmdsOut.End();

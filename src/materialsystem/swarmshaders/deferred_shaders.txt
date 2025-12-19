@@ -1,19 +1,25 @@
-skydome_ps30.fxc
-skydome_vs30.fxc
-composite_vs30.fxc
-composite_ps30.fxc
-
-water_deferred_ps30.fxc
-
-water_vs20.fxc
-
-
 
 composite_translucent_ps30.fxc
+water_deferred_ps30.fxc
 
+forward_data_ps30.fxc
+forward_data_vs30.fxc
+skydome_ps30.fxc
+skydome_vs30.fxc
 lightingpass_global_ps30.fxc
 lightingpass_pbr_point_ps30.fxc
 lightingpass_spot_ps30.fxc
+
+gbuffer_vs30.fxc
+gbuffer_ps30.fxc
+screenspaceeffect_vs20.fxc
+ssr_raytrace_ps30.fxc
+ssr_ps30.fxc
+
+composite_vs30.fxc
+composite_ps30.fxc
+
+water_vs20.fxc
 
 ssgi_ps30.fxc
 passthru_vs30.fxc
@@ -23,21 +29,10 @@ gbuffer_translucent_ps30.fxc
 water_ps2x.fxc
 gbuffer_water_ps30.fxc
 
-
-
-
-
-gbuffer_vs30.fxc
-gbuffer_ps30.fxc
-
 shadowpass_vs30.fxc
 shadowpass_ps30.fxc
 
-
-
 //defconstruct_vs30.fxc
-
-
 
 volume_blend_ps30.fxc
 volume_prepass_vs30.fxc

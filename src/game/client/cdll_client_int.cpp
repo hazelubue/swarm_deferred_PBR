@@ -2832,10 +2832,16 @@ void CHLClient::WriteSaveGameScreenshotOfSize( const char *pFilename, int width,
 	view->WriteSaveGameScreenshotOfSize( pFilename, width, height );
 }
 
+
 // See RenderViewInfo_t
 void CHLClient::RenderView( const CViewSetup &setup, int nClearFlags, int whatToDraw )
 {
 	VPROF("RenderView");
+
+	//CDeferredViewRender* pDeferredView = static_cast<CDeferredViewRender*>(view);
+	
+	//SetOriginalViewSetup(setup);
+
 	view->RenderView( setup, setup, nClearFlags, whatToDraw );
 }
 

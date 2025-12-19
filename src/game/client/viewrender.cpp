@@ -572,70 +572,70 @@ protected:
 //-----------------------------------------------------------------------------
 // Scenes above water
 //-----------------------------------------------------------------------------
-class CAboveWaterView : public CBaseWaterView
-{
-	DECLARE_CLASS( CAboveWaterView, CBaseWaterView );
-public:
-	CAboveWaterView(CViewRender *pMainView) : 
-		CBaseWaterView( pMainView ),
-		m_ReflectionView( pMainView ),
-		m_RefractionView( pMainView ),
-		m_IntersectionView( pMainView )
-	{}
-
-	void Setup(  const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo );
-	void			Draw();
-
-	class CReflectionView : public CBaseWorldView
-	{
-		DECLARE_CLASS( CReflectionView, CBaseWorldView );
-	public:
-		CReflectionView(CViewRender *pMainView) : CBaseWorldView( pMainView ) {}
-
-		void Setup( bool bReflectEntities );
-		void Draw();
-
-	private:
-		CAboveWaterView *GetOuter() { return GET_OUTER( CAboveWaterView, m_ReflectionView ); }
-	};
-
-	class CRefractionView : public CBaseWorldView
-	{
-		DECLARE_CLASS( CRefractionView, CBaseWorldView );
-	public:
-		CRefractionView(CViewRender *pMainView) : CBaseWorldView( pMainView ) {}
-
-		void Setup();
-		void Draw();
-
-	private:
-		CAboveWaterView *GetOuter() { return GET_OUTER( CAboveWaterView, m_RefractionView ); }
-	};
-
-	class CIntersectionView : public CBaseWorldView
-	{
-		DECLARE_CLASS( CIntersectionView, CBaseWorldView );
-	public:
-		CIntersectionView(CViewRender *pMainView) : CBaseWorldView( pMainView ) {}
-
-		void Setup();
-		void Draw();
-
-	private:
-		CAboveWaterView *GetOuter() { return GET_OUTER( CAboveWaterView, m_IntersectionView ); }
-	};
-
-
-	friend class CRefractionView;
-	friend class CReflectionView;
-	friend class CIntersectionView;
-
-	bool m_bViewIntersectsWater;
-
-	CReflectionView m_ReflectionView;
-	CRefractionView m_RefractionView;
-	CIntersectionView m_IntersectionView;
-};
+//class CAboveWaterView : public CBaseWaterView
+//{
+//	DECLARE_CLASS( CAboveWaterView, CBaseWaterView );
+//public:
+//	CAboveWaterView(CViewRender *pMainView) : 
+//		CBaseWaterView( pMainView ),
+//		m_ReflectionView( pMainView ),
+//		m_RefractionView( pMainView ),
+//		m_IntersectionView( pMainView )
+//	{}
+//
+//	void Setup(  const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo );
+//	void			Draw();
+//
+//	class CReflectionView : public CBaseWorldView
+//	{
+//		DECLARE_CLASS( CReflectionView, CBaseWorldView );
+//	public:
+//		CReflectionView(CViewRender *pMainView) : CBaseWorldView( pMainView ) {}
+//
+//		void Setup( bool bReflectEntities );
+//		void Draw();
+//
+//	private:
+//		CAboveWaterView *GetOuter() { return GET_OUTER( CAboveWaterView, m_ReflectionView ); }
+//	};
+//
+//	class CRefractionView : public CBaseWorldView
+//	{
+//		DECLARE_CLASS( CRefractionView, CBaseWorldView );
+//	public:
+//		CRefractionView(CViewRender *pMainView) : CBaseWorldView( pMainView ) {}
+//
+//		void Setup();
+//		void Draw();
+//
+//	private:
+//		CAboveWaterView *GetOuter() { return GET_OUTER( CAboveWaterView, m_RefractionView ); }
+//	};
+//
+//	class CIntersectionView : public CBaseWorldView
+//	{
+//		DECLARE_CLASS( CIntersectionView, CBaseWorldView );
+//	public:
+//		CIntersectionView(CViewRender *pMainView) : CBaseWorldView( pMainView ) {}
+//
+//		void Setup();
+//		void Draw();
+//
+//	private:
+//		CAboveWaterView *GetOuter() { return GET_OUTER( CAboveWaterView, m_IntersectionView ); }
+//	};
+//
+//
+//	friend class CRefractionView;
+//	friend class CReflectionView;
+//	friend class CIntersectionView;
+//
+//	bool m_bViewIntersectsWater;
+//
+//	CReflectionView m_ReflectionView;
+//	CRefractionView m_RefractionView;
+//	CIntersectionView m_IntersectionView;
+//};
 
 
 //-----------------------------------------------------------------------------
@@ -677,40 +677,40 @@ public:
 //-----------------------------------------------------------------------------
 // Scenes containing reflective glass
 //-----------------------------------------------------------------------------
-class CReflectiveGlassView : public CSimpleWorldView
-{
-	DECLARE_CLASS( CReflectiveGlassView, CSimpleWorldView );
-public:
-	CReflectiveGlassView( CViewRender *pMainView ) : BaseClass( pMainView )
-	{
-	}
-
-	virtual bool AdjustView( float flWaterHeight );
-	virtual void PushView( float waterHeight );
-	virtual void PopView( );
-	void Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane );
-	void Draw();
-
-	cplane_t m_ReflectionPlane;
-};
-
-class CRefractiveGlassView : public CSimpleWorldView
-{
-	DECLARE_CLASS( CRefractiveGlassView, CSimpleWorldView );
-public:
-	CRefractiveGlassView( CViewRender *pMainView ) : BaseClass( pMainView )
-	{
-	}
-
-	virtual bool AdjustView( float flWaterHeight );
-	virtual void PushView( float waterHeight );
-	virtual void PopView( );
-	void Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane );
-	void Draw();
-
-	cplane_t m_ReflectionPlane;
-};
-
+//class CReflectiveGlassView : public CSimpleWorldView
+//{
+//	DECLARE_CLASS( CReflectiveGlassView, CSimpleWorldView );
+//public:
+//	CReflectiveGlassView( CViewRender *pMainView ) : BaseClass( pMainView )
+//	{
+//	}
+//
+//	virtual bool AdjustView( float flWaterHeight );
+//	virtual void PushView( float waterHeight );
+//	virtual void PopView( );
+//	void Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane );
+//	void Draw();
+//
+//	cplane_t m_ReflectionPlane;
+//};
+//
+//class CRefractiveGlassView : public CSimpleWorldView
+//{
+//	DECLARE_CLASS( CRefractiveGlassView, CSimpleWorldView );
+//public:
+//	CRefractiveGlassView( CViewRender *pMainView ) : BaseClass( pMainView )
+//	{
+//	}
+//
+//	virtual bool AdjustView( float flWaterHeight );
+//	virtual void PushView( float waterHeight );
+//	virtual void PopView( );
+//	void Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane );
+//	void Draw();
+//
+//	cplane_t m_ReflectionPlane;
+//};
+//
 
 
 
@@ -2915,25 +2915,25 @@ void CViewRender::DrawWorldAndEntities( bool bDrawSkybox, const CViewSetup &view
 	WaterRenderInfo_t info;
 	DetermineWaterRenderInfo( fogVolumeInfo, info );
 
-	if ( info.m_bCheapWater )
-	{		     
-		cplane_t glassReflectionPlane;
-		if ( IsReflectiveGlassInView( viewIn, glassReflectionPlane ) )
-		{								    
-			CRefPtr<CReflectiveGlassView> pGlassReflectionView = new CReflectiveGlassView( this );
-			pGlassReflectionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, bDrawSkybox, fogVolumeInfo, info, glassReflectionPlane );
-			AddViewToScene( pGlassReflectionView );
+	//if ( info.m_bCheapWater )
+	//{		     
+	//	/*cplane_t glassReflectionPlane;
+	//	if ( IsReflectiveGlassInView( viewIn, glassReflectionPlane ) )
+	//	{								    
+	//		CRefPtr<CReflectiveGlassView> pGlassReflectionView = new CReflectiveGlassView( this );
+	//		pGlassReflectionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, bDrawSkybox, fogVolumeInfo, info, glassReflectionPlane );
+	//		AddViewToScene( pGlassReflectionView );
 
-			CRefPtr<CRefractiveGlassView> pGlassRefractionView = new CRefractiveGlassView( this );
-			pGlassRefractionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, bDrawSkybox, fogVolumeInfo, info, glassReflectionPlane );
-			AddViewToScene( pGlassRefractionView );
-		}
+	//		CRefPtr<CRefractiveGlassView> pGlassRefractionView = new CRefractiveGlassView( this );
+	//		pGlassRefractionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, bDrawSkybox, fogVolumeInfo, info, glassReflectionPlane );
+	//		AddViewToScene( pGlassRefractionView );
+	//	}*/
 
-		CRefPtr<CSimpleWorldView> pNoWaterView = new CSimpleWorldView( this );
-		pNoWaterView->Setup( viewIn, nClearFlags, bDrawSkybox, fogVolumeInfo, info, pCustomVisibility );
-		AddViewToScene( pNoWaterView );
-		return;
-	}
+	//	CRefPtr<CSimpleWorldView> pNoWaterView = new CSimpleWorldView( this );
+	//	pNoWaterView->Setup( viewIn, nClearFlags, bDrawSkybox, fogVolumeInfo, info, pCustomVisibility );
+	//	AddViewToScene( pNoWaterView );
+	//	return;
+	//}
 
 	Assert( !pCustomVisibility );
 
@@ -2944,7 +2944,7 @@ void CViewRender::DrawWorldAndEntities( bool bDrawSkybox, const CViewSetup &view
 	}
 
 	// We can see water of some sort
-	if ( !fogVolumeInfo.m_bEyeInFogVolume )
+	/*if ( !fogVolumeInfo.m_bEyeInFogVolume )
 	{
 		CRefPtr<CAboveWaterView> pAboveWaterView = new CAboveWaterView( this );
 		pAboveWaterView->Setup( viewIn, bDrawSkybox, fogVolumeInfo, info );
@@ -2955,7 +2955,7 @@ void CViewRender::DrawWorldAndEntities( bool bDrawSkybox, const CViewSetup &view
 		CRefPtr<CUnderWaterView> pUnderWaterView = new CUnderWaterView( this );
 		pUnderWaterView->Setup( viewIn, bDrawSkybox, fogVolumeInfo, info );
 		AddViewToScene( pUnderWaterView );
-	}
+	}*/
 }
 
 
@@ -5549,47 +5549,47 @@ void CBaseWorldView::DrawExecute( float waterHeight, view_id_t viewID, float wat
 //-----------------------------------------------------------------------------
 // Draws the scene when there's no water or only cheap water
 //-----------------------------------------------------------------------------
-void CSimpleWorldView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, ViewCustomVisibility_t *pCustomVisibility )
-{
-	BaseClass::Setup( view );
-
-	m_ClearFlags = nClearFlags;
-	m_DrawFlags = DF_DRAW_ENTITITES;
-
-	if ( !waterInfo.m_bOpaqueWater )
-	{
-		m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
-	}
-	else
-	{
-		bool bViewIntersectsWater = DoesViewPlaneIntersectWater( fogInfo.m_flWaterHeight, fogInfo.m_nVisibleFogVolume );
-		if( bViewIntersectsWater )
-		{
-			// have to draw both sides if we can see both.
-			m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
-		}
-		else if ( fogInfo.m_bEyeInFogVolume )
-		{
-			m_DrawFlags |= DF_RENDER_UNDERWATER;
-		}
-		else
-		{
-			m_DrawFlags |= DF_RENDER_ABOVEWATER;
-		}
-	}
-	if ( waterInfo.m_bDrawWaterSurface )
-	{
-		m_DrawFlags |= DF_RENDER_WATER;
-	}
-
-	if ( !fogInfo.m_bEyeInFogVolume && bDrawSkybox )
-	{
-		m_DrawFlags |= DF_DRAWSKYBOX;
-	}
-
-	m_pCustomVisibility = pCustomVisibility;
-	m_fogInfo = fogInfo;
-}
+//void CSimpleWorldView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, ViewCustomVisibility_t *pCustomVisibility )
+//{
+//	BaseClass::Setup( view );
+//
+//	m_ClearFlags = nClearFlags;
+//	m_DrawFlags = DF_DRAW_ENTITITES;
+//
+//	if ( !waterInfo.m_bOpaqueWater )
+//	{
+//		m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
+//	}
+//	else
+//	{
+//		bool bViewIntersectsWater = DoesViewPlaneIntersectWater( fogInfo.m_flWaterHeight, fogInfo.m_nVisibleFogVolume );
+//		if( bViewIntersectsWater )
+//		{
+//			// have to draw both sides if we can see both.
+//			m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
+//		}
+//		else if ( fogInfo.m_bEyeInFogVolume )
+//		{
+//			m_DrawFlags |= DF_RENDER_UNDERWATER;
+//		}
+//		else
+//		{
+//			m_DrawFlags |= DF_RENDER_ABOVEWATER;
+//		}
+//	}
+//	if ( waterInfo.m_bDrawWaterSurface )
+//	{
+//		m_DrawFlags |= DF_RENDER_WATER;
+//	}
+//
+//	if ( !fogInfo.m_bEyeInFogVolume && bDrawSkybox )
+//	{
+//		m_DrawFlags |= DF_DRAWSKYBOX;
+//	}
+//
+//	m_pCustomVisibility = pCustomVisibility;
+//	m_fogInfo = fogInfo;
+//}
 
 
 //-----------------------------------------------------------------------------
@@ -5699,285 +5699,285 @@ void CBaseWaterView::CSoftwareIntersectionView::Draw()
 //-----------------------------------------------------------------------------
 // Draws the scene when the view point is above the level of the water
 //-----------------------------------------------------------------------------
-void CAboveWaterView::Setup( const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
-{
-	BaseClass::Setup( view );
-
-	m_bSoftwareUserClipPlane = g_pMaterialSystemHardwareConfig->UseFastClipping();
-
-	CalcWaterEyeAdjustments( fogInfo, m_waterHeight, m_waterZAdjust, m_bSoftwareUserClipPlane );
-
-	// BROKEN STUFF!
-	if ( m_waterZAdjust == 0.0f )
-	{
-		m_bSoftwareUserClipPlane = false;
-	}
-
-	m_DrawFlags = DF_RENDER_ABOVEWATER | DF_DRAW_ENTITITES;
-	m_ClearFlags = VIEW_CLEAR_DEPTH;
-
-
-
-	if ( bDrawSkybox )
-	{
-		m_DrawFlags |= DF_DRAWSKYBOX;
-	}
-
-	if ( waterInfo.m_bDrawWaterSurface )
-	{
-		m_DrawFlags |= DF_RENDER_WATER;
-	}
-	if ( !waterInfo.m_bRefract && !waterInfo.m_bOpaqueWater )
-	{
-		m_DrawFlags |= DF_RENDER_UNDERWATER;
-	}
-
-	m_fogInfo = fogInfo;
-	m_waterInfo = waterInfo;
-}
-
-		 
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::Draw()
-{
-	VPROF( "CViewRender::ViewDrawScene_EyeAboveWater" );
-
-	// eye is outside of water
-	
-	CMatRenderContextPtr pRenderContext( materials );
-	
-	// render the reflection
-	if( m_waterInfo.m_bReflect )
-	{
-		m_ReflectionView.Setup( m_waterInfo.m_bReflectEntities );
-		m_pMainView->AddViewToScene( &m_ReflectionView );
-	}
-	
-	bool bViewIntersectsWater = false;
-
-	// render refraction
-	if ( m_waterInfo.m_bRefract )
-	{
-		m_RefractionView.Setup();
-		m_pMainView->AddViewToScene( &m_RefractionView );
-
-		if( !m_bSoftwareUserClipPlane )
-		{
-			bViewIntersectsWater = DoesViewPlaneIntersectWater( m_fogInfo.m_flWaterHeight, m_fogInfo.m_nVisibleFogVolume );
-		}
-	}
-	else if ( !( m_DrawFlags & DF_DRAWSKYBOX ) )
-	{
-		m_ClearFlags |= VIEW_CLEAR_COLOR;
-	}
-
-
-
-	// NOTE!!!!!  YOU CAN ONLY DO THIS IF YOU HAVE HARDWARE USER CLIP PLANES!!!!!!
-	bool bHardwareUserClipPlanes = !g_pMaterialSystemHardwareConfig->UseFastClipping();
-	if( bViewIntersectsWater && bHardwareUserClipPlanes )
-	{
-		// This is necessary to keep the non-water fogged world from drawing underwater in 
-		// the case where we want to partially see into the water.
-		m_DrawFlags |= DF_CLIP_Z | DF_CLIP_BELOW;
-	}
-
-	// render the world
-	DrawSetup( m_waterHeight, m_DrawFlags, m_waterZAdjust );
-	EnableWorldFog();
-	DrawExecute( m_waterHeight, CurrentViewID(), m_waterZAdjust );
-
-	if ( m_waterInfo.m_bRefract )
-	{
-		if ( m_bSoftwareUserClipPlane )
-		{
-			m_SoftwareIntersectionView.Setup( true );
-			m_SoftwareIntersectionView.Draw( );
-		}
-		else if ( bViewIntersectsWater )
-		{
-			m_IntersectionView.Setup();
-			m_pMainView->AddViewToScene( &m_IntersectionView );
-		}
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::CReflectionView::Setup( bool bReflectEntities )
-{
-	BaseClass::Setup( *GetOuter() );
-
-	m_ClearFlags = VIEW_CLEAR_DEPTH;
-
-	// NOTE: Clearing the color is unnecessary since we're drawing the skybox
-	// and dest-alpha is never used in the reflection
-	m_DrawFlags = DF_RENDER_REFLECTION | DF_CLIP_Z | DF_CLIP_BELOW | 
-		DF_RENDER_ABOVEWATER;
-
-	// NOTE: This will cause us to draw the 2d skybox in the reflection 
-	// (which we want to do instead of drawing the 3d skybox)
-	m_DrawFlags |= DF_DRAWSKYBOX;
-
-	if( bReflectEntities )
-	{
-		m_DrawFlags |= DF_DRAW_ENTITITES;
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::CReflectionView::Draw()
-{
-
-
-	// Store off view origin and angles and set the new view
-	int nSaveViewID = CurrentViewID();
-	SetupCurrentView( origin, angles, VIEW_REFLECTION );
-
-	// Disable occlusion visualization in reflection
-	bool bVisOcclusion = r_visocclusion.GetBool();
-	r_visocclusion.SetValue( 0 );
-
-	DrawSetup( GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0.0f, GetOuter()->m_fogInfo.m_nVisibleFogVolumeLeaf );
-
-	EnableWorldFog();
-	DrawExecute( GetOuter()->m_fogInfo.m_flWaterHeight, VIEW_REFLECTION, 0.0f );
-
-	r_visocclusion.SetValue( bVisOcclusion );
-	
-
-
-	// finish off the view and restore the previous view.
-	SetupCurrentView( origin, angles, ( view_id_t )nSaveViewID );
-
-	// This is here for multithreading
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->Flush();
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::CRefractionView::Setup()
-{
-	BaseClass::Setup( *GetOuter() );
-
-	m_ClearFlags = VIEW_CLEAR_COLOR | VIEW_CLEAR_DEPTH;
-
-	m_DrawFlags = DF_RENDER_REFRACTION | DF_CLIP_Z | 
-		DF_RENDER_UNDERWATER | DF_FUDGE_UP | 
-		DF_DRAW_ENTITITES ;
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::CRefractionView::Draw()
-{
-
-
-	// Store off view origin and angles and set the new view
-	int nSaveViewID = CurrentViewID();
-	SetupCurrentView( origin, angles, VIEW_REFRACTION );
-
-	DrawSetup( GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust );
-
-	SetFogVolumeState( GetOuter()->m_fogInfo, true );
-	SetClearColorToFogColor();
-	DrawExecute( GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust );
-
-
-
-	// finish off the view.  restore the previous view.
-	SetupCurrentView( origin, angles, ( view_id_t )nSaveViewID );
-
-	// This is here for multithreading
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
-	pRenderContext->Flush();
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::CIntersectionView::Setup()
-{
-	BaseClass::Setup( *GetOuter() );
-	m_DrawFlags = DF_RENDER_UNDERWATER | DF_CLIP_Z | DF_DRAW_ENTITITES;
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-void CAboveWaterView::CIntersectionView::Draw()
-{
-	DrawSetup( GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0 );
-
-	SetFogVolumeState( GetOuter()->m_fogInfo, true );
-	SetClearColorToFogColor( );
-	DrawExecute( GetOuter()->m_fogInfo.m_flWaterHeight, VIEW_NONE, 0 );
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
-}
+//void CAboveWaterView::Setup( const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
+//{
+//	BaseClass::Setup( view );
+//
+//	m_bSoftwareUserClipPlane = g_pMaterialSystemHardwareConfig->UseFastClipping();
+//
+//	CalcWaterEyeAdjustments( fogInfo, m_waterHeight, m_waterZAdjust, m_bSoftwareUserClipPlane );
+//
+//	// BROKEN STUFF!
+//	if ( m_waterZAdjust == 0.0f )
+//	{
+//		m_bSoftwareUserClipPlane = false;
+//	}
+//
+//	m_DrawFlags = DF_RENDER_ABOVEWATER | DF_DRAW_ENTITITES;
+//	m_ClearFlags = VIEW_CLEAR_DEPTH;
+//
+//
+//
+//	if ( bDrawSkybox )
+//	{
+//		m_DrawFlags |= DF_DRAWSKYBOX;
+//	}
+//
+//	if ( waterInfo.m_bDrawWaterSurface )
+//	{
+//		m_DrawFlags |= DF_RENDER_WATER;
+//	}
+//	if ( !waterInfo.m_bRefract && !waterInfo.m_bOpaqueWater )
+//	{
+//		m_DrawFlags |= DF_RENDER_UNDERWATER;
+//	}
+//
+//	m_fogInfo = fogInfo;
+//	m_waterInfo = waterInfo;
+//}
+//
+//		 
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::Draw()
+//{
+//	VPROF( "CViewRender::ViewDrawScene_EyeAboveWater" );
+//
+//	// eye is outside of water
+//	
+//	CMatRenderContextPtr pRenderContext( materials );
+//	
+//	// render the reflection
+//	if( m_waterInfo.m_bReflect )
+//	{
+//		m_ReflectionView.Setup( m_waterInfo.m_bReflectEntities );
+//		m_pMainView->AddViewToScene( &m_ReflectionView );
+//	}
+//	
+//	bool bViewIntersectsWater = false;
+//
+//	// render refraction
+//	if ( m_waterInfo.m_bRefract )
+//	{
+//		m_RefractionView.Setup();
+//		m_pMainView->AddViewToScene( &m_RefractionView );
+//
+//		if( !m_bSoftwareUserClipPlane )
+//		{
+//			bViewIntersectsWater = DoesViewPlaneIntersectWater( m_fogInfo.m_flWaterHeight, m_fogInfo.m_nVisibleFogVolume );
+//		}
+//	}
+//	else if ( !( m_DrawFlags & DF_DRAWSKYBOX ) )
+//	{
+//		m_ClearFlags |= VIEW_CLEAR_COLOR;
+//	}
+//
+//
+//
+//	// NOTE!!!!!  YOU CAN ONLY DO THIS IF YOU HAVE HARDWARE USER CLIP PLANES!!!!!!
+//	bool bHardwareUserClipPlanes = !g_pMaterialSystemHardwareConfig->UseFastClipping();
+//	if( bViewIntersectsWater && bHardwareUserClipPlanes )
+//	{
+//		// This is necessary to keep the non-water fogged world from drawing underwater in 
+//		// the case where we want to partially see into the water.
+//		m_DrawFlags |= DF_CLIP_Z | DF_CLIP_BELOW;
+//	}
+//
+//	// render the world
+//	DrawSetup( m_waterHeight, m_DrawFlags, m_waterZAdjust );
+//	EnableWorldFog();
+//	DrawExecute( m_waterHeight, CurrentViewID(), m_waterZAdjust );
+//
+//	if ( m_waterInfo.m_bRefract )
+//	{
+//		if ( m_bSoftwareUserClipPlane )
+//		{
+//			m_SoftwareIntersectionView.Setup( true );
+//			m_SoftwareIntersectionView.Draw( );
+//		}
+//		else if ( bViewIntersectsWater )
+//		{
+//			m_IntersectionView.Setup();
+//			m_pMainView->AddViewToScene( &m_IntersectionView );
+//		}
+//	}
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::CReflectionView::Setup( bool bReflectEntities )
+//{
+//	BaseClass::Setup( *GetOuter() );
+//
+//	m_ClearFlags = VIEW_CLEAR_DEPTH;
+//
+//	// NOTE: Clearing the color is unnecessary since we're drawing the skybox
+//	// and dest-alpha is never used in the reflection
+//	m_DrawFlags = DF_RENDER_REFLECTION | DF_CLIP_Z | DF_CLIP_BELOW | 
+//		DF_RENDER_ABOVEWATER;
+//
+//	// NOTE: This will cause us to draw the 2d skybox in the reflection 
+//	// (which we want to do instead of drawing the 3d skybox)
+//	m_DrawFlags |= DF_DRAWSKYBOX;
+//
+//	if( bReflectEntities )
+//	{
+//		m_DrawFlags |= DF_DRAW_ENTITITES;
+//	}
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::CReflectionView::Draw()
+//{
+//
+//
+//	// Store off view origin and angles and set the new view
+//	int nSaveViewID = CurrentViewID();
+//	SetupCurrentView( origin, angles, VIEW_REFLECTION );
+//
+//	// Disable occlusion visualization in reflection
+//	bool bVisOcclusion = r_visocclusion.GetBool();
+//	r_visocclusion.SetValue( 0 );
+//
+//	DrawSetup( GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0.0f, GetOuter()->m_fogInfo.m_nVisibleFogVolumeLeaf );
+//
+//	EnableWorldFog();
+//	DrawExecute( GetOuter()->m_fogInfo.m_flWaterHeight, VIEW_REFLECTION, 0.0f );
+//
+//	r_visocclusion.SetValue( bVisOcclusion );
+//	
+//
+//
+//	// finish off the view and restore the previous view.
+//	SetupCurrentView( origin, angles, ( view_id_t )nSaveViewID );
+//
+//	// This is here for multithreading
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->Flush();
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::CRefractionView::Setup()
+//{
+//	BaseClass::Setup( *GetOuter() );
+//
+//	m_ClearFlags = VIEW_CLEAR_COLOR | VIEW_CLEAR_DEPTH;
+//
+//	m_DrawFlags = DF_RENDER_REFRACTION | DF_CLIP_Z | 
+//		DF_RENDER_UNDERWATER | DF_FUDGE_UP | 
+//		DF_DRAW_ENTITITES ;
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::CRefractionView::Draw()
+//{
+//
+//
+//	// Store off view origin and angles and set the new view
+//	int nSaveViewID = CurrentViewID();
+//	SetupCurrentView( origin, angles, VIEW_REFRACTION );
+//
+//	DrawSetup( GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust );
+//
+//	SetFogVolumeState( GetOuter()->m_fogInfo, true );
+//	SetClearColorToFogColor();
+//	DrawExecute( GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust );
+//
+//
+//
+//	// finish off the view.  restore the previous view.
+//	SetupCurrentView( origin, angles, ( view_id_t )nSaveViewID );
+//
+//	// This is here for multithreading
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
+//	pRenderContext->Flush();
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::CIntersectionView::Setup()
+//{
+//	BaseClass::Setup( *GetOuter() );
+//	m_DrawFlags = DF_RENDER_UNDERWATER | DF_CLIP_Z | DF_DRAW_ENTITITES;
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// 
+////-----------------------------------------------------------------------------
+//void CAboveWaterView::CIntersectionView::Draw()
+//{
+//	DrawSetup( GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0 );
+//
+//	SetFogVolumeState( GetOuter()->m_fogInfo, true );
+//	SetClearColorToFogColor( );
+//	DrawExecute( GetOuter()->m_fogInfo.m_flWaterHeight, VIEW_NONE, 0 );
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
+//}
 
 
 //-----------------------------------------------------------------------------
 // Draws the scene when the view point is under the level of the water
 //-----------------------------------------------------------------------------
-void CUnderWaterView::Setup( const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
-{
-	BaseClass::Setup( view );
-
-	m_bSoftwareUserClipPlane = g_pMaterialSystemHardwareConfig->UseFastClipping();
-
-	CalcWaterEyeAdjustments( fogInfo, m_waterHeight, m_waterZAdjust, m_bSoftwareUserClipPlane );
-
-	IMaterial *pWaterMaterial = fogInfo.m_pFogVolumeMaterial;
-		IMaterialVar *pScreenOverlayVar = pWaterMaterial->FindVar( "$underwateroverlay", NULL, false );
-		if ( pScreenOverlayVar && ( pScreenOverlayVar->IsDefined() ) )
-		{
-			char const *pOverlayName = pScreenOverlayVar->GetStringValue();
-			if ( pOverlayName[0] != '0' )						// fixme!!!
-			{
-				IMaterial *pOverlayMaterial = materials->FindMaterial( pOverlayName,  TEXTURE_GROUP_OTHER );
-				m_pMainView->SetWaterOverlayMaterial( pOverlayMaterial );
-			}
-		}
-	// NOTE: We're not drawing the 2d skybox under water since it's assumed to not be visible.
-
-	// render the world underwater
-	// Clear the color to get the appropriate underwater fog color
-	m_DrawFlags = DF_FUDGE_UP | DF_RENDER_UNDERWATER | DF_DRAW_ENTITITES;
-	m_ClearFlags = VIEW_CLEAR_DEPTH;
-
-	if( !m_bSoftwareUserClipPlane )
-	{
-		m_DrawFlags |= DF_CLIP_Z;
-	}
-	if ( waterInfo.m_bDrawWaterSurface )
-	{
-		m_DrawFlags |= DF_RENDER_WATER;
-	}
-	if ( !waterInfo.m_bRefract && !waterInfo.m_bOpaqueWater )
-	{
-		m_DrawFlags |= DF_RENDER_ABOVEWATER;
-	}
-
-	m_fogInfo = fogInfo;
-	m_waterInfo = waterInfo;
-	m_bDrawSkybox = bDrawSkybox;
-}
+//void CUnderWaterView::Setup( const CViewSetup &view, bool bDrawSkybox, const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t& waterInfo )
+//{
+//	BaseClass::Setup( view );
+//
+//	m_bSoftwareUserClipPlane = g_pMaterialSystemHardwareConfig->UseFastClipping();
+//
+//	CalcWaterEyeAdjustments( fogInfo, m_waterHeight, m_waterZAdjust, m_bSoftwareUserClipPlane );
+//
+//	IMaterial *pWaterMaterial = fogInfo.m_pFogVolumeMaterial;
+//		IMaterialVar *pScreenOverlayVar = pWaterMaterial->FindVar( "$underwateroverlay", NULL, false );
+//		if ( pScreenOverlayVar && ( pScreenOverlayVar->IsDefined() ) )
+//		{
+//			char const *pOverlayName = pScreenOverlayVar->GetStringValue();
+//			if ( pOverlayName[0] != '0' )						// fixme!!!
+//			{
+//				IMaterial *pOverlayMaterial = materials->FindMaterial( pOverlayName,  TEXTURE_GROUP_OTHER );
+//				m_pMainView->SetWaterOverlayMaterial( pOverlayMaterial );
+//			}
+//		}
+//	// NOTE: We're not drawing the 2d skybox under water since it's assumed to not be visible.
+//
+//	// render the world underwater
+//	// Clear the color to get the appropriate underwater fog color
+//	m_DrawFlags = DF_FUDGE_UP | DF_RENDER_UNDERWATER | DF_DRAW_ENTITITES;
+//	m_ClearFlags = VIEW_CLEAR_DEPTH;
+//
+//	if( !m_bSoftwareUserClipPlane )
+//	{
+//		m_DrawFlags |= DF_CLIP_Z;
+//	}
+//	if ( waterInfo.m_bDrawWaterSurface )
+//	{
+//		m_DrawFlags |= DF_RENDER_WATER;
+//	}
+//	if ( !waterInfo.m_bRefract && !waterInfo.m_bOpaqueWater )
+//	{
+//		m_DrawFlags |= DF_RENDER_ABOVEWATER;
+//	}
+//
+//	m_fogInfo = fogInfo;
+//	m_waterInfo = waterInfo;
+//	m_bDrawSkybox = bDrawSkybox;
+//}
 
 
 //-----------------------------------------------------------------------------
@@ -6080,144 +6080,144 @@ void CUnderWaterView::CRefractionView::Draw()
 //-----------------------------------------------------------------------------
 // Draws the scene when the view contains reflective glass
 //-----------------------------------------------------------------------------
-void CReflectiveGlassView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, 
-	const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane )
-{
-	BaseClass::Setup( view, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
-	m_ReflectionPlane = reflectionPlane;
-}
-
-
-bool CReflectiveGlassView::AdjustView( float flWaterHeight )
-{
-	ITexture *pTexture = GetWaterReflectionTexture();
-		   
-	// Use the aspect ratio of the main view! So, don't recompute it here
-	x = y = 0;
-	width = pTexture->GetActualWidth();
-	height = pTexture->GetActualHeight();
-
-	// Reflect the camera origin + vectors around the reflection plane 
-	float flDist = DotProduct( origin, m_ReflectionPlane.normal ) - m_ReflectionPlane.dist;
-	VectorMA( origin, - 2.0f * flDist, m_ReflectionPlane.normal, origin );
-
-	Vector vecForward, vecUp;
-	AngleVectors( angles, &vecForward, NULL, &vecUp );
-
-	float flDot = DotProduct( vecForward, m_ReflectionPlane.normal );
-	VectorMA( vecForward, - 2.0f * flDot, m_ReflectionPlane.normal, vecForward );
-
-	flDot = DotProduct( vecUp, m_ReflectionPlane.normal );
-	VectorMA( vecUp, - 2.0f * flDot, m_ReflectionPlane.normal, vecUp );
-
-	VectorAngles( vecForward, vecUp, angles );
-	return true;
-}
-
-void CReflectiveGlassView::PushView( float waterHeight )
-{
-	render->Push3DView( *this, m_ClearFlags, GetWaterReflectionTexture(), GetFrustum() );
-	 
-	Vector4D plane;
-	VectorCopy( m_ReflectionPlane.normal, plane.AsVector3D() );
-	plane.w = m_ReflectionPlane.dist + 0.1f;
-
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->PushCustomClipPlane( plane.Base() );
-}
-
-void CReflectiveGlassView::PopView( )
-{
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->PopCustomClipPlane( );
-	render->PopView( GetFrustum() );
-}
-
-
-//-----------------------------------------------------------------------------
-// Renders reflective or refractive parts of glass
-//-----------------------------------------------------------------------------
-void CReflectiveGlassView::Draw()
-{
-	VPROF( "CReflectiveGlassView::Draw" );
-
-	CMatRenderContextPtr pRenderContext( materials );
-	PIXEVENT( pRenderContext, "CReflectiveGlassView::Draw" );
-
-	// Disable occlusion visualization in reflection
-	bool bVisOcclusion = r_visocclusion.GetBool();
-	r_visocclusion.SetValue( 0 );
-				   
-	BaseClass::Draw();
-
-	r_visocclusion.SetValue( bVisOcclusion );
-
-	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
-	pRenderContext->Flush();
-}
+//void CReflectiveGlassView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, 
+//	const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane )
+//{
+//	BaseClass::Setup( view, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
+//	m_ReflectionPlane = reflectionPlane;
+//}
+//
+//
+//bool CReflectiveGlassView::AdjustView( float flWaterHeight )
+//{
+//	ITexture *pTexture = GetWaterReflectionTexture();
+//		   
+//	// Use the aspect ratio of the main view! So, don't recompute it here
+//	x = y = 0;
+//	width = pTexture->GetActualWidth();
+//	height = pTexture->GetActualHeight();
+//
+//	// Reflect the camera origin + vectors around the reflection plane 
+//	float flDist = DotProduct( origin, m_ReflectionPlane.normal ) - m_ReflectionPlane.dist;
+//	VectorMA( origin, - 2.0f * flDist, m_ReflectionPlane.normal, origin );
+//
+//	Vector vecForward, vecUp;
+//	AngleVectors( angles, &vecForward, NULL, &vecUp );
+//
+//	float flDot = DotProduct( vecForward, m_ReflectionPlane.normal );
+//	VectorMA( vecForward, - 2.0f * flDot, m_ReflectionPlane.normal, vecForward );
+//
+//	flDot = DotProduct( vecUp, m_ReflectionPlane.normal );
+//	VectorMA( vecUp, - 2.0f * flDot, m_ReflectionPlane.normal, vecUp );
+//
+//	VectorAngles( vecForward, vecUp, angles );
+//	return true;
+//}
+//
+//void CReflectiveGlassView::PushView( float waterHeight )
+//{
+//	render->Push3DView( *this, m_ClearFlags, GetWaterReflectionTexture(), GetFrustum() );
+//	 
+//	Vector4D plane;
+//	VectorCopy( m_ReflectionPlane.normal, plane.AsVector3D() );
+//	plane.w = m_ReflectionPlane.dist + 0.1f;
+//
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->PushCustomClipPlane( plane.Base() );
+//}
+//
+//void CReflectiveGlassView::PopView( )
+//{
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->PopCustomClipPlane( );
+//	render->PopView( GetFrustum() );
+//}
+//
+//
+////-----------------------------------------------------------------------------
+//// Renders reflective or refractive parts of glass
+////-----------------------------------------------------------------------------
+//void CReflectiveGlassView::Draw()
+//{
+//	VPROF( "CReflectiveGlassView::Draw" );
+//
+//	CMatRenderContextPtr pRenderContext( materials );
+//	PIXEVENT( pRenderContext, "CReflectiveGlassView::Draw" );
+//
+//	// Disable occlusion visualization in reflection
+//	bool bVisOcclusion = r_visocclusion.GetBool();
+//	r_visocclusion.SetValue( 0 );
+//				   
+//	BaseClass::Draw();
+//
+//	r_visocclusion.SetValue( bVisOcclusion );
+//
+//	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
+//	pRenderContext->Flush();
+//}
 
 
 
 //-----------------------------------------------------------------------------
 // Draws the scene when the view contains reflective glass
 //-----------------------------------------------------------------------------
-void CRefractiveGlassView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, 
-	const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane )
-{
-	BaseClass::Setup( view, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
-	m_ReflectionPlane = reflectionPlane;
-}
-
-
-bool CRefractiveGlassView::AdjustView( float flWaterHeight )
-{
-	ITexture *pTexture = GetWaterRefractionTexture();
-
-	// Use the aspect ratio of the main view! So, don't recompute it here
-	x = y = 0;
-	width = pTexture->GetActualWidth();
-	height = pTexture->GetActualHeight();
-	return true;
-}
-
-
-void CRefractiveGlassView::PushView( float waterHeight )
-{
-	render->Push3DView( *this, m_ClearFlags, GetWaterRefractionTexture(), GetFrustum() );
-
-	Vector4D plane;
-	VectorMultiply( m_ReflectionPlane.normal, -1, plane.AsVector3D() );
-	plane.w = -m_ReflectionPlane.dist + 0.1f;
-
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->PushCustomClipPlane( plane.Base() );
-}
-
-
-void CRefractiveGlassView::PopView( )
-{
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->PopCustomClipPlane( );
-	render->PopView( GetFrustum() );
-}
+//void CRefractiveGlassView::Setup( const CViewSetup &view, int nClearFlags, bool bDrawSkybox, 
+//	const VisibleFogVolumeInfo_t &fogInfo, const WaterRenderInfo_t &waterInfo, const cplane_t &reflectionPlane )
+//{
+//	BaseClass::Setup( view, nClearFlags, bDrawSkybox, fogInfo, waterInfo, NULL );
+//	m_ReflectionPlane = reflectionPlane;
+//}
+//
+//
+//bool CRefractiveGlassView::AdjustView( float flWaterHeight )
+//{
+//	ITexture *pTexture = GetWaterRefractionTexture();
+//
+//	// Use the aspect ratio of the main view! So, don't recompute it here
+//	x = y = 0;
+//	width = pTexture->GetActualWidth();
+//	height = pTexture->GetActualHeight();
+//	return true;
+//}
+//
+//
+//void CRefractiveGlassView::PushView( float waterHeight )
+//{
+//	render->Push3DView( *this, m_ClearFlags, GetWaterRefractionTexture(), GetFrustum() );
+//
+//	Vector4D plane;
+//	VectorMultiply( m_ReflectionPlane.normal, -1, plane.AsVector3D() );
+//	plane.w = -m_ReflectionPlane.dist + 0.1f;
+//
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->PushCustomClipPlane( plane.Base() );
+//}
+//
+//
+//void CRefractiveGlassView::PopView( )
+//{
+//	CMatRenderContextPtr pRenderContext( materials );
+//	pRenderContext->PopCustomClipPlane( );
+//	render->PopView( GetFrustum() );
+//}
 
 
 
 //-----------------------------------------------------------------------------
 // Renders reflective or refractive parts of glass
 //-----------------------------------------------------------------------------
-void CRefractiveGlassView::Draw()
-{
-	VPROF( "CRefractiveGlassView::Draw" );
-
-	CMatRenderContextPtr pRenderContext( materials );
-	PIXEVENT( pRenderContext, "CRefractiveGlassView::Draw" );
-
-	BaseClass::Draw();
-
-	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
-	pRenderContext->Flush();
-}
+//void CRefractiveGlassView::Draw()
+//{
+//	VPROF( "CRefractiveGlassView::Draw" );
+//
+//	CMatRenderContextPtr pRenderContext( materials );
+//	PIXEVENT( pRenderContext, "CRefractiveGlassView::Draw" );
+//
+//	BaseClass::Draw();
+//
+//	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
+//	pRenderContext->Flush();
+//}
 
 
 //-----------------------------------------------------------------------------

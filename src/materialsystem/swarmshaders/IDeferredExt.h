@@ -28,7 +28,7 @@ struct lightData_Global_t
 	{
 		bEnabled = false;
 		bShadow = false;
-		vecLight.Init( 0, 0, 1 );
+		vecLight.Init(0, 0, 1);
 
 		diff.Init();
 		ambh.Init();
@@ -43,6 +43,18 @@ struct lightData_Global_t
 	// client logic
 	float flFadeTime;
 	float flShadowBlend;
+};
+
+struct Matrix_Data_t
+{
+	Vector4D vecOrigin;
+	float flZDists[2];
+	VMatrix matView;
+	VMatrix matProj;
+	VMatrix matViewInv;
+	VMatrix matProjInv;
+	VMatrix matViewProj;
+	VMatrix matLockedViewProjInv;
 };
 
 struct shadowData_ortho_t
@@ -93,32 +105,42 @@ class IDeferredExtension : public IBaseInterface
 public:
 	virtual void EnableDeferredLighting() = 0;
 
-	virtual void CommitOrigin( const Vector &origin ) = 0;
-	virtual void CommitViewForward( const Vector &fwd ) = 0;
-	virtual void CommitZDists( const float &zNear, const float &zFar ) = 0;
-	virtual void CommitZScale( const float &zFar ) = 0;
-	virtual void CommitFrustumDeltas( const VMatrix &matTFrustum ) = 0;
+	virtual void CommitOrigin(const Vector& origin) = 0;
+	virtual void CommitViewForward(const Vector& fwd) = 0;
+	virtual void CommitZDists(const float& zNear, const float& zFar) = 0;
+	virtual void CommitZScale(const float& zFar) = 0;
+	virtual void CommitFrustumDeltas(const VMatrix& matTFrustum) = 0;
 
-	virtual void CommitShadowData_Ortho( const int &index, const shadowData_ortho_t &data ) = 0;
-	virtual void CommitShadowData_Proj( const int &index, const shadowData_proj_t &data ) = 0;
-	virtual void CommitShadowData_General( const shadowData_general_t &data ) = 0;
+	virtual void CommitShadowData_Ortho(const int& index, const shadowData_ortho_t& data) = 0;
+	virtual void CommitShadowData_Proj(const int& index, const shadowData_proj_t& data) = 0;
+	virtual void CommitShadowData_General(const shadowData_general_t& data) = 0;
 
-	virtual void CommitVolumeData( const volumeData_t &data ) = 0;
+	virtual void CommitVolumeData(const volumeData_t& data) = 0;
 
-	virtual void CommitLightData_Global( const lightData_Global_t &data ) = 0;
-	virtual float *CommitLightData_Common( float *pFlData, int numRows,
+	virtual void CommitLightData_Global(const lightData_Global_t& data) = 0;
+	virtual float* CommitLightData_Common(float* pFlData, int numRows,
 		int numShadowedCookied, int numShadowed,
-		int numCookied, int numSimple ) = 0;
+		int numCookied, int numSimple) = 0;
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
-		ITexture *pTexDepth,
-		ITexture *pTexLightingCtrl,
-		ITexture *pTexLightAccum ) = 0;
-	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
-	virtual void CommitTexture_DualParaboloidDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
-	virtual void CommitTexture_ProjectedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
-	virtual void CommitTexture_Cookie( const int &index, ITexture *pTexCookie ) = 0;
-	virtual void CommitTexture_VolumePrePass( ITexture *pTexVolumePrePass ) = 0;
+	virtual void CommitClock(const float& curTime) = 0;
+
+	virtual void CommitMatrixData(float* data, const Vector& origin, const float& zNear, const float& zFar,
+		VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
+		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv) = 0;
+
+	virtual void CommitTexture_General(ITexture* pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
+		ITexture* pTexDepth,
+		ITexture* pTexForwardData,
+		ITexture* pTexLightingCtrl,
+		ITexture* pTexLightAccum) = 0;
+
+	virtual void CommitTexture_CascadedDepth(const int& index, ITexture* pTexShadowDepth) = 0;
+	virtual void CommitTexture_DualParaboloidDepth(const int& index, ITexture* pTexShadowDepth) = 0;
+	virtual void CommitTexture_ProjectedDepth(const int& index, ITexture* pTexShadowDepth) = 0;
+	virtual void CommitTexture_Cookie(const int& index, ITexture* pTexCookie) = 0;
+	virtual void CommitTexture_VolumePrePass(ITexture* pTexVolumePrePass) = 0;
+
+	virtual float GetCurrentTime() = 0;
 
 	virtual void ClearForwardLights() = 0;
 	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
@@ -135,8 +157,12 @@ public:
 	virtual int GetForwardSpotLights_NumRows() = 0;
 	virtual int GetNumActiveForwardLights() = 0;
 
+	virtual void FillDataForFramebuffer() = 0;
+	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height) = 0;
+
+
 private:
-	
+
 
 	CUtlVector<ForwardLightData> m_vecForwardLights;
 	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
@@ -158,69 +184,85 @@ public:
 	virtual void EnableDeferredLighting();
 	bool IsDeferredLightingEnabled();
 
-	virtual void CommitOrigin( const Vector &origin );
-	virtual void CommitViewForward( const Vector &fwd );
-	virtual void CommitZDists( const float &zNear, const float &zFar );
-	virtual void CommitZScale( const float &zFar );
-	virtual void CommitFrustumDeltas( const VMatrix &matTFrustum );
+	virtual void CommitOrigin(const Vector& origin);
+	virtual void CommitViewForward(const Vector& fwd);
+	virtual void CommitZDists(const float& zNear, const float& zFar);
+	virtual void CommitZScale(const float& zFar);
+	virtual void CommitFrustumDeltas(const VMatrix& matTFrustum);
 
-	virtual void CommitShadowData_Ortho( const int &index, const shadowData_ortho_t &data );
-	virtual void CommitShadowData_Proj( const int &index, const shadowData_proj_t &data );
-	virtual void CommitShadowData_General( const shadowData_general_t &data );
+	virtual void CommitShadowData_Ortho(const int& index, const shadowData_ortho_t& data);
+	virtual void CommitShadowData_Proj(const int& index, const shadowData_proj_t& data);
+	virtual void CommitShadowData_General(const shadowData_general_t& data);
 
-	virtual void CommitVolumeData( const volumeData_t &data );
+	virtual void CommitVolumeData(const volumeData_t& data);
 
-	virtual void CommitLightData_Global( const lightData_Global_t &data );
-	virtual float *CommitLightData_Common( float *pFlData, int numRows,
+
+	virtual void CommitLightData_Global(const lightData_Global_t& data);
+	virtual float* CommitLightData_Common(float* pFlData, int numRows,
 		int numShadowedCookied, int numShadowed,
-		int numCookied, int numSimple );
+		int numCookied, int numSimple);
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction, 
-		ITexture *pTexDepth,
-		ITexture *pTexLightingCtrl,
-		ITexture *pTexLightAccum );
-	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth );
-	virtual void CommitTexture_DualParaboloidDepth( const int &index, ITexture *pTexShadowDepth );
-	virtual void CommitTexture_ProjectedDepth( const int &index, ITexture *pTexShadowDepth );
-	virtual void CommitTexture_Cookie( const int &index, ITexture *pTexCookie );
-	virtual void CommitTexture_VolumePrePass( ITexture *pTexVolumePrePass );
+	virtual void CommitClock(const float& curTime);
 
-	inline float *GetOriginBase();
-	inline float *GetForwardBase();
-	inline const float &GetZDistNear();
-	inline const float &GetZDistFar();
+	virtual void CommitMatrixData(float* data, const Vector& origin, const float& zNear, const float& zFar,
+		VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
+		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv);
+
+	virtual void CommitTexture_General(ITexture* pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
+		ITexture* pTexDepth,
+		ITexture* pTexForwardData,
+		ITexture* pTexLightingCtrl,
+		ITexture* pTexLightAccum);
+
+	inline const Matrix_Data_t& GetCommonData();
+
+	virtual void CommitTexture_CascadedDepth(const int& index, ITexture* pTexShadowDepth);
+	virtual void CommitTexture_DualParaboloidDepth(const int& index, ITexture* pTexShadowDepth);
+	virtual void CommitTexture_ProjectedDepth(const int& index, ITexture* pTexShadowDepth);
+	virtual void CommitTexture_Cookie(const int& index, ITexture* pTexCookie);
+	virtual void CommitTexture_VolumePrePass(ITexture* pTexVolumePrePass);
+
+
+
+	inline float* GetOriginBase();
+	inline float* GetForwardBase();
+	inline const float& GetZDistNear();
+	inline const float& GetZDistFar();
 	inline float GetZScale();
-	inline float *GetFrustumDeltaBase();
+	inline float* GetFrustumDeltaBase();
 
 	inline int GetNumActiveLights_ShadowedCookied();
 	inline int GetNumActiveLights_Shadowed();
 	inline int GetNumActiveLights_Cookied();
 	inline int GetNumActiveLights_Simple();
-	inline float *GetActiveLightData();
+	inline float* GetActiveLightData();
 	inline int GetActiveLights_NumRows();
 
-	inline const shadowData_ortho_t &GetShadowData_Ortho( const int &index );
-	inline const shadowData_proj_t &GetShadowData_Proj( const int &index );
-	inline const shadowData_general_t &GetShadowData_General();
+	virtual float GetCurrentTime();
 
-	inline const volumeData_t &GetVolumeData();
+	inline const shadowData_ortho_t& GetShadowData_Ortho(const int& index);
+	inline const shadowData_proj_t& GetShadowData_Proj(const int& index);
+	inline const shadowData_general_t& GetShadowData_General();
 
-	inline const lightData_Global_t &GetLightData_Global();
+	inline const volumeData_t& GetVolumeData();
 
-	inline ITexture *GetTexture_Normals();
-	inline ITexture *GetTexture_WaterNormals();
-	inline ITexture *GetTexture_Depth();
-	inline ITexture *GetTexture_LightAccum();
+	inline const lightData_Global_t& GetLightData_Global();
 
-	inline ITexture *GetTexture_LightCtrl();
+	inline ITexture* GetTexture_Normals();
+	inline ITexture* GetTexture_WaterNormals();
+	inline ITexture* GetTexture_Depth();
+	inline ITexture* GetTexture_LightAccum();
+
+	inline ITexture* GetTexture_LightCtrl();
 	inline ITexture* GetTexture_Reflection();
 	inline ITexture* GetTexture_Refraction();
+	inline ITexture* GetTexture_ForwardData();
 
-	inline ITexture *GetTexture_ShadowDepth_Ortho( const int &index );
-	inline ITexture *GetTexture_ShadowDepth_DP( const int &index );
-	inline ITexture *GetTexture_ShadowDepth_Proj( const int &index );
-	inline ITexture *GetTexture_Cookie( const int &index );
-	inline ITexture *GetTexture_VolumePrePass();
+	inline ITexture* GetTexture_ShadowDepth_Ortho(const int& index);
+	inline ITexture* GetTexture_ShadowDepth_DP(const int& index);
+	inline ITexture* GetTexture_ShadowDepth_Proj(const int& index);
+	inline ITexture* GetTexture_Cookie(const int& index);
+	inline ITexture* GetTexture_VolumePrePass();
 
 	virtual void ClearForwardLights();
 	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
@@ -236,10 +278,13 @@ public:
 	virtual int GetForwardLights_NumRows();
 	virtual int GetForwardSpotLights_NumRows();
 	virtual int GetNumActiveForwardLights();
+	virtual void FillDataForFramebuffer();
+	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height);
 
 private:
 
-	
+	float m_curTime;
+
 	CUtlVector<ForwardLightData> m_vecForwardLights;
 	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
@@ -253,48 +298,56 @@ private:
 	float m_flZDists[3];
 	VMatrix m_matTFrustumD;
 
-	shadowData_ortho_t m_dataOrtho[ SHADOW_NUM_CASCADES ];
-	shadowData_proj_t m_dataProj[ MAX_SHADOW_PROJ ];
+	shadowData_ortho_t m_dataOrtho[SHADOW_NUM_CASCADES];
+	shadowData_proj_t m_dataProj[MAX_SHADOW_PROJ];
 	shadowData_general_t m_dataGeneral;
 
 	volumeData_t m_dataVolume;
 
+	Matrix_Data_t m_commonData;
+
 	lightData_Global_t m_globalLight;
-	float *m_pflCommonLightData;
+	float* m_pflCommonLightData;
 	int m_iCommon_NumRows;
 	int m_iNumCommon_ShadowedCookied;
 	int m_iNumCommon_Shadowed;
 	int m_iNumCommon_Cookied;
 	int m_iNumCommon_Simple;
 
-	ITexture *m_pTexNormals;
-	ITexture *m_pTexWaterNormals;
-	ITexture *m_pTexDepth;
-	ITexture *m_pTexLightAccum;
-	ITexture *m_pTexLightCtrl;
-	ITexture * m_pReflection;
+	ITexture* m_pTexNormals;
+	ITexture* m_pTexWaterNormals;
+	ITexture* m_pTexDepth;
+	ITexture* m_pTexLightAccum;
+	ITexture* m_pTexLightCtrl;
+	ITexture* m_pReflection;
 	ITexture* m_pRefraction;
+	ITexture* m_pForwardData;
 
-	ITexture *m_pTexShadowDepth_Ortho[ MAX_SHADOW_ORTHO ];
-	ITexture *m_pTexShadowDepth_DP[ MAX_SHADOW_DP ];
-	ITexture *m_pTexShadowDepth_Proj[ MAX_SHADOW_PROJ ];
-	ITexture *m_pTexCookie[ NUM_COOKIE_SLOTS ];
-	ITexture *m_pTexVolumePrePass;
+	ITexture* m_pTexShadowDepth_Ortho[MAX_SHADOW_ORTHO];
+	ITexture* m_pTexShadowDepth_DP[MAX_SHADOW_DP];
+	ITexture* m_pTexShadowDepth_Proj[MAX_SHADOW_PROJ];
+	ITexture* m_pTexCookie[NUM_COOKIE_SLOTS];
+	ITexture* m_pTexVolumePrePass;
 };
 
-float *CDeferredExtension::GetOriginBase()
+const Matrix_Data_t& CDeferredExtension::GetCommonData()
+{
+	return m_commonData;
+}
+
+float* CDeferredExtension::GetOriginBase()
 {
 	return m_vecOrigin.Base();
 }
-float *CDeferredExtension::GetForwardBase()
+float* CDeferredExtension::GetForwardBase()
 {
 	return m_vecForward.Base();
 }
-const float &CDeferredExtension::GetZDistNear()
+const float& CDeferredExtension::GetZDistNear()
 {
 	return m_flZDists[0];
 }
-const float &CDeferredExtension::GetZDistFar()
+const float& CDeferredExtension::GetZDistFar()
 {
 	return m_flZDists[1];
 }
@@ -302,32 +355,31 @@ float CDeferredExtension::GetZScale()
 {
 	return m_flZDists[2];
 }
-float *CDeferredExtension::GetFrustumDeltaBase()
+float* CDeferredExtension::GetFrustumDeltaBase()
 {
 	return m_matTFrustumD.Base();
 }
-
-const shadowData_ortho_t &CDeferredExtension::GetShadowData_Ortho( const int &index )
+const shadowData_ortho_t& CDeferredExtension::GetShadowData_Ortho(const int& index)
 {
-	Assert( index >= 0 && index < SHADOW_NUM_CASCADES );
-	return m_dataOrtho[ index ];
+	Assert(index >= 0 && index < SHADOW_NUM_CASCADES);
+	return m_dataOrtho[index];
 }
-const shadowData_proj_t &CDeferredExtension::GetShadowData_Proj( const int &index )
+const shadowData_proj_t& CDeferredExtension::GetShadowData_Proj(const int& index)
 {
-	Assert( index >= 0 && index < MAX_SHADOW_PROJ );
-	return m_dataProj[ index ];
+	Assert(index >= 0 && index < MAX_SHADOW_PROJ);
+	return m_dataProj[index];
 }
-const shadowData_general_t &CDeferredExtension::GetShadowData_General()
+const shadowData_general_t& CDeferredExtension::GetShadowData_General()
 {
 	return m_dataGeneral;
 }
 
-const lightData_Global_t &CDeferredExtension::GetLightData_Global()
+const lightData_Global_t& CDeferredExtension::GetLightData_Global()
 {
 	return m_globalLight;
 }
 
-const volumeData_t &CDeferredExtension::GetVolumeData()
+const volumeData_t& CDeferredExtension::GetVolumeData()
 {
 	return m_dataVolume;
 }
@@ -348,7 +400,7 @@ int CDeferredExtension::GetNumActiveLights_Simple()
 {
 	return m_iNumCommon_Simple;
 }
-float *CDeferredExtension::GetActiveLightData()
+float* CDeferredExtension::GetActiveLightData()
 {
 	return m_pflCommonLightData;
 }
@@ -356,7 +408,7 @@ int CDeferredExtension::GetActiveLights_NumRows()
 {
 	return m_iCommon_NumRows;
 }
-ITexture *CDeferredExtension::GetTexture_Normals()
+ITexture* CDeferredExtension::GetTexture_Normals()
 {
 	return m_pTexNormals;
 }
@@ -366,16 +418,16 @@ ITexture* CDeferredExtension::GetTexture_WaterNormals()
 	return m_pTexWaterNormals;
 }
 
-ITexture *CDeferredExtension::GetTexture_Depth()
+ITexture* CDeferredExtension::GetTexture_Depth()
 {
 	return m_pTexDepth;
 }
-ITexture *CDeferredExtension::GetTexture_LightAccum()
+ITexture* CDeferredExtension::GetTexture_LightAccum()
 {
 	return m_pTexLightAccum;
 }
 
-ITexture *CDeferredExtension::GetTexture_LightCtrl()
+ITexture* CDeferredExtension::GetTexture_LightCtrl()
 {
 	return m_pTexLightCtrl;
 }
@@ -389,27 +441,33 @@ ITexture* CDeferredExtension::GetTexture_Refraction()
 {
 	return m_pRefraction;
 }
-ITexture *CDeferredExtension::GetTexture_ShadowDepth_Ortho( const int &index )
+
+ITexture* CDeferredExtension::GetTexture_ForwardData()
 {
-	Assert( index >= 0 && index < MAX_SHADOW_ORTHO );
+	return m_pForwardData;
+}
+
+ITexture* CDeferredExtension::GetTexture_ShadowDepth_Ortho(const int& index)
+{
+	Assert(index >= 0 && index < MAX_SHADOW_ORTHO);
 	return m_pTexShadowDepth_Ortho[index];
 }
-ITexture *CDeferredExtension::GetTexture_ShadowDepth_DP( const int &index )
+ITexture* CDeferredExtension::GetTexture_ShadowDepth_DP(const int& index)
 {
-	Assert( index >= 0 && index < MAX_SHADOW_DP );
+	Assert(index >= 0 && index < MAX_SHADOW_DP);
 	return m_pTexShadowDepth_DP[index];
 }
-ITexture *CDeferredExtension::GetTexture_ShadowDepth_Proj( const int &index )
+ITexture* CDeferredExtension::GetTexture_ShadowDepth_Proj(const int& index)
 {
-	Assert( index >= 0 && index < MAX_SHADOW_PROJ );
+	Assert(index >= 0 && index < MAX_SHADOW_PROJ);
 	return m_pTexShadowDepth_Proj[index];
 }
-ITexture *CDeferredExtension::GetTexture_Cookie( const int &index )
+ITexture* CDeferredExtension::GetTexture_Cookie(const int& index)
 {
-	Assert( index >= 0 && index < NUM_COOKIE_SLOTS );
+	Assert(index >= 0 && index < NUM_COOKIE_SLOTS);
 	return m_pTexCookie[index];
 }
-ITexture *CDeferredExtension::GetTexture_VolumePrePass()
+ITexture* CDeferredExtension::GetTexture_VolumePrePass()
 {
 	return m_pTexVolumePrePass;
 }
@@ -419,10 +477,10 @@ ITexture *CDeferredExtension::GetTexture_VolumePrePass()
 bool ConnectDeferredExt();
 void ShutdownDeferredExt();
 
-extern IDeferredExtension *GetDeferredExt();
+extern IDeferredExtension* GetDeferredExt();
 #else
 extern CDeferredExtension __g_defExt;
-FORCEINLINE CDeferredExtension *GetDeferredExt()
+FORCEINLINE CDeferredExtension* GetDeferredExt()
 {
 	return &__g_defExt;
 }

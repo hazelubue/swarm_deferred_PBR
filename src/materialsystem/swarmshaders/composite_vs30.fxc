@@ -16,6 +16,7 @@
 // SKIP:		$MODEL && $BASETEXTURE2
 // SKIP:		$MODEL && $MULTIBLEND
 // SKIP:		$BASETEXTURE2 && $MULTIBLEND
+// SKIP:		$LIGHTMAPPED && $MULTIBLEND
 
 #include "common_vs_fxc.h"
 #include "common_deferred_fxc.h"
@@ -42,6 +43,10 @@ const float4 flBlendModTransform[2]			: register( SHADER_SPECIFIC_CONST_1 ); // 
 const float4 flBlendModTransform2[2]			: register( SHADER_SPECIFIC_CONST_3 ); // up to 4
 const float4 flBlendModTransform3[2]			: register( SHADER_SPECIFIC_CONST_5 ); // up to 6
 #endif
+#endif
+
+#if LIGHTMAPPED
+const float4 cBaseTexCoordTransform[2]			: register(SHADER_SPECIFIC_CONST_7);
 #endif
 
 struct VS_INPUT
@@ -83,7 +88,11 @@ struct VS_INPUT
 	float4 vColorBlend3					: TEXCOORD6;
 	float4 vColorBlend4					: TEXCOORD7;
 #endif
-
+#endif
+	
+#if LIGHTMAPPED
+    float4 vLightmapTexCoord			: TEXCOORD1;
+    float4 vLightmapTexCoordOffset		: TEXCOORD7;
 #endif
 };
 
@@ -99,7 +108,6 @@ struct VS_OUTPUT
 	//float3 vProjPosXYW				: TEXCOORD1;
 	float3 worldPos					: TEXCOORD2;
 
-	float4 worldPos_ProjPosZ		: TEXCOORD1;
 #if EYEVEC
 	float3 worldToEye				: TEXCOORD3;
 #endif
@@ -118,6 +126,9 @@ struct VS_OUTPUT
 	float4 vColorBlend3					: TEXCOORD6;
 	float3 vColorBlend4					: TEXCOORD7;
 #endif
+	
+    //float4 lightmapTexCoord1And2 : TEXCOORD1;
+    //float4 lightmapTexCoord3 : TEXCOORD7;
 };
 
 VS_OUTPUT main( const VS_INPUT In )
@@ -131,7 +142,25 @@ VS_OUTPUT main( const VS_INPUT In )
 	// morph (model) &&
 	// skin (model) ||
 	// xform to world (not model)
+	
+#if LIGHTMAPPED
+    Out.lightmapTexCoord3.z = dot(In.vTexCoord_0, cBaseTexCoordTransform[0].xy) + cBaseTexCoordTransform[0].w;
+    Out.lightmapTexCoord3.w = dot(In.vTexCoord_0, cBaseTexCoordTransform[1].xy) + cBaseTexCoordTransform[1].w;
+    Out.lightmapTexCoord1And2.xy = In.vLightmapTexCoord.xy + In.vLightmapTexCoordOffset.xy;
 
+    float2 lightmapTexCoord2 = Out.lightmapTexCoord1And2.xy + In.vLightmapTexCoordOffset.xy;
+    float2 lightmapTexCoord3 = lightmapTexCoord2 + In.vLightmapTexCoordOffset.xy;
+
+    // Reversed component order
+    Out.lightmapTexCoord1And2.w = lightmapTexCoord2.x;
+    Out.lightmapTexCoord1And2.z = lightmapTexCoord2.y;
+
+    Out.lightmapTexCoord3.xy = lightmapTexCoord3;
+#else
+    //Out.lightmapTexCoord1And2 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    //Out.lightmapTexCoord3 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+#endif
+	
 #if MODEL
 	float4 vPos = In.vPos;
 	float3 vNormal = 0;
@@ -190,7 +219,7 @@ VS_OUTPUT main( const VS_INPUT In )
 
 	Out.vProjPos = mul( float4( worldPos, 1 ), cViewProj );
 	Out.vTexCoord.xy = In.vTexCoord_0;
-    Out.worldPos_ProjPosZ = float4(worldPos, Out.vProjPos.z);
+    //Out.worldPos_ProjPosZ = float4(worldPos, Out.vProjPos.z);
 	//Out.vProjPosXYW = Out.vProjPos.xyw;
 
 	Out.worldPos = worldPos;

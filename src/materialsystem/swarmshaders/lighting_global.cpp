@@ -4,54 +4,18 @@
 #include "defconstruct_vs30.inc"
 #include "include/lightingpass_global_ps30.inc"
 
-extern ConVar cl_light_specular_factor/*("cl_specular_factor", "1.4")*/;
+extern ConVar cl_light_specular_factor;
 
 ConVar cl_light_specular_global_boost("cl_light_specular_global_boost", ".1", FCVAR_CHEAT);
 extern ConVar cl_light_specular_grazing_factor;
 extern ConVar cl_light_specular_grazing_power;
 ConVar cl_light_specular_global_size("cl_light_specular_global_size", "10", FCVAR_CHEAT);
-//extern ConVar cl_light_gi_enable;
-//extern ConVar cl_light_gi_power;
-//extern ConVar cl_light_roughness_scale;
+
 extern ConVar cl_light_specular_scale;
 ConVar cl_light_diffuse_strength_global("cl_light_diffuse_strength_global", "0.01", FCVAR_CHEAT);
 extern ConVar cl_light_fresnel_strength;
 extern ConVar cl_light_Sheen_strength;
 extern ConVar cl_light_specular_roughness;
-
-
-static void UTIL_StringToFloatArray(float* pVector, int count, const char* pString)
-{
-	char* pstr, * pfront, tempString[128];
-	int	j;
-
-	Q_strncpy(tempString, pString, sizeof(tempString));
-	pstr = pfront = tempString;
-
-	for (j = 0; j < count; j++)			// lifted from pr_edict.c
-	{
-		pVector[j] = atof(pfront);
-
-		// skip any leading whitespace
-		while (*pstr && *pstr <= ' ')
-			pstr++;
-
-		// skip to next whitespace
-		while (*pstr && *pstr > ' ')
-			pstr++;
-
-		if (!*pstr)
-			break;
-
-		pstr++;
-		pfront = pstr;
-	}
-	for (j++; j < count; j++)
-	{
-		pVector[j] = 0;
-	}
-}
-
 
 BEGIN_VS_SHADER(LIGHTING_GLOBAL, "")
 BEGIN_SHADER_PARAMS

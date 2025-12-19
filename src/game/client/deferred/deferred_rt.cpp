@@ -7,6 +7,7 @@
 static CTextureReference g_tex_Normals;
 static CTextureReference g_tex_Water_Normals;
 static CTextureReference g_tex_Depth;
+static CTextureReference g_tex_ForwardData;
 
 static CTextureReference g_tex_Reflection;
 static CTextureReference g_tex_Refraction;
@@ -54,6 +55,8 @@ void InitDeferredRTs( bool bInitial )
 	const ImageFormat fmt_gbuffer2 = IMAGE_FORMAT_RGBA8888;
 
 	const ImageFormat fmt_gbuffer1 = IMAGE_FORMAT_R32F;
+	const ImageFormat fmt_ForwardLightData = IMAGE_FORMAT_RGBA32323232F;
+
 	const ImageFormat fmt_lightAccum =
 #if DEFCFG_LIGHTACCUM_COMPRESSED
 		IMAGE_FORMAT_RGBA8888;
@@ -114,6 +117,14 @@ void InitDeferredRTs( bool bInitial )
 			fmt_gbuffer1,
 			MATERIAL_RT_DEPTH_NONE,
 			gbufferFlags, 0 ) );
+
+		g_tex_ForwardData.Init(materials->CreateNamedRenderTargetTextureEx2(DEFRTNAME_FORWARDDATA,
+			dummy, dummy,
+			RT_SIZE_FULL_FRAME_BUFFER_ROUNDED_UP,
+			fmt_ForwardLightData,
+			MATERIAL_RT_DEPTH_NONE,
+			depthFlags, 0));
+
 
 		g_tex_LightCtrl.Init( materials->CreateNamedRenderTargetTextureEx2( DEFRTNAME_GBUFFER2,
 			dummy, dummy,
@@ -279,7 +290,7 @@ void InitDeferredRTs( bool bInitial )
 
 	materials->EndRenderTargetAllocation();
 
-	GetDeferredExt()->CommitTexture_General( g_tex_Normals, g_tex_Water_Normals, g_tex_Reflection, g_tex_Refraction, g_tex_Depth,
+	GetDeferredExt()->CommitTexture_General( g_tex_Normals, g_tex_Water_Normals, g_tex_Reflection, g_tex_Refraction, g_tex_Depth, g_tex_ForwardData,
 		g_tex_LightCtrl,
 		g_tex_Lightaccum );
 
@@ -346,6 +357,11 @@ ITexture* GetDefRT_Reflection()
 ITexture *GetDefRT_Lightaccum()
 {
 	return g_tex_Lightaccum;
+}
+
+ITexture* GetDefRT_ForwardData()
+{
+	return g_tex_ForwardData;
 }
 
 ITexture *GetDefRT_VolumePrepass()
