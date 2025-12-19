@@ -120,7 +120,14 @@ float4 g_vInvViewportTransform : register(c24);
 const float g_flForcedFresnelValue : register(c25);
 
 const float2 g_vecFullScreenTexel : register(c27);
+
+const float4 g_GlobalLightDir : register(c34); // xyz = direction, w = has shadow
+const float4 g_GlobalLightDiffuse : register(c35); // xyz = diffuse color
+const float4 g_GlobalLightAmbHigh : register(c32); // xyz = ambient high color
+const float4 g_GlobalLightAmbLow : register(c33); // xyz = ambient low color
 const float3 g_vecOrigin : register(c36);
+
+
 
 struct PS_INPUT
 {
@@ -479,6 +486,10 @@ float4 main(PS_INPUT i) : COLOR
     float3 compositeLighting = (float3) 0;
     float3 finalColor = (float3) 0;
 	
+    float3 V = normalize(g_vecOrigin.xyz - i.worldPos);
+	
+    float NdotV = max(0.0f, dot(N, V));
+
 #if !USE_FORWARD_RENDERING
 	
     float3 F0 = lerp(0.04, baseSampleAlpha.rgb, metallic);
@@ -493,10 +504,6 @@ float4 main(PS_INPUT i) : COLOR
 	
 #else
 
-		float3 V = normalize(g_vecOrigin.xyz - i.worldPos);
-		
-		float NdotV = max(0.0f, dot(N, V));
-     
 		int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
 		//[unroll(16)]
 		for (int i = 0; i < LIGHT_COUNT; i++)
@@ -532,14 +539,25 @@ float4 main(PS_INPUT i) : COLOR
 			float NdotH = max(0.0f, dot(N, H));
 			float VdotH = max(0.0f, dot(V, H));
 	
-			float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, baseSampleAlpha.rgb, effectiveLightColor, attenuation, lightType);
+			float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, baseSampleAlpha.rgb, effectiveLightColor, attenuation, lightType, lightPos, lightRadius);
 	
 			compositeLighting += flLighting;
     
-	}
-    
+		}
+
+	float3 L_global = normalize(g_GlobalLightDir.xyz);
+    float NdotL_global = max(0.0f, dot(N, L_global));
+
+    float3 H_global = normalize(L_global + V);
+    float NdotH_global = max(0.0f, dot(N, H_global));
+    float VdotH_global = max(0.0f, dot(V, H_global));
+
+    float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N, worldPos, g_vecOrigin, roughness, metallic, baseSampleAlpha.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
+	
+    compositeLighting += globalLighting;
+	
 #endif
-    
+	
     finalColor += compositeLighting;
 	
     float4 vLightmappedWaterFogColor = g_WaterFogColor;

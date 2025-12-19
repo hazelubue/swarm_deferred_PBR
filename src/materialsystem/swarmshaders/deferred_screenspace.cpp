@@ -1,0 +1,210 @@
+
+#include "deferred_includes.h"
+#include "deferred_screenspace.h"
+#include "tier0/memdbgon.h"
+
+BEGIN_VS_SHADER(Deferred_screenspace,
+	"Help for Water")
+
+BEGIN_SHADER_PARAMS
+
+SHADER_PARAM(C0_X, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C0_Y, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C0_Z, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C0_W, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C1_X, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C1_Y, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C1_Z, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C1_W, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C2_X, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C2_Y, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C2_Z, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C2_W, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C3_X, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C3_Y, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C3_Z, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C3_W, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C4_X, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C4_Y, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C4_Z, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(C4_W, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "");
+SHADER_PARAM(PIXSHADER, SHADER_PARAM_TYPE_STRING, "", "Name of the pixel shader to use")
+SHADER_PARAM(VERTEXSHADER, SHADER_PARAM_TYPE_STRING, "", "Name of the vertex shader to use")
+SHADER_PARAM(DISABLE_COLOR_WRITES, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(ALPHATESTED, SHADER_PARAM_TYPE_FLOAT, "0", "")
+SHADER_PARAM(TEXTURE1, SHADER_PARAM_TYPE_TEXTURE, "", "")
+SHADER_PARAM(TEXTURE2, SHADER_PARAM_TYPE_TEXTURE, "", "")
+SHADER_PARAM(TEXTURE3, SHADER_PARAM_TYPE_TEXTURE, "", "")
+SHADER_PARAM(TEXTURE4, SHADER_PARAM_TYPE_TEXTURE, "", "")
+SHADER_PARAM(LINEARREAD_BASETEXTURE, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(LINEARREAD_TEXTURE1, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(LINEARREAD_TEXTURE2, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(LINEARREAD_TEXTURE4, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(LINEARREAD_TEXTURE3, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(LINEARWRITE, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(VERTEXCOLOR, SHADER_PARAM_TYPE_INTEGER, "0", "vertices have color info")
+SHADER_PARAM(VERTEXTRANSFORM, SHADER_PARAM_TYPE_INTEGER, "0", "verts are in world space")
+SHADER_PARAM(ALPHABLEND, SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to enable alpha blend")
+SHADER_PARAM(MULTIPLYCOLOR, SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to multiply src and dest color")
+SHADER_PARAM(WRITEALPHA, SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to enable alpha write")
+SHADER_PARAM(WRITEDEPTH, SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to enable depth write")
+SHADER_PARAM(TCSIZE0, SHADER_PARAM_TYPE_INTEGER, "2", "Number of components in texture coord0")
+SHADER_PARAM(TCSIZE1, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord1")
+SHADER_PARAM(TCSIZE2, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord2")
+SHADER_PARAM(TCSIZE3, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord3")
+SHADER_PARAM(TCSIZE4, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord4")
+SHADER_PARAM(TCSIZE5, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord5")
+SHADER_PARAM(TCSIZE6, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord6")
+SHADER_PARAM(TCSIZE7, SHADER_PARAM_TYPE_INTEGER, "0", "Number of components in texture coord7")
+SHADER_PARAM(POINTSAMPLE_BASETEXTURE, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(POINTSAMPLE_TEXTURE1, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(POINTSAMPLE_TEXTURE2, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(POINTSAMPLE_TEXTURE3, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(POINTSAMPLE_TEXTURE4, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(ALPHA_BLEND_COLOR_OVERLAY, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(CULL, SHADER_PARAM_TYPE_INTEGER, "0", "Culling control - 0 = nocull, 1 = do cull")
+SHADER_PARAM(DEPTHTEST, SHADER_PARAM_TYPE_INTEGER, "0", "Enable Depthtest")
+SHADER_PARAM(COPYALPHA, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(ALPHA_BLEND, SHADER_PARAM_TYPE_INTEGER, "0", "")
+SHADER_PARAM(USES_VIEWPROJ, SHADER_PARAM_TYPE_INTEGER, "0", "")
+
+END_SHADER_PARAMS
+
+void SetupParamsSSR(defParms_screenspace& info)
+{
+	info.C0_X = C0_X;
+	info.C0_Y = C0_Y;
+	info.C0_Z = C0_Z;
+	info.C0_W = C0_W;
+	info.C1_X = C1_X;
+	info.C1_Y = C1_Y;
+	info.C1_Z = C1_Z;
+	info.C1_W = C1_W;
+	info.C2_X = C2_X;
+	info.C2_Y = C2_Y;
+	info.C2_Z = C2_Z;
+	info.C2_W = C2_W;
+	info.C3_X = C3_X;
+	info.C3_Y = C3_Y;
+	info.C3_Z = C3_Z;
+	info.C3_W = C3_W;
+	info.C4_X = C4_X;
+	info.C4_Y = C4_Y;
+	info.C4_Z = C4_Z;
+	info.C4_W = C4_W;
+	info.BASETEXTURE = BASETEXTURE;
+	info.PIXSHADER = PIXSHADER;
+	info.VERTEXSHADER = VERTEXSHADER;
+	info.DISABLE_COLOR_WRITES = DISABLE_COLOR_WRITES;
+	info.ALPHATESTED = ALPHATESTED;
+	info.TEXTURE1 = TEXTURE1;
+	info.TEXTURE2 = TEXTURE2;
+	info.TEXTURE3 = TEXTURE3;
+	//info.TEXTURE4 = TEXTURE4;
+	info.LINEARREAD_BASETEXTURE = LINEARREAD_BASETEXTURE;
+	info.LINEARREAD_TEXTURE1 = LINEARREAD_TEXTURE1;
+	info.LINEARREAD_TEXTURE2 = LINEARREAD_TEXTURE2;
+	info.LINEARREAD_TEXTURE3 = LINEARREAD_TEXTURE3;
+	//info.LINEARREAD_TEXTURE4 = LINEARREAD_TEXTURE4;
+	info.LINEARWRITE = LINEARWRITE;
+	info.VERTEXCOLOR = VERTEXCOLOR;
+	info.VERTEXTRANSFORM = VERTEXTRANSFORM;
+	info.ALPHABLEND = ALPHABLEND;
+	info.MULTIPLYCOLOR = MULTIPLYCOLOR;
+	info.WRITEALPHA = WRITEALPHA;
+	info.WRITEDEPTH = WRITEDEPTH;
+	info.TCSIZE0 = TCSIZE0;
+	info.TCSIZE1 = TCSIZE1;
+	info.TCSIZE2 = TCSIZE2;
+	info.TCSIZE3 = TCSIZE3;
+	info.TCSIZE4 = TCSIZE4;
+	info.TCSIZE5 = TCSIZE5;
+	info.TCSIZE6 = TCSIZE6;
+	info.TCSIZE7 = TCSIZE7;
+	info.POINTSAMPLE_BASETEXTURE = POINTSAMPLE_BASETEXTURE;
+	info.POINTSAMPLE_TEXTURE1 = POINTSAMPLE_TEXTURE1;
+	info.POINTSAMPLE_TEXTURE2 = POINTSAMPLE_TEXTURE2;
+	info.POINTSAMPLE_TEXTURE3 = POINTSAMPLE_TEXTURE3;
+	//info.POINTSAMPLE_TEXTURE4 = POINTSAMPLE_TEXTURE4;
+	info.ALPHA_BLEND_COLOR_OVERLAY = ALPHA_BLEND_COLOR_OVERLAY;
+	info.CULL = CULL;
+	info.DEPTHTEST = DEPTHTEST;
+	info.COPYALPHA = COPYALPHA;
+	info.ALPHA_BLEND = ALPHA_BLEND;
+	info.USES_VIEWPROJ = USES_VIEWPROJ;
+}
+
+
+
+
+SHADER_INIT_PARAMS()
+{
+	// for fallback shaders
+	// SWARMS VBSP BETTER FUCKING CALL MODINIT NOW
+	SET_FLAGS2(MATERIAL_VAR2_LIGHTING_LIGHTMAP);
+	/*if (PARM_DEFINED(BUMPMAP))
+		SET_FLAGS2(MATERIAL_VAR2_LIGHTING_BUMPED_LIGHTMAP);*/
+
+	defParms_screenspace parms_compositePBR;
+	SetupParamsSSR(parms_compositePBR);
+	InitParmsScreenspace(parms_compositePBR, this, params);
+	/*defParms_composite parms_composite;
+	SetupParmsComposite(parms_composite);
+	InitParmsComposite(parms_composite, this, params);*/
+}
+
+SHADER_INIT
+{
+
+	defParms_screenspace parms_compositePBR;
+	SetupParamsSSR(parms_compositePBR);
+	InitPassScreenspace(parms_compositePBR, this, params);
+	/*defParms_composite parms_composite;
+	SetupParmsComposite(parms_composite);
+	InitParmsComposite(parms_composite, this, params);*/
+}
+
+SHADER_FALLBACK
+{
+	/*if (!GetDeferredExt()->IsDeferredLightingEnabled())
+		return "lightmappedgeneric";*/
+
+		//const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+		const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
+
+//if (bTranslucent)
+//	return "lightmappedgeneric";
+if (bIsDecal)
+	return "DecalModulate";
+
+	return 0;
+}
+
+SHADER_DRAW
+{
+
+	if (pShaderAPI != NULL && *pContextDataPtr == NULL)
+		*pContextDataPtr = new CDeferredPerMaterialContextData();
+
+	CDeferredPerMaterialContextData* pDefContext = reinterpret_cast<CDeferredPerMaterialContextData*>(*pContextDataPtr);
+
+	Assert(pShaderAPI == NULL ||
+		iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID);
+
+
+		
+			defParms_screenspace parms_compositePBR;
+			SetupParamsSSR(parms_compositePBR);
+			DrawPassScreenspace(parms_compositePBR, this, params, pShaderShadow, pShaderAPI, vertexCompression, pDefContext);
+			/*defParms_composite parms_composite;
+			SetupParmsComposite(parms_composite);
+			DrawPassComposite(parms_composite, this, params, pShaderShadow, pShaderAPI,
+				vertexCompression, pDefContext);  */
+		
+		
+		if (pShaderAPI != NULL && pDefContext->m_bMaterialVarsChanged)
+			pDefContext->m_bMaterialVarsChanged = false;
+}
+
+END_SHADER

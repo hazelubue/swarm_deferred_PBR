@@ -39,7 +39,7 @@ public:
 	int GetIndex() const
 	{
 		Assert( m_bCONVERT_TO_SRGB );
-		return ( 8 * m_nCONVERT_TO_SRGB ) + 0;
+		return ( 2 * m_nCONVERT_TO_SRGB ) + 0;
 	}
 };
 
@@ -49,12 +49,8 @@ public:
 class skydome_ps30_Dynamic_Index
 {
 	unsigned int m_nRENDER_SKY : 2;
-	unsigned int m_nENABLE_STARS : 2;
-	unsigned int m_nENABLE_SUN : 2;
 #ifdef _DEBUG
 	bool m_bRENDER_SKY : 1;
-	bool m_bENABLE_STARS : 1;
-	bool m_bENABLE_SUN : 1;
 #endif	// _DEBUG
 public:
 	void SetRENDER_SKY( int i )
@@ -66,42 +62,20 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetENABLE_STARS( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nENABLE_STARS = i;
-#ifdef _DEBUG
-		m_bENABLE_STARS = true;
-#endif	// _DEBUG
-	}
-
-	void SetENABLE_SUN( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nENABLE_SUN = i;
-#ifdef _DEBUG
-		m_bENABLE_SUN = true;
-#endif	// _DEBUG
-	}
-
 	skydome_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
 		m_nRENDER_SKY = 0;
-		m_nENABLE_STARS = 0;
-		m_nENABLE_SUN = 0;
 #ifdef _DEBUG
 		m_bRENDER_SKY = false;
-		m_bENABLE_STARS = false;
-		m_bENABLE_SUN = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bRENDER_SKY && m_bENABLE_STARS && m_bENABLE_SUN );
-		return ( 1 * m_nRENDER_SKY ) + ( 2 * m_nENABLE_STARS ) + ( 4 * m_nENABLE_SUN ) + 0;
+		Assert( m_bRENDER_SKY );
+		return ( 1 * m_nRENDER_SKY ) + 0;
 	}
 };
 
-#define shaderDynamicTest_skydome_ps30 psh_forgot_to_set_dynamic_RENDER_SKY + psh_forgot_to_set_dynamic_ENABLE_STARS + psh_forgot_to_set_dynamic_ENABLE_SUN
+#define shaderDynamicTest_skydome_ps30 psh_forgot_to_set_dynamic_RENDER_SKY
 

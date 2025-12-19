@@ -1,0 +1,13 @@
+"Deferred_screenspace"
+{
+    "$basetexture" "white"
+    "$vertexcolor" 1
+    "$vertexalpha" 1
+    "$nocull" 1
+    "$ignorez" 1
+
+    "$pixshader" "forward_data_ps30"
+    "$vertexshader" "forward_data_vs30"
+	
+    "$writefloat" 1
+}

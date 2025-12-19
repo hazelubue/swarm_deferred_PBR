@@ -14,14 +14,7 @@ CDeferredManagerClient *GetDeferredManager()
 	return &__g_defmanager;
 }
 
-static IViewRender *g_pCurrentViewRender = NULL;
-
-IViewRender *GetViewRenderInstance()
-{
-	AssertMsg( g_pCurrentViewRender != NULL, "viewrender creation failed!" );
-
-	return g_pCurrentViewRender;
-}
+IViewRender *g_pCurrentViewRender = NULL;
 
 static CDeferredMaterialSystem g_DeferredMaterialSystem;
 static IMaterialSystem *g_pOldMatSystem;

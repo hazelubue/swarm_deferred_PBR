@@ -1,0 +1,426 @@
+// D3D9 Version - Screen Space Reflections
+// Converted from D3D11 compute shader to D3D9 pixel shader
+
+#include "stochasticSSRHF.h"
+#include "ShaderInterop_Postprocess.h"
+
+//#define DEBUG_TILING
+
+// Camera constants (D3D9 register mapping)
+const float4x4 g_ViewInv : register(c8);
+const float4x4 g_ProjInv : register(c12);
+const float4x4 g_View : register(c16);
+const float4x4 g_Proj : register(c20);
+const float2 g_zPlanes : register(c24);
+const float4 g_ResolutionRcp : register(c4); // 1/width, 1/height, 0, 0
+const float3 g_EyeOrigin : register(c40);
+const float4 g_FrustumCorner[4] : register(c46); // or however many you have
+const float g_L_world_ctrl : register(c50);
+
+// Computed derived matrices
+float4x4 GetViewProj()
+{
+    return mul(g_View, g_Proj);
+}
+float4x4 GetViewProjInv()
+{
+    return mul(g_ProjInv, g_ViewInv);
+}
+
+
+
+sampler texture_depth_sampler : register(s0);
+sampler input_sampler : register(s1);
+sampler texture_roughness_sampler : register(s2);
+sampler texture_normal_sampler : register(s3);
+
+static const float traceThickness = 1.5;
+static const float blendScreenEdgeFade = 5.0f;
+
+static const float HiZTraceMostDetailedLevel = 0.0;
+static const float HiZTraceIterationsMax = 64;
+
+static const int downsampleFactor = 2;
+
+float2 GetMipResolution(float2 screenDimensions, int mipLevel)
+{
+    return screenDimensions * pow(0.5, mipLevel);
+}
+
+void InitialAdvanceRay(float3 origin, float3 direction, float2 currentMipResolution, float2 currentMipResolution_rcp, float2 floorOffset, float2 uvOffset, out float3 position, out float tCurrent)
+{
+    float2 currentMipPosition = currentMipResolution * origin.xy;
+
+	// Intersect ray with the half box that is pointing away from the ray origin.
+    float2 xyPlane = floor(currentMipPosition) + floorOffset;
+    xyPlane = xyPlane * currentMipResolution_rcp + uvOffset;
+
+	// o + d * t = p' => t = (p' - o) / d
+    float2 t = (xyPlane - origin.xy) / (direction.xy + 0.0001);
+    tCurrent = min(t.x, t.y);
+    position = origin + tCurrent * direction;
+}
+
+bool AdvanceRay(float3 origin, float3 direction, float2 currentMipPosition, float2 currentMipResolution_rcp, float2 floorOffset, float2 uvOffset, float surfaceZ, inout float3 position, inout float tCurrent)
+{
+	// Create boundary planes
+    float2 xyPlane = floor(currentMipPosition) + floorOffset;
+    xyPlane = xyPlane * currentMipResolution_rcp + uvOffset;
+    float3 boundaryPlanes = float3(xyPlane, surfaceZ);
+
+	// Intersect ray with the half box that is pointing away from the ray origin.
+	// o + d * t = p' => t = (p' - o) / d
+    float3 t = (boundaryPlanes - origin) / (direction + 0.0001);
+
+	// Prevent using z plane when shooting out of the depth buffer.
+    t.z = direction.z < 0 ? t.z : FLT_MAX;
+
+	// Choose nearest intersection with a boundary.
+    float tMin = min(min(t.x, t.y), t.z);
+
+	// Larger z means closer to the camera.
+    bool aboveSurface = surfaceZ < position.z;
+
+	// Decide whether we are able to advance the ray until we hit the xy boundaries or if we had to clamp it at the surface.
+	// We use the asint comparison to avoid NaN / Inf logic, also we actually care about bitwise equality here to see if t_min is the t.z we fed into the min3 above.
+    bool skippedTile = abs(tMin - t.z) > 0.00001 && aboveSurface;
+
+	// Make sure to only advance the ray if we're still above the surface.
+    tCurrent = aboveSurface ? tMin : tCurrent;
+
+	// Advance ray
+    position = origin + tCurrent * direction;
+
+    return skippedTile;
+}
+
+// Based on: https://github.com/GPUOpen-Effects/FidelityFX-SSSR/tree/master
+// Requires origin and direction of the ray to be in screen space [0, 1] x [0, 1]
+float3 HierarchicalRaymarch(float3 origin, float3 direction, float2 screenSize, out bool validHit)
+{
+	// Start on mip with highest detail.
+    int currentMip = HiZTraceMostDetailedLevel;
+
+	// Could recompute these every iteration, but it's faster to hoist them out and update them.
+    float2 currentMipResolution = GetMipResolution(screenSize, currentMip);
+    float2 currentMipResolution_rcp = rcp(currentMipResolution);
+
+	// Offset to the bounding boxes uv space to intersect the ray with the center of the next pixel.
+	// This means we ever so slightly over shoot into the next region.
+    float2 uvOffset = 0.005 * exp2(HiZTraceMostDetailedLevel) / screenSize;
+    uvOffset = (direction.xy < 0) ? -uvOffset : uvOffset;
+
+    // Offset applied depending on current mip resolution to move the boundary to the left/right upper/lower border depending on ray direction.
+    float2 floorOffset = (direction.xy < 0) ? 0 : 1;
+
+	// Initially advance ray to avoid immediate self intersections.
+    float tCurrent;
+    float3 position;
+    InitialAdvanceRay(origin, direction, currentMipResolution, currentMipResolution_rcp, floorOffset, uvOffset, position, tCurrent);
+
+    int i = 0;
+    while (i < HiZTraceIterationsMax && currentMip >= HiZTraceMostDetailedLevel)
+    {
+        if (any(position.xy < 0.0) || any(position.xy > 1.0))
+        {
+            validHit = false;
+            return position;
+        }
+
+        float2 currentMipPosition = currentMipResolution * position.xy;
+        float surfaceZ = tex2Dlod(texture_depth_sampler, float4(position.xy, 0, currentMip)).r;
+
+        bool skippedTile = AdvanceRay(origin, direction, currentMipPosition, currentMipResolution_rcp, floorOffset, uvOffset, surfaceZ, position, tCurrent);
+
+        currentMip += skippedTile ? 1 : -1;
+        currentMipResolution *= skippedTile ? 0.5 : 2;
+        currentMipResolution_rcp *= skippedTile ? 2 : 0.5;
+
+        i++;
+    }
+
+    validHit = (i <= HiZTraceIterationsMax);
+
+    return position;
+}
+
+static const int rayMarchIterationsMax = 60; // primary ray march step count (higher will find more in distance, but slower)
+static const float rayMarchStepIncrease = 1.05f; // primary ray march step increase (higher will travel more distance, but can miss details)
+static const int rayMarchFineIterationsMax = 2; // binary step count (higher is nicer but slower)
+static const float rayMarchTolerance = 0.000002; // early exit factor for binary search (smaller is nicer but slower)
+static const float rayMarchLevelIncrement = 0.3; // level increment based on ray travel distance and roughness (higher values improves performance, but traces at lower resolution)
+
+// samplePos where ray march left of
+float3 BinarySearch(float3 samplePos, float3 V, float level)
+{
+    for (int i = 0; i < rayMarchFineIterationsMax; i++)
+    {
+        float sampleDepth = tex2Dlod(texture_depth_sampler, float4(samplePos.xy, 0, level)).r;
+
+        if (abs(samplePos.z - sampleDepth) < rayMarchTolerance)
+        {
+            return samplePos;
+        }
+
+        if (samplePos.z >= sampleDepth)
+        {
+            samplePos += V;
+        }
+
+        V *= 0.5f;
+        samplePos -= V;
+    }
+
+    return samplePos;
+}
+
+// P and V in screen space [0, 1] x [0, 1]
+float4 RayMarch(float3 P, float3 V, float roughness, float jitter, out bool validHit)
+{
+    float3 samplePos = P + V * jitter;
+    float sampleDepth = 0;
+    float level = 1;
+    int iterations = 0;
+
+    while (iterations <= rayMarchIterationsMax)
+    {
+        if (any(samplePos.xy < 0.0) || any(samplePos.xy > 1.0))
+        {
+            validHit = false;
+            return float4(samplePos, 0);
+        }
+
+        samplePos += V;
+        sampleDepth = tex2Dlod(texture_depth_sampler, float4(samplePos.xy, 0, level)).r; // Removed duplicate declaration
+
+        if (sampleDepth > samplePos.z)
+        {
+            samplePos = BinarySearch(samplePos.xyz, V, level);
+            break;
+        }
+
+        V *= rayMarchStepIncrease;
+        level += rayMarchLevelIncrement * roughness;
+        iterations++;
+    }
+
+    validHit = (iterations <= rayMarchIterationsMax);
+    return float4(samplePos.xy, sampleDepth, 0);
+}
+
+float CalculateEdgeVignette(float2 hitPixel)
+{
+    float2 hitPixelNDC = hitPixel * 2.0 - 1.0;
+
+	//float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
+	//float attenuation = 1.0 - max(0.0, maxDimension - blendScreenEdgeFade) / (1.0 - blendScreenEdgeFade);
+
+    float2 vignette = saturate(abs(hitPixelNDC) * blendScreenEdgeFade - (blendScreenEdgeFade - 1.0f));
+    float attenuation = saturate(1.0 - dot(vignette, vignette));
+
+    return attenuation;
+}
+
+float3 reconstruct_world_position(float2 uv, float depth, bool flipY)
+{
+    //Value range is < -1, and > +1
+    //uv space is 0 to 1
+    //ndc space conversion
+    //ndc space is -1 to 1.
+    float2 ndc = uv * 2.0 - 1.0;
+    //yflips cause the camera to not be hooked up properly
+
+
+    if (flipY)
+    {
+        ndc.y = -ndc.y;
+    }
+
+    float depthNDC = depth * 2.0 - 1.0;
+
+    //clip pos
+    //clip pos is -1..1
+    float4 clipPos = float4(ndc, depthNDC, 1.0);
+
+    //clipPos.y = -clipPos.y;
+
+    //world pos
+    float4 worldPos = mul(clipPos, GetViewProjInv());
+
+    //perspective divide
+    //homogenous coordinate
+    return worldPos.xyz /= worldPos.w;
+}
+
+float ValidateHit(float3 hit, float hitDepth, float2 prevHitUV)
+{
+    float vignetteHit = CalculateEdgeVignette(hit.xy);
+    float vignetteHitPrev = CalculateEdgeVignette(prevHitUV);
+    float vignette = min(vignetteHit, vignetteHitPrev);
+
+    float3 surfaceViewPosition = reconstruct_world_position(hit.xy, hitDepth, false /*, GetViewProjInv()*/);
+    float3 hitViewPosition = reconstruct_world_position(hit.xy, hit.z, false /*, GetViewProjInv()*/);
+
+    float distance = length(surfaceViewPosition - hitViewPosition);
+    float confidence = 1.0 - smoothstep(0.5, traceThickness, distance);
+
+    return vignette * confidence;
+}
+
+//float3 ApplyScreenSpaceBias(float3 screenPos, float3 normal, float biasAmount)
+//{
+//    // Project normal to screen space
+//    float3 normalView = mul(float4(normal, 0.0), g_View).xyz;
+//    float4 normalClip = mul(float4(normalView, 0.0), g_Proj);
+//    float2 normalScreen = normalClip.xy / normalClip.w;
+    
+//    // Apply small offset along normal
+//    screenPos.xy += normalize(normalScreen) * biasAmount * g_ResolutionRcp.xy;
+    
+//    return screenPos;
+//}
+
+
+struct PS_INPUT
+{
+    float2 pos : VPOS;
+    float2 uv : TEXCOORD0;
+    float4 vProj : TEXCOORD3;
+    float3 worldPos : TEXCOORD4;
+};
+
+struct PS_OUTPUT
+{
+    float4 rayIndirectSpecular : COLOR0;
+    float4 rayDirectionPDF : COLOR1;
+    float4 rayLengths : COLOR2;
+};
+
+PS_OUTPUT main(PS_INPUT input)
+{
+    PS_OUTPUT output;
+
+    const int downsampleFactor = 2;
+
+    float2 pixel = input.pos.xy;
+    float2 uv = input.uv;
+
+    float2 screenUV = input.vProj.xy / input.vProj.w;
+    screenUV = screenUV * 0.5 + 0.5;
+
+    float2 flippedUV = screenUV;
+    flippedUV.y = 1.0 - flippedUV.y;
+    
+    int3 Gid = int3(input.pos.xy / 8, 0);
+    int3 GTid = int3(int2(input.pos.xy) % 8, 0);
+    int2 tiles = int2(ceil(1.0 / g_ResolutionRcp.x / 8.0), ceil(1.0 / g_ResolutionRcp.y / 8.0));
+    const int2 pixel2 = GetReflectionIndirectDispatchCoord(Gid, GTid, tiles, downsampleFactor);
+    const float2 uv2 = (pixel + 0.5f) * g_ResolutionRcp.xy;
+
+    float depth = tex2D(texture_depth_sampler, uv).r;
+    float roughness = tex2D(texture_roughness_sampler, uv).g;
+
+    int2 screenJitter = floor(blue_noise(int2(0, 0)).xy * downsampleFactor);
+    int2 jitterPixel = screenJitter + pixel2 * downsampleFactor;
+    float2 jitterUV = (screenJitter + pixel2 + 0.5f) * g_ResolutionRcp;
+
+    if (!NeedReflection(roughness, depth, 0.1))
+    {
+        output.rayIndirectSpecular = float4(0, 0, 0, 0);
+        output.rayDirectionPDF = float4(0, 0, 0, 0);
+        output.rayLengths = 0.0;
+        return output;
+    }
+
+
+    float3 N = decode_oct(tex2D(texture_normal_sampler, uv).rgb);
+    float3 P_world = reconstruct_world_position(uv, depth, false /*, GetViewProjInv()*/);
+    float3 V_world = normalize(P_world - g_EyeOrigin);
+
+    float4 H;
+    float3 L_world;
+
+    float3x3 tangentBasis = GetTangentBasis(N);
+    float3 tangentV = mul(tangentBasis, V_world);
+
+    const float2 bluenoise = blue_noise(pixel).xy;
+    float2 Xi = bluenoise.xy;
+    Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+
+    //H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
+    //H.xyz = mul(H.xyz, tangentBasis);
+    L_world = reflect(-V_world, mul(N.xyx, tangentBasis));
+
+    float4 rayStartClip;
+    {
+        rayStartClip = mul(float4(P_world, 1.0), GetViewProj());
+    }
+
+    float4 rayEndClip;
+    {
+        float3 rayEndWorld = P_world + L_world * 100.0;
+        rayEndClip = mul(float4(rayEndWorld, 1.0), GetViewProj());
+    }
+
+    float3 rayStartScreen = rayStartClip.xyz * rcp(rayStartClip.w);
+    float3 rayEndScreen = rayEndClip.xyz * rcp(rayEndClip.w);
+
+    rayStartScreen.xy = rayStartScreen.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+    rayEndScreen.xy = rayEndScreen.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+    //rayEndScreen.z = rayEndScreen.z * float2(0.5, 0.5) + float2(0.5, 0.5);
+    
+    //rayEndScreen.xy += rayStartScreen.xy + L_world * g_L_world_ctrl;
+    
+    float3 rayDirectionScreen = rayStartScreen - rayEndScreen;
+    //rayDirectionScreen = normalize(rayDirectionScreen);
+    float rayLength = length(rayDirectionScreen.xy);
+
+    //force constant depth
+    //rayDirectionScreen.z = rayStartScreen.z;
+
+
+    bool validHit = false;
+    float2 screenResolution = float2(1.0 / g_ResolutionRcp.x, 1.0 / g_ResolutionRcp.y);
+
+    float initialStep = lerp(0.1, 0.5, roughness) * rayLength;
+    float jitter = blue_noise(pixel);
+    float4 hit = RayMarch(rayStartScreen, rayDirectionScreen * initialStep, roughness, jitter, validHit);
+
+    //hit.y = 1.0f - hit.y;
+    //hit.xy = hit.xy * 0.5f + 0.5f;
+
+    //hit.w /= hit.w;
+    //hit.xy *= 2.0;
+
+    float2 prevHitUV = hit.xy;
+
+    float hitDepth = tex2D(texture_depth_sampler, hit.xy).r;
+
+    float confidence = validHit ? ValidateHit(hit.xyz, hitDepth, prevHitUV) : 0;
+
+    float4 indirectSpecular;
+    indirectSpecular.rgb = confidence > 0 ? tex2D(input_sampler, prevHitUV).rgb : 0;
+    indirectSpecular.a = confidence;
+
+    float3 color = indirectSpecular;
+
+    output.rayDirectionPDF = float4(L_world, 1.0f);
+
+    if (validHit)
+    {
+        // Use the same world space reconstruction for hit point
+        float3 Phit_world = reconstruct_world_position(hit.xy, hitDepth, false);
+        output.rayLengths = distance(P_world, Phit_world);
+    }
+    else
+    {
+        output.rayLengths = 0;
+    }
+
+    //combine outputs to see full reflection direction and stability
+    //output.rayIndirectSpecular = float4(L_world.xy, rayDirectionScreen.xy);
+    //output.rayIndirectSpecular = float4(hit);
+
+    output.rayIndirectSpecular = float4(indirectSpecular.rgb, indirectSpecular.a);
+    return output;
+}

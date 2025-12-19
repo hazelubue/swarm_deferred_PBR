@@ -10,14 +10,6 @@
 #include "shaderapi\ishaderapi.h"
 #include "tier0/memdbgon.h"
 
-//BEGIN_VS_SHADER(DEFPASS_GBUFFER,
-//	"Help for LightmappedGeneric")
-//	BEGIN_SHADER_PARAMS
-//
-//	SHADER_PARAM(MRAOTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_MRAO", "Texture with metalness in R, roughness in G, ambient occlusion in B.");
-//
-//END_SHADER_PARAMS
-
 const int PARALLAX_QUALITY_MAX = 3;
 
 static ConVar mat_pbr_parallaxdepth("mat_pbr_parallaxdepth", ".1"); // 0.04
@@ -30,40 +22,11 @@ static ConVar mat_pbr_iblIntensity("mat_pbr_iblIntensity", "1000.0", FCVAR_CHEAT
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
-static void UTIL_StringToFloatArray(float* pVector, int count, const char* pString)
-{
-	char* pstr, * pfront, tempString[128];
-	int	j;
-
-	Q_strncpy(tempString, pString, sizeof(tempString));
-	pstr = pfront = tempString;
-
-	for (j = 0; j < count; j++)			// lifted from pr_edict.c
-	{
-		pVector[j] = atof(pfront);
-
-		// skip any leading whitespace
-		while (*pstr && *pstr <= ' ')
-			pstr++;
-
-		// skip to next whitespace
-		while (*pstr && *pstr > ' ')
-			pstr++;
-
-		if (!*pstr)
-			break;
-
-		pstr++;
-		pfront = pstr;
-	}
-	for (j++; j < count; j++)
-	{
-		pVector[j] = 0;
-	}
-}
-
 void InitParmsGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
+	const bool bModel = info.bModel;
+	const bool bBumpmap = PARM_TEX(info.iBumpmap);
+
 	if (PARM_NO_DEFAULT(info.iAlphatestRef) ||
 		(PARM_VALID(info.iAlphatestRef) && PARM_FLOAT(info.iAlphatestRef) == 0.0f))
 		params[info.iAlphatestRef]->SetFloatValue(DEFAULT_ALPHATESTREF);
@@ -87,6 +50,10 @@ void InitParmsGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMa
 	InitFloatParam(info.m_nTreeSwaySpeedLerpStart, params, 3.0f);
 	InitFloatParam(info.m_nTreeSwaySpeedLerpEnd, params, 6.0f);
 
+	if (!bModel && bBumpmap)
+	{
+		SET_FLAGS2(MATERIAL_VAR2_LIGHTING_BUMPED_LIGHTMAP);
+	}
 }
 
 void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params)
@@ -113,7 +80,6 @@ void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	{
 		pShader->LoadTexture(info.m_nMRAO);
 	}
-	//if (PARM_DEFINED(info.m_nAlpha)) pShader->LoadTexture(info.m_nAlpha);
 }
 
 void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params,
@@ -122,7 +88,6 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 {
 
 	const bool bModel = info.bModel;
-	//const bool bWater = info.bWater;
 
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 	const bool bFastVTex = g_pHardwareConfig->HasFastVertexTextures();
@@ -133,7 +98,6 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	const bool bBumpmap = PARM_TEX(info.iBumpmap);
 	const bool bBumpmap2 = bBumpmap && PARM_TEX(info.iBumpmap2);
 	const bool bSpecular = PARM_TEX(info.iSpecularTexture);
-	//const bool bAlpha = PARM_TEX(info.m_nAlpha);
 
 	const bool bBlendmodulate = (bAlbedo2 || bBumpmap2) && PARM_TEX(info.iBlendmodulate);
 
@@ -141,10 +105,7 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	const bool bTreeSway = nTreeSwayMode != 0;
 
 	const bool bAlphatest = IS_FLAG_SET(MATERIAL_VAR_ALPHATEST) && bAlbedo;
-	//const bool bOpaque = !IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-
-	// here we are debugging what makes ONLY glass transparent truly to the gbuffer truth.
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT); /*|| PARM_DEFINED(info.m_nTrasncluent);*/
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	const bool bSSBump = bBumpmap && PARM_SET(info.iSSBump);
 
@@ -152,20 +113,11 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	bool bhasMRAO = IsTextureSet(info.m_nMRAO, params);
 
 	bool bHasFlowmap = params[info.FLOWMAP]->IsTexture();
-
-	//bool bHasCubemap = PARM_TEX(info.Envmap);
-
-
-	//Assert(!bIsDecal || bDeferredShading);
-	//Assert(!bTranslucent || bDeferredShading);
+	bool bLightmap = !bModel;
 
 	SHADOW_STATE
 	{
 		pShaderShadow->SetDefaultState();
-		/*if (bTranslucent)
-		{
-			pShaderShadow->EnableBlending(true);
-		}*/
 
 		pShaderShadow->EnableSRGBWrite(false);
 
@@ -192,6 +144,10 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 				iVFmtFlags |= VERTEX_COLOR;
 		}
 
+		if (bLightmap)
+		{
+			iTexCoordNum = 4;
+		}
 
 		pShaderShadow->EnableTexture(SHADER_SAMPLER0, true);
 		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER0, false);
@@ -247,45 +203,36 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		SET_STATIC_VERTEX_SHADER_COMBO(TREESWAY, nTreeSwayMode);
 		SET_STATIC_VERTEX_SHADER(gbuffer_vs30);
 
-		/*if (!bTranslucent)
-		{*/
-			DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
-			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
-			SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
-			SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
-			SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
-			SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
-			SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
-			SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-			SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
-			SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
-			//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
-			SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
-		//}
-		//else
-		//{
-		//	DECLARE_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
-		//	SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
-		//	//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
-		//	SET_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-		//}
-	}
+		DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
+		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
+		SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
+		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
+		SET_STATIC_PIXEL_SHADER_COMBO(NOCULL, bNoCull);
+		SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
+		SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
+		SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
+		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+		SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
+		SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAP, bLightmap);
+		SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
 
-		DYNAMIC_STATE
+		pShader->PI_BeginCommandBuffer();
+
+		// Send ambient cube to the pixel shader, force to black if not available
+		pShader->PI_SetPixelShaderAmbientLightCube(39);
+
+		// Send lighting array to the pixel shader
+		//pShader->PI_SetPixelShaderLocalLighting(PSREG_LIGHT_INFO_ARRAY);
+
+		// Set up shader modulation color
+		pShader->PI_SetModulationPixelShaderDynamicState_LinearColorSpace(PSREG_DIFFUSE_MODULATION);
+
+		pShader->PI_EndCommandBuffer();
+		
+	}
+	DYNAMIC_STATE
 	{
 		Assert(pDeferredContext != NULL);
-
-		//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
-
-		//if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0))
 
 		if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0))
 		{
@@ -334,6 +281,9 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 			if (bhasMRAO)
 				tmpBuf.BindTexture(pShader, SHADER_SAMPLER15, info.m_nMRAO);
 
+			/*if (bLightmap)
+				tmpBuf.BindStandardTexture(SHADER_SAMPLER8, TEXTURE_LIGHTMAP);*/
+
 			if (bTreeSway)
 			{
 				float flParams[4];
@@ -368,10 +318,6 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 			tmpBuf.End();
 
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0, tmpBuf.Copy());
-
-			//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
-
-			//pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0, tmpBuf.Copy());
 		}
 
 		pShaderAPI->SetDefaultState();
@@ -389,18 +335,28 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 		SET_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 #else
-		/*if (!bTranslucent)
-		{*/
-			DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
-			SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
-		/*}
+
+		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+		SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+#endif
+		LightState_t lightState;
+		pShaderAPI->GetDX9LightState(&lightState);
+
+		if (bLightmap)
+			pShaderAPI->BindStandardTexture(SHADER_SAMPLER8, TEXTURE_BLACK);
+
+		// Brushes don't need ambient cubes or dynamic lights
+		if (bModel)
+		{
+			// Models need ambient cube for baked lighting
+			lightState.m_bAmbientLight = true;
+		}
 		else
 		{
-			DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-			SET_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-		}*/
-		
-#endif
+			// Brushes use lightmaps
+			lightState.m_bAmbientLight = false;
+			lightState.m_nNumLights = 0;
+		}
 
 		if (bModel && bFastVTex)
 		{
@@ -424,14 +380,6 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		pShaderAPI->GetWorldSpaceCameraPosition(vEyePos_SpecExponent);
 		//vEyePos_SpecExponent[3] = iEnvMapLOD;
 		pShaderAPI->SetPixelShaderConstant(11, vEyePos_SpecExponent, 1);
-
-		
-
-		/*float flZDists[2];
-		flZDists[0] = GetDeferredExt()->GetZDistNear();
-		flZDists[1] = GetDeferredExt()->GetZDistFar();
-		flZDists[2] = GetDeferredExt()->GetZScale();
-		pShaderAPI->SetPixelShaderConstant(6, flZDists);*/
 
 		pShader->LoadViewMatrixIntoVertexShaderConstant(VERTEX_SHADER_AMBIENT_LIGHT);
 
@@ -536,63 +484,7 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		pShader->SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_13, BASETEXTURETRANSFORM);
 		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0));
 
-		//for glass pass compatibility this uses DEFSTAGE_GBUFFER0 and glass uses DEFSTAGE_GBUFFER1 respectively. Implement this when glass is implemented.
-
-		//pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0));
 	}
-
-
 
 	pShader->Draw();
 }
-
-
-
-//// testing my crappy math
-//float PackLightingControls(int phong_exp, int half_lambert, int litface)
-//{
-//	return (litface +
-//		half_lambert * 2 +
-//		phong_exp * 4) / 255.0f;
-//}
-//
-//void UnpackLightingControls(float mixed,
-//	float& phong_exp, float& half_lambert, float& litface)
-//{
-//	mixed *= 255.0f;
-//
-//	litface = fmod(mixed, 2.0f);
-//	half_lambert = fmod(mixed -= litface, 4.0f);
-//	phong_exp = fmod(mixed -= half_lambert, 256.0f);
-//
-//	half_lambert /= 2.0f;
-//	phong_exp /= 252.0f;
-//}
-//
-//static uint8 packed;
-//
-//CON_COMMAND(test_packing, "")
-//{
-//	if (args.ArgC() < 4)
-//		return;
-//
-//	float res = PackLightingControls(atoi(args[1]),
-//		atoi(args[2]),
-//		atoi(args[3]));
-//
-//	res *= 255.0f;
-//
-//	packed = res;
-//
-//	Msg("packed to: %u\n", packed);
-//}
-//
-//CON_COMMAND(test_unpacking, "")
-//{
-//	float o0, o1, o2;
-//
-//	UnpackLightingControls(packed / 255.0f, o0, o1, o2);
-//
-//	Msg("unpacked to: exp %f, halfl %f, litface %f\n", o0, o1, o2);
-//}
-//

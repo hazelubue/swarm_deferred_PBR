@@ -9,6 +9,7 @@
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
 ConVar building_cubemaps("building_cubemaps", "1");
+ConVar mat_ibl_intensity("mat_ibl_intensity", "1");
 
 void InitParmsComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
@@ -113,11 +114,9 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	const bool bNeedsFresnel = bPhongFresnel || bEnvmapFresnel;
 	const bool bGBufferNormal = bEnvmap || bRimLight || bNeedsFresnel;
 	const bool bWorldEyeVec = bGBufferNormal;
-
-	
-	
-
-	AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
+	const bool bLightMapped = !bModel;
+		
+		AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
 		"blended albedo not supported by gbuffer pass!");
 
 	AssertMsgOnce(IS_FLAG_SET(MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK) == false,
@@ -224,6 +223,7 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		}
 
 		pShaderShadow->EnableTexture(SHADER_SAMPLER11, true);
+		pShaderShadow->EnableTexture(SHADER_SAMPLER12, true);
 
 		pShaderShadow->EnableAlphaWrites(false);
 		pShaderShadow->EnableDepthWrites(!bTranslucent);
@@ -260,6 +260,7 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_MASK, bSelfIllumMask);
 		SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_ENVMAP_ALPHA, bSelfIllumMaskInEnvmapMask);
 		SET_STATIC_PIXEL_SHADER(composite_ps30);
+
 	}
 		DYNAMIC_STATE
 	{
@@ -283,15 +284,10 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 
 			if (bEnvmap)
 			{
-				/*if (building_cubemaps.GetBool())
-					tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_BLACK);
+				if (PARM_TEX(info.iEnvmap) && !bModel)
+					tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iEnvmap);
 				else
-				{*/
-					if (PARM_TEX(info.iEnvmap) && !bModel)
-						tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iEnvmap);
-					else
-						tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_LOCAL_ENV_CUBEMAP);
-				//}
+					tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_LOCAL_ENV_CUBEMAP);
 
 				if (bEnvmapMask)
 					tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iEnvmapMask);
@@ -367,16 +363,11 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 				tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iSelfIllumMask);
 			}
 
-			/*if (bMRAO)
-			{
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER11, info.MRAOTEXTURE);
-			}*/
-
 			int x, y, w, t;
 			pShaderAPI->GetCurrentViewport(x, y, w, t);
 			float fl1[4] = { 1.0f / w, 1.0f / t, 0, 0 };
 
-			tmpBuf.SetPixelShaderConstant(1, fl1);
+			tmpBuf.SetPixelShaderConstant(20, fl1);
 
 			tmpBuf.SetPixelShaderFogParams(2);
 
@@ -387,6 +378,14 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy());
 		}
+
+		//setup matrix data.
+		const Matrix_Data_t& data = GetDeferredExt()->GetCommonData();
+
+		pShaderAPI->SetPixelShaderConstant(13, data.matViewInv.Base(), 4);
+		//pShaderAPI->SetPixelShaderConstant(12, data.matProjInv.Base(), 4);
+		//pShaderAPI->SetPixelShaderConstant(16, data.matView.Base(), 4);
+		//pShaderAPI->SetPixelShaderConstant(20, data.matProj.Base(), 4);
 
 		/*MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
 
@@ -438,7 +437,15 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		pShader->BindTexture(SHADER_SAMPLER2, GetDeferredExt()->GetTexture_LightAccum());
 		pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_LightCtrl());
 
+		if (bLightMapped)
+		{
+			pShader->BindTexture(SHADER_SAMPLER12, GetDeferredExt()->GetTexture_WaterNormals());
+		}
+
 		CommitBaseDeferredConstants_Origin(pShaderAPI, 3);
+
+		float flIblIntensity[4] = { mat_ibl_intensity.GetFloat(), 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(24, flIblIntensity);
 
 		if (bWorldEyeVec)
 		{
@@ -456,7 +463,10 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		{
 			pShaderAPI->SetPixelShaderConstant(10, params[info.iSelfIllumTint]->GetVecValue());
 		}
+
+		pShader->SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, BASETEXTURETRANSFORM);
 	}
 
 	pShader->Draw();
+
 }

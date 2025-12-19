@@ -14,6 +14,7 @@ ITexture *GetDefRT_LightCtrl();
 ITexture* GetDefRT_Reflection();
 ITexture* GetDefRT_Refraction();
 ITexture *GetDefRT_Lightaccum();
+ITexture* GetDefRT_ForwardData();
 
 ITexture *GetDefRT_VolumePrepass();
 ITexture *GetDefRT_VolumetricsBuffer( int index );

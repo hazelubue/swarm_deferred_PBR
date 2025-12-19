@@ -105,6 +105,12 @@
     <ClCompile Include="skydome_atmosphere.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
+    <ClCompile Include="\\host.lan\Data\#hengine\deferred\src\materialsystem\swarmshaders\deferred_screenspace.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="\\host.lan\Data\#hengine\deferred\src\materialsystem\swarmshaders\deferred_screenspace_general.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
     <ClCompile Include="skydome_atmosphere_helper.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
@@ -193,6 +199,9 @@
     </ClInclude>
     <ClInclude Include="common_water_pbr.h">
       <Filter>Shader Source\fxc</Filter>
+    </ClInclude>
+    <ClInclude Include="utilstring_array.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -310,5 +319,13 @@
     <None Include="composite_translucent_ps30.fxc">
       <Filter>Shader Source\fxc</Filter>
     </None>
+    <None Include="multiblend_composite_ps30.fxc" />
+    <None Include="forward_data_ps30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
+    <None Include="forward_data_vs30.fxc">
+      <Filter>Shader Source\fxc</Filter>
+    </None>
+    <None Include="asd.fxc" />
   </ItemGroup>
 </Project>

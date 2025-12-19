@@ -27,6 +27,8 @@
 #include "defpass_composite.h"
 #include "defpass_composite_translucent.h"
 
+#include "utilstring_array.h"
+
 #include "lighting_pass_basic.h"
 #include "lighting_pass_volum.h"
 

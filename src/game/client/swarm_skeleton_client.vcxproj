@@ -1338,6 +1338,7 @@
     <ClInclude Include="c_basetoggle.h" />
     <ClInclude Include="c_colorcorrection.h" />
     <ClInclude Include="c_env_ambient_light.h" />
+    <ClInclude Include="c_env_global_light.h" />
     <ClInclude Include="c_env_projectedtexture.h" />
     <ClInclude Include="c_env_skydome.h" />
     <ClInclude Include="c_gameinstructor.h" />

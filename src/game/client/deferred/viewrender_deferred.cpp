@@ -62,6 +62,7 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+#include <c_env_global_light.h>
 
 
 extern ConVar r_visocclusion;
@@ -138,6 +139,11 @@ extern bool g_bRenderingScreenshot;
 //static FrustumCache_t s_FrustumCache;
 extern FrustumCache_t* FrustumCache(void);
 
+extern Vector g_vecCurrentRenderOrigin;
+extern QAngle g_vecCurrentRenderAngles;
+extern Vector g_vecCurrentVForward, g_vecCurrentVRight, g_vecCurrentVUp;
+extern VMatrix g_matCurrentCamInverse;
+extern bool s_bCanAccessCurrentView;
 
 //-----------------------------------------------------------------------------
 // Describes a pruned set of leaves to be rendered this view. Reference counted
@@ -198,7 +204,8 @@ public:
 
 private:
 	VisibleFogVolumeInfo_t m_fogInfo;
-
+	WaterRenderInfo_t m_waterInfo;
+	bool m_bIsCompositePass;
 };
 
 class CGBufferView : public CBaseWorldViewDeferred
@@ -458,7 +465,7 @@ public:
 	{
 	}
 
-	void Setup(const CViewSetup& view, bool bDrawSkybox, const VisibleFogVolumeInfo_t& fogInfo, const WaterRenderInfo_t& waterInfo);
+	void			Setup(const CViewSetup& view, bool bDrawSkybox, const VisibleFogVolumeInfo_t& fogInfo, const WaterRenderInfo_t& waterInfo);
 	void			Draw();
 
 	class CReflectionView : public CBaseWorldViewDeferred
@@ -466,6 +473,12 @@ public:
 		DECLARE_CLASS(CReflectionView, CBaseWorldViewDeferred);
 	public:
 		CReflectionView(CViewRender* pMainView) : CBaseWorldViewDeferred(pMainView) {}
+
+		virtual bool AdjustView(float waterHeight) override
+		{
+			// Don't let base class modify our already-corrected angles
+			return false;
+		}
 
 		void Setup(bool bReflectEntities);
 		void Draw();
@@ -526,7 +539,7 @@ public:
 	{
 	}
 
-	void			Setup(const CViewSetup& view, bool bDrawSkybox, const VisibleFogVolumeInfo_t& fogInfo, const WaterRenderInfo_t& info);
+	void			Setup(const CViewSetup& view, bool bDrawSkybox, const VisibleFogVolumeInfo_t& fogInfo, const WaterRenderInfo_t& waterInfo);
 	void			Draw();
 
 	class CRefractionView : public CBaseWorldViewDeferred
@@ -547,28 +560,6 @@ public:
 	bool m_bDrawSkybox; // @MULTICORE (toml 8/17/2006): remove after setup hoisted
 
 	CRefractionView m_RefractionView;
-};
-
-class CForwardView : public CBaseWorldViewDeferred
-{
-	DECLARE_CLASS(CForwardView, CBaseWorldViewDeferred);
-public:
-	CForwardView(CViewRender* pMainView) : CBaseWorldViewDeferred(pMainView)
-	{
-	}
-
-	void Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRenderInfo_t& waterInfo);
-	void Draw();
-
-	virtual void PushView(float waterHeight);
-	virtual void PopView();
-
-	static void PushForward(bool bClearDepth = true);
-	static void PopForward();
-
-private:
-	VisibleFogVolumeInfo_t m_fogInfo;
-	bool m_bDrewSkybox;
 };
 
 //-----------------------------------------------------------------------------
@@ -668,8 +659,6 @@ PRECACHE_REGISTER_END()
 extern void AllowCurrentViewAccess(bool allow);
 extern bool IsCurrentViewAccessAllowed();
 
-extern void SetupCurrentView(const Vector& vecOrigin, const QAngle& angles, view_id_t viewID, bool bDrawWorldNormal = false, bool bCullFrontFaces = false);
-
 extern view_id_t CurrentViewID();
 
 //-----------------------------------------------------------------------------
@@ -700,6 +689,7 @@ CDeferredViewRender::CDeferredViewRender()
 void CDeferredViewRender::Init()
 {
 	m_SkydomeMaterial.Init("shaders/skydome", TEXTURE_GROUP_MODEL);
+	m_ForwardData.Init("shaders/WriteFloatData", TEXTURE_GROUP_MODEL);
 	BaseClass::Init();
 
 }
@@ -707,6 +697,13 @@ void CDeferredViewRender::Init()
 void CDeferredViewRender::Shutdown()
 {
 	BaseClass::Shutdown();
+}
+
+IViewRender* GetViewRenderInstance()
+{
+	AssertMsg(g_pCurrentViewRender != NULL, "viewrender creation failed!");
+
+	return g_pCurrentViewRender;
 }
 
 void CDeferredViewRender::LevelInit()
@@ -755,10 +752,6 @@ void CDeferredViewRender::ViewDrawForward(const CViewSetup& view, bool& bDrew3dS
 	unsigned int visFlags;
 	SetupVis(view, visFlags, NULL);
 
-	CRefPtr<CForwardView> pForwardView = new CForwardView(this);
-	pForwardView->Setup(view, bDrew3dSkybox, waterInfo);
-	AddViewToScene(pForwardView);
-
 	DrawViewModels(view, bDrawViewModel, false);
 
 	g_CurrentViewID = oldViewID;
@@ -783,6 +776,8 @@ void CDeferredViewRender::ViewDrawSceneDeferred(const CViewSetup& view, int nCle
 
 	WaterRenderInfo_t waterInfo;
 	DetermineWaterRenderInfo(fogInfo, waterInfo);
+
+	SendForwardData();		//for lights texture
 
 	ViewDrawGBuffer(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
 
@@ -832,6 +827,7 @@ void CDeferredViewRender::ViewDrawSceneDeferred(const CViewSetup& view, int nCle
 			GetDeferredExt()->GetNumActiveForwardLights());
 	}
 
+	GetDeferredExt()->FillDataForFramebuffer();
 
 	ViewDrawForward(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
 
@@ -1046,6 +1042,10 @@ void CDeferredViewRender::ViewDrawComposite(const CViewSetup& view, bool& bDrew3
 	}
 
 	ParticleMgr()->IncrementFrameCode();
+
+	/*CRefPtr<CCompositeView> pCompositeView = new CCompositeView(this);
+	pCompositeView->Setup(view, nClearFlags, drawSkybox, bDrew3dSkybox, viewID);
+	AddViewToScene(pCompositeView);*/
 
 	DrawWorldComposite(view, nClearFlags, drawSkybox);
 
@@ -1264,6 +1264,20 @@ void CDeferredViewRender::DrawLightShadowView(const CViewSetup& view, int iDesir
 	}
 	break;
 	}
+}
+
+void CDeferredViewRender::SendForwardData()
+{
+	CMatRenderContextPtr pRenderContext(materials);
+
+	pRenderContext->Bind(m_ForwardData);
+
+	pRenderContext->MatrixMode(MATERIAL_MODEL);
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+	//pRenderContext->Translate(view.origin.x, view.origin.y, view.origin.z);
+
+	pRenderContext->OverrideDepthEnable(false, true);
 }
 
 void CDeferredViewRender::DrawSky(const CViewSetup& view)
@@ -1490,6 +1504,7 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 	CViewSetup worldView = view;
 
 	CLightingEditor* pLightEditor = GetLightingEditor();
+	CViewSetup originalView = worldView;
 
 	if (pLightEditor->IsEditorActive())
 		pLightEditor->GetEditorView(&worldView.origin, &worldView.angles);
@@ -1538,6 +1553,14 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 		g_pClientShadowMgr->UpdateSplitscreenLocalPlayerShadowSkip();
 
 		ProcessDeferredGlobals(worldView);
+
+		IViewRender* pViewRender = GetViewRenderInstance();
+		if (pViewRender)
+		{
+			CViewSetup originalView = pViewRender->GetOriginalViewSetup(); // Need to add this method
+			ProcessGlobalMatrixData(originalView);
+		}
+		
 		GetLightingManager()->LightSetup(worldView);
 
 		PreViewDrawScene(worldView);
@@ -1864,12 +1887,14 @@ struct defData_setGlobals
 {
 public:
 	Vector orig, fwd;
+	float Clock;
 	float zDists[2];
 	VMatrix frustumDeltas;
 
 	static void Fire(defData_setGlobals d)
 	{
 		IDeferredExtension* pDef = GetDeferredExt();
+		pDef->CommitClock(d.Clock);
 		pDef->CommitOrigin(d.orig);
 		pDef->CommitViewForward(d.fwd);
 		pDef->CommitZDists(d.zDists[0], d.zDists[1]);
@@ -1879,9 +1904,18 @@ public:
 
 void CDeferredViewRender::ProcessDeferredGlobals(const CViewSetup& view)
 {
-	VMatrix matPerspective, matView, matViewProj, screen2world;
+
+	s_bCanAccessCurrentView = true;
+
+	VMatrix matView = CurrentWorldToViewMatrix();
+	Vector vFwd = CurrentViewForward();
+	VMatrix matPerspective, matViewProj, screen2world;
 	matView.Identity();
 	matView.SetupMatrixOrgAngles(vec3_origin, view.angles);
+
+	VMatrix matProj;
+	CMatRenderContextPtr pRenderContext(materials);
+	pRenderContext->GetMatrix(MATERIAL_PROJECTION, &matProj);
 
 	MatrixSourceToDeviceSpace(matView);
 	g_ShaderEditorSystem->SetMainViewMatrix(matView);
@@ -1926,9 +1960,107 @@ void CDeferredViewRender::ProcessDeferredGlobals(const CViewSetup& view)
 	data.frustumDeltas.SetBasisVectors(frustum_cc, frustum_right, frustum_up);
 	data.frustumDeltas = data.frustumDeltas.Transpose3x3();
 
+	C_GlobalLight* pLight = C_GlobalLight::s_pCSMLight;
+
+	float clockValue;
+	if (pLight && pLight->m_bEnabled)
+	{
+		clockValue = gpGlobals->curtime * pLight->DayNightTimescale();
+		clockValue = floor(clockValue * 100.0f) / 100.0f;  //0.1 sec
+	}
+
+	data.Clock = clockValue;
+
+	//this works but flickers
+	/*C_GlobalLight* pLight = C_GlobalLight::s_pCSMLight;
+
+	if (pLight)
+	{
+		data.Clock = gpGlobals ? gpGlobals->curtime * pLight->DayNightTimescale() : 0.0f;
+	}*/
+
+
 	QUEUE_FIRE(defData_setGlobals, Fire, data);
 }
 
+VMatrix CDeferredViewRender::GetProjMatrix(const CViewSetup& viewSetup)
+{
+	float y = -viewSetup.y;
+	float x = -viewSetup.x;
+
+	float fov = viewSetup.fov;
+	fov = 1.0f / tan(DEG2RAD(fov * 0.5f));
+	float f = viewSetup.zFar;
+	float n = viewSetup.zNear;
+	//float aspect = viewSetup.aspect;
+	VMatrix mProj;
+	mProj.Init(
+		fov, 0, x, 0,
+		0, fov, y, 0,
+		0, 0, 1, 1,
+		0, 0, -1, 0
+	);
+
+	return mProj;
+}
+
+VMatrix CDeferredViewRender::GetViewMatrix(const Vector& pos, const QAngle& ang)
+{
+
+	Vector D, R, U;
+	AngleVectors(ang, &D, &R, &U);
+	Vector P = -pos;
+	VMatrix mFirst;
+	mFirst.Init(
+		R.x, R.y, R.z, 0,
+		U.x, U.y, U.z, 0,
+		D.x, D.y, D.z, 0,
+		0, 0, 0, 1
+	);
+	VMatrix mSecond;
+	mSecond.Init(
+		1, 0, 0, P.x,
+		0, 1, 0, P.y,
+		0, 0, 1, P.z,
+		0, 0, 0, 1
+	);
+	mFirst = mFirst * mSecond;
+	return mFirst;
+}
+
+VMatrix CDeferredViewRender::GetViewProjMatrix(const CViewSetup& viewSetup)
+{
+	Vector pos = viewSetup.origin;
+	QAngle ang = viewSetup.angles;
+	VMatrix mView = GetViewMatrix(pos, ang);
+	VMatrix mProj = GetProjMatrix(viewSetup);
+	mProj = mProj * mView;
+	return mProj;
+}
+
+
+void CDeferredViewRender::ProcessGlobalMatrixData(const CViewSetup& view)
+{
+	VMatrix matView, matProj, matViewProj, matViewProjInv;
+	render->GetMatricesForView(view, &matView, &matProj, &matViewProj, &matViewProjInv);
+
+	VMatrix matViewInv, matProjInv;
+	MatrixInverseGeneral(matView, matViewInv);
+	MatrixInverseGeneral(matProj, matProjInv);
+
+	IDeferredExtension* pDef = GetDeferredExt();
+	pDef->CommitMatrixData(
+		NULL,        
+		view.origin,
+		view.zNear,
+		view.zFar,
+		matView,          
+		matProj,         
+		matViewInv,      
+		matProjInv,       
+		matViewProjInv     
+	);
+}
 //-----------------------------------------------------------------------------
 // Returns true if the view plane intersects the water
 //-----------------------------------------------------------------------------
@@ -3018,7 +3150,7 @@ void CGBufferView::PushGBuffer(bool bInitial, float zScale, bool bClearDepth)
 	pRenderContext->SetRenderTargetEx(1, pDepth);
 	//pRenderContext->SetRenderTargetEx(3, GetDefRT_Specular());
 	pRenderContext->SetRenderTargetEx(3, GetDefRT_LightCtrl());
-	//pRenderContext->SetRenderTargetEx(2, GetDefRT_Alpha());
+	pRenderContext->SetRenderTargetEx(2, GetDefRT_WaterNormals());
 
 	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
 		DEFERRED_RENDER_STAGE_GBUFFER);
@@ -3179,94 +3311,6 @@ void CGBufferViewWater::PopGBufferWater()
 //
 //	pRenderContext->PopRenderTargetAndViewport();
 //}
-
-void CForwardView::Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRenderInfo_t& waterInfo)
-{
-	m_fogInfo.m_bEyeInFogVolume = false;
-	m_bDrewSkybox = bDrewSkybox;
-
-	BaseClass::Setup(view);
-	m_bDrawWorldNormal = true;
-
-	// Different draw flags for forward rendering
-	m_ClearFlags = VIEW_CLEAR_DEPTH;  // Clear depth but NOT color (we composite over existing)
-	m_DrawFlags = DF_DRAW_ENTITITES;
-
-	// We're doing forward rendering, so we don't write to GBuffer
-	// We just render directly to the backbuffer/composition target
-
-	// Handle water if needed
-	if (waterInfo.m_bDrawWaterSurface)
-	{
-		m_DrawFlags |= DF_RENDER_WATER;
-	}
-
-	m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
-}
-
-void CForwardView::Draw()
-{
-	VPROF("CViewRender::ForwardView::Draw");
-
-	CMatRenderContextPtr pRenderContext(materials);
-	PIXEVENT(pRenderContext, "CForwardView::Draw");
-
-#if defined(_X360)
-	pRenderContext->PushVertexShaderGPRAllocation(32);
-#endif
-
-	// Set up for forward rendering
-	SetupCurrentView(origin, angles, VIEW_MAIN);  // Or a new VIEW_FORWARD if you want
-
-	// Set forward render stage
-	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-		DEFERRED_RENDER_STAGE_FORWARD);
-
-	pRenderContext.SafeRelease();
-
-	// Setup and draw
-	DrawSetup(m_fogInfo.m_flWaterHeight, m_DrawFlags, 0);
-	DrawExecute(m_fogInfo.m_flWaterHeight, CurrentViewID(), 0, false);
-
-	pRenderContext.GetFrom(materials);
-
-#if defined(_X360)
-	pRenderContext->PopVertexShaderGPRAllocation();
-#endif
-}
-
-void CForwardView::PushView(float waterHeight)
-{
-	PushForward(!m_bDrewSkybox);
-}
-
-void CForwardView::PopView()
-{
-	PopForward();
-}
-
-void CForwardView::PushForward(bool bClearDepth)
-{
-	CMatRenderContextPtr pRenderContext(materials);
-
-	// For forward rendering, we typically render to the composition buffer
-	// or directly to the backbuffer
-	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-		DEFERRED_RENDER_STAGE_FORWARD);
-
-	// Don't clear color - we're compositing over existing deferred result
-	if (bClearDepth)
-	{
-		pRenderContext->ClearBuffers(false, true, false);
-	}
-}
-
-void CForwardView::PopForward()
-{
-	CMatRenderContextPtr pRenderContext(materials);
-	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-		DEFERRED_RENDER_STAGE_INVALID);
-}
 
 //-----------------------------------------------------------------------------
 // Pops a water render target
@@ -3598,6 +3642,7 @@ void CSimpleWorldViewDeferred::Setup(const CViewSetup& view, int nClearFlags, bo
 
 	m_pCustomVisibility = pCustomVisibility;
 	m_fogInfo = fogInfo;
+	m_waterInfo = waterInfo;
 }
 
 
@@ -4035,6 +4080,19 @@ void CAboveWaterDeferredView::Draw()
 
 	CMatRenderContextPtr pRenderContext(materials);
 
+	/*if (m_bIsCompositePass)
+	{
+		CDeferredViewRender* pDeferredViewRender = static_cast<CDeferredViewRender*>(GetViewRenderInstance());
+		if (pDeferredViewRender)
+		{
+			SetupCurrentView(pDeferredViewRender->GetReflectionViewOrigin(),
+				pDeferredViewRender->GetReflectionViewAngles(),
+				CurrentViewID(),
+				m_bDrawWorldNormal,
+				false);
+		}
+	}*/
+
 	// render the reflection
 	if (m_waterInfo.m_bReflect)
 	{
@@ -4128,32 +4186,42 @@ static ConVar r_visocclusion("r_visocclusion", "0", FCVAR_CHEAT);
 //-----------------------------------------------------------------------------
 void CAboveWaterDeferredView::CReflectionView::Draw()
 {
+	CAboveWaterDeferredView* pOuter = GetOuter();
+	float waterHeight = pOuter->m_fogInfo.m_flWaterHeight;
+
+	// Calculate reflection camera
+	Vector reflectionOrigin = pOuter->origin;
+	reflectionOrigin.z = 2.0f * waterHeight - pOuter->origin.z;
+
+	QAngle reflectionAngles = pOuter->angles;
+	reflectionAngles.x = -reflectionAngles.x; // Mirror pitch
+	reflectionAngles.z = 0; // No roll
+
+	// Set up and render the reflection view
+	origin = reflectionOrigin;
+	angles = reflectionAngles;
 
 
-	// Store off view origin and angles and set the new view
 	int nSaveViewID = CurrentViewID();
-	SetupCurrentView(origin, angles, VIEW_REFLECTION);
 
-	// Disable occlusion visualization in reflection
+	::SetupCurrentView(reflectionOrigin, reflectionAngles, VIEW_REFLECTION);
+
 	bool bVisOcclusion = r_visocclusion.GetBool();
 	r_visocclusion.SetValue(0);
 
 	CGBufferView::PushGBuffer;
 	PushComposite();
 
-	DrawSetup(GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0.0f, GetOuter()->m_fogInfo.m_nVisibleFogVolumeLeaf);
-
+	DrawSetup(waterHeight, m_DrawFlags, 0.0f, pOuter->m_fogInfo.m_nVisibleFogVolumeLeaf);
 	EnableWorldFog();
-	DrawExecute(GetOuter()->m_fogInfo.m_flWaterHeight, VIEW_REFLECTION, 0.0f);
+	DrawExecute(waterHeight, VIEW_REFLECTION, 0.0f);
+
 	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	r_visocclusion.SetValue(bVisOcclusion);
+	::SetupCurrentView(pOuter->origin, pOuter->angles, (view_id_t)nSaveViewID);
 
-	// finish off the view and restore the previous view.
-	SetupCurrentView(origin, angles, (view_id_t)nSaveViewID);
-
-	// This is here for multithreading
 	CMatRenderContextPtr pRenderContext(materials);
 	pRenderContext->Flush();
 }
@@ -4428,3 +4496,4 @@ void CUnderWaterDeferredView::CRefractionView::Draw()
 
 	SetupCurrentView(origin, angles, (view_id_t)nSaveViewID);
 }
+

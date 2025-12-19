@@ -92,6 +92,8 @@ ConVar zoom_sensitivity_ratio( "zoom_sensitivity_ratio", "1.0", 0, "Additional m
 
 // Each MOD implements GetViewRenderInstance() and provides either a default object or a subclassed object!!!
 IViewRender *view = NULL;	// set in cldll_client_init.cpp if no mod creates their own
+static CViewSetup* m_OriginalViewSetup = NULL;
+bool g_bOriginalViewSetupValid = false;
 
 #if _DEBUG
 bool g_bRenderingCameraView = false;
@@ -305,6 +307,8 @@ void CViewRender::Init( void )
 		g_vecVUp[ i ].Init();
 		g_matCamInverse[ i ].Identity();
 	}
+
+	g_pScreenSpaceEffects->EnableScreenSpaceEffect("ssr");
 }
 
 CMaterialReference &CViewRender::GetWhite()
@@ -351,6 +355,7 @@ void CViewRender::LevelShutdown( void )
 //-----------------------------------------------------------------------------
 void CViewRender::Shutdown( void )
 {
+	g_pScreenSpaceEffects->DisableScreenSpaceEffect("ssr");
 
 	m_TranslucentSingleColor.Shutdown();
 	m_ModulateSingleColor.Shutdown();
@@ -889,6 +894,17 @@ void CViewRender::SetUpOverView()
 	// render->DrawTopView( true );
 }
 
+void SetOriginalViewSetup(const CViewSetup& setup)
+{
+	*m_OriginalViewSetup = setup;
+	g_bOriginalViewSetupValid = true;
+}
+
+const CViewSetup& CViewRender::GetOriginalViewSetup() const
+{
+	return *m_OriginalViewSetup;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Render current view into specified rectangle
 // Input  : *rect - 
@@ -996,6 +1012,8 @@ void CViewRender::Render( vrect_t *rect )
 
 		// This is the hook for per-split screen player views
 		C_BaseEntity::PreRenderEntities( hh );
+
+		//SetOriginalViewSetup(view);
 
 		if ( ( ss_debug_draw_player.GetInt() < 0 ) || ( hh == ss_debug_draw_player.GetInt() ) )
 		{

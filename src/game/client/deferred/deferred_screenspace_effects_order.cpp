@@ -15,7 +15,6 @@
 #include "ScreenSpaceEffects.h"
 //#include "deferred_screenspace_effects.h"
 
-
 //ADD_SCREENSPACE_EFFECT(CSSGI, hl2_ssgi);
 
 

@@ -203,10 +203,10 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 	bool DrawToGBuffer( IMaterialVar **params )
 	{
 
-		const bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
+		//const bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
 		const bool bTranslucent = IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT );
 
-		return !bTranslucent && !bIsDecal;
+		return !bTranslucent; //&& !bIsDecal;
 	}
 
 	SHADER_INIT_PARAMS()
@@ -282,10 +282,10 @@ BEGIN_VS_SHADER( DEFERRED_MODEL, "" )
 			return "VertexlitGeneric";
 
 		//const bool bTranslucent = IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT );
-		const bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
+		//const bool bIsDecal = IS_FLAG_SET( MATERIAL_VAR_DECAL );
 
-		if ( bIsDecal )
-			return "VertexlitGeneric";
+		//if ( bIsDecal )
+		//	return "VertexlitGeneric";
 
 		return 0;
 	}

@@ -1,6 +1,6 @@
 
 float g_SpecularBoost = 0.5f;
-float g_DiffuseScale = 1.0f;
+float g_DiffuseScale = 111.0f;
 float g_SheenStrength = 0.5f;
 
 static const int MAX_FORWARD_LIGHTS = 16;
@@ -209,17 +209,9 @@ float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightP
 float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float NdotH,
     float3 L, float3 normal, float3 vWorldPos, float3 vEye,
     float roughness, float metalness, float3 albedo,
-    float3 effectiveLightColor, float attenuation, float lightType)
+    float3 effectiveLightColor, float attenuation, float lightType, float3 lightPos, float lightRadius)
 {
     float3 V = normalize(vEye - vWorldPos);
-
-    int dataIndex = index * 2;
-
-    float3 lightPos = g_ForwardLightData[dataIndex].xyz;
-    float lightRadius = g_ForwardLightData[dataIndex].w;
-
-    float3 toLight = lightPos - vWorldPos;
-    float lightToWorldDist = length(toLight);
 
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo.rgb, metalness);
 

@@ -338,6 +338,8 @@ public:
 
 	virtual void	InitFadeData( void );
 
+	virtual const CViewSetup& GetOriginalViewSetup() const;
+
 protected:
 	// Sets up the view parameters
 	void			SetUpView();
@@ -362,6 +364,8 @@ protected:
 	virtual void	RenderPreScene( const CViewSetup &view ) { }
 	virtual void	PreViewDrawScene( const CViewSetup &view ) {}
 	virtual void	PostViewDrawScene( const CViewSetup &view ) {}
+
+
 
 public:
 					CViewRender();
@@ -439,6 +443,10 @@ public:
 	{
 		m_UnderWaterOverlayMaterial.Init( pMaterial );
 	}
+
+	// Determines what kind of water we're going to use
+	void			DetermineWaterRenderInfo(const VisibleFogVolumeInfo_t& fogVolumeInfo, WaterRenderInfo_t& info);
+
 protected:
 	int				m_BuildWorldListsNumber;
 
@@ -474,8 +482,6 @@ protected:
 
 
 
-	// Determines what kind of water we're going to use
-	void			DetermineWaterRenderInfo( const VisibleFogVolumeInfo_t &fogVolumeInfo, WaterRenderInfo_t &info );
 
 	bool			UpdateRefractIfNeededByList( CViewModelRenderablesList::RenderGroups_t &list );
 	void			DrawRenderablesInList( CViewModelRenderablesList::RenderGroups_t &list, int flags = 0 );

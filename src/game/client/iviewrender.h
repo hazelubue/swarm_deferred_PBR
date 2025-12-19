@@ -91,6 +91,8 @@ public:
 	// First argument is 3d view setup, second is for the HUD (in most cases these are ==, but in split screen the client .dll handles this differently)
 	virtual void		RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw ) = 0;
 
+	virtual const CViewSetup& GetOriginalViewSetup() const = 0;
+
 	// What are we currently rendering? Returns a combination of DF_ flags.
 	virtual int GetDrawFlags() = 0;
 
@@ -142,10 +144,16 @@ public:
 	virtual void		FreezeFrame( float flFreezeTime ) = 0;
 
 	virtual void		InitFadeData( void ) = 0;
+
 };
 
-extern IViewRender *view;
 
-extern IViewRender *GetViewRenderInstance();
+
+extern CViewSetup* m_OriginalViewSetup;
+extern bool g_bOriginalViewSetupValid;
+
+extern IViewRender* view;
+
+extern IViewRender* GetViewRenderInstance();
 
 #endif // IVIEWRENDER_H

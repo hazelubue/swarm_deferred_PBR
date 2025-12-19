@@ -73,6 +73,7 @@ SHADER_PARAM(ALPHATEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "a alpha texture!");
 SHADER_PARAM(TRANSPARENCY, SHADER_PARAM_TYPE_INTEGER, "", "");
 SHADER_PARAM(TRANSLUCENT, SHADER_PARAM_TYPE_INTEGER, "", "");
 SHADER_PARAM(SELFILLUM, SHADER_PARAM_TYPE_INTEGER, "", "");
+SHADER_PARAM(LIGHTMAP, SHADER_PARAM_TYPE_TEXTURE, "", "");
 END_SHADER_PARAMS
 
 void SetupParmsGBuffer0(defParms_gBuffer0& p)
@@ -208,10 +209,10 @@ void SetupParmsComposite_translucent(defParms_composite_translucent& p)
 
 bool DrawToGBuffer(IMaterialVar** params)
 {
-	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
+	//const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
-	return !bTranslucent && !bIsDecal;
+	return !bTranslucent; //&& !bIsDecal;
 }
 
 SHADER_INIT_PARAMS()
@@ -295,10 +296,10 @@ SHADER_FALLBACK
 	}
 
 	//const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
+	//const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
 
-	if (bIsDecal)
-		return "LightmappedGeneric";
+	//if (bIsDecal)
+	//	return "LightmappedGeneric";
 
 	return 0;
 }

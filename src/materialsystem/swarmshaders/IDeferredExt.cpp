@@ -19,6 +19,7 @@ CDeferredExtension::CDeferredExtension()
 	m_pTexLightAccum = NULL;
     m_pRefraction = NULL;
     m_pReflection = NULL;
+    m_pForwardData = NULL;
 #if ( DEFCFG_LIGHTCTRL_PACKING == 0 )
 	m_pTexLightCtrl = NULL;
 #endif
@@ -94,9 +95,35 @@ void CDeferredExtension::CommitVolumeData( const volumeData_t &data )
 	m_dataVolume = data;
 }
 
-void CDeferredExtension::CommitLightData_Global( const lightData_Global_t &data )
+void CDeferredExtension::CommitLightData_Global( const lightData_Global_t &data)
 {
 	m_globalLight = data;
+}
+
+void CDeferredExtension::CommitClock(const float& curTime)
+{
+    m_curTime = curTime;
+}
+
+void CDeferredExtension::CommitMatrixData(float* data, const Vector& origin, const float& zNear, const float& zFar,
+    VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
+    VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv)
+{
+    if (data)
+    {
+        memcpy(&m_commonData, data, sizeof(m_commonData));
+    }
+    else
+    {
+        m_commonData.vecOrigin = Vector4D(origin.x, origin.y, origin.z, 1.0f);
+        m_commonData.flZDists[0] = zNear;
+        m_commonData.flZDists[1] = zFar;
+        m_commonData.matView = m_matView;
+        m_commonData.matProj = m_matProj;
+        m_commonData.matViewInv = m_matViewInv;
+        m_commonData.matProjInv = m_matProjInv;
+        m_commonData.matLockedViewProjInv = m_matLockedViewProjInv;
+    }
 }
 
 float *CDeferredExtension::CommitLightData_Common( float *pFlData, int numRows,
@@ -115,13 +142,14 @@ float *CDeferredExtension::CommitLightData_Common( float *pFlData, int numRows,
 	return pReturn;
 }
 
-void CDeferredExtension::CommitTexture_General( ITexture *pTexNormals, ITexture *pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction, ITexture *pTexDepth,
+void CDeferredExtension::CommitTexture_General( ITexture *pTexNormals, ITexture *pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction, ITexture *pTexDepth, ITexture* pTexForwardData,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum )
 {
 	m_pTexWaterNormals = pTexWaterNormals;
 	m_pTexNormals = pTexNormals;
 	m_pTexDepth = pTexDepth;
+    m_pForwardData = pTexForwardData;
     m_pRefraction = pTexRefraction;
     m_pReflection = pTexReflection;
 	m_pTexLightAccum = pTexLightAccum;
@@ -151,6 +179,12 @@ void CDeferredExtension::CommitTexture_VolumePrePass( ITexture *pTexVolumePrePas
 {
 	m_pTexVolumePrePass = pTexVolumePrePass;
 }
+
+float CDeferredExtension::GetCurrentTime()
+{
+    return m_curTime;
+}
+
 void CDeferredExtension::ClearForwardLights()
 {
     m_vecForwardLights.RemoveAll();
@@ -322,4 +356,14 @@ int CDeferredExtension::GetNumActiveForwardLights()
     return m_vecForwardLights.Count();
 }
 
+void CDeferredExtension::FillDataForFramebuffer()
+{
+    //// Get light data
+    //GetForwardLightData();
+    //GetForwardSpotlightData();
 
+    //pRenderContext->PopRenderTargetAndViewport();
+
+    //pRenderContext->CopyRenderTargetToTextureEx(m_pForwardData, 0, NULL, NULL);
+
+}

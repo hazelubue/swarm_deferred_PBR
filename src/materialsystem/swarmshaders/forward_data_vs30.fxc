@@ -1,0 +1,35 @@
+#include "common_vs_fxc.h"
+
+struct VS_INPUT
+{
+    float3 vPositionOs : POSITION;
+    float4 vColor : COLOR0;
+    float2 vTexCoord : TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+    float4 vPositionPs : POSITION;
+    float4 vColor : COLOR0;
+    float2 vTexCoord : TEXCOORD0;
+};
+
+// Standard Source Engine vertex shader constants
+const float4 cBaseTexCoordTransform[2] : register(SHADER_SPECIFIC_CONST_8);
+
+void main(VS_INPUT i, out VS_OUTPUT o)
+{
+    // This is the CORRECT way to transform vertex position
+    o.vPositionPs = mul(float4(i.vPositionOs, 1.0f), cModelViewProj);
+    
+    o.vColor = i.vColor;
+    
+    // If you want to apply texture coordinate transformation:
+    // float2 transformedTexCoord = i.vTexCoord;
+    // transformedTexCoord.x = dot(float4(i.vTexCoord.x, i.vTexCoord.y, 0, 1), cBaseTexCoordTransform[0]);
+    // transformedTexCoord.y = dot(float4(i.vTexCoord.x, i.vTexCoord.y, 0, 1), cBaseTexCoordTransform[1]);
+    // o.vTexCoord = transformedTexCoord;
+    
+    // Or just pass through:
+    o.vTexCoord = i.vTexCoord;
+}

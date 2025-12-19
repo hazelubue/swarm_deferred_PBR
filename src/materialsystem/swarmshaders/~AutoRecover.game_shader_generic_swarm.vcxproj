@@ -226,10 +226,11 @@
     <ClCompile Include="lighting_volume.cpp" />
     <ClCompile Include="skydome_atmosphere.cpp" />
     <ClCompile Include="skydome_atmosphere_helper.cpp" />
-    <ClCompile Include="ssgi.cpp" />
     <ClCompile Include="volume_blend.cpp" />
     <ClCompile Include="volume_prepass.cpp" />
     <ClCompile Include="water.cpp" />
+    <ClCompile Include="\\host.lan\Data\#hengine\deferred\src\materialsystem\swarmshaders\deferred_screenspace.cpp" />
+    <ClCompile Include="\\host.lan\Data\#hengine\deferred\src\materialsystem\swarmshaders\deferred_screenspace_general.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h" />
@@ -260,6 +261,7 @@
     <ClInclude Include="lighting_pass_basic.h" />
     <ClInclude Include="lighting_pass_volum.h" />
     <ClInclude Include="skydome_atmosphere_helper.h" />
+    <ClInclude Include="utilstring_array.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\dx9sdk\lib\d3dx9.lib" />
@@ -282,6 +284,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </CustomBuildStep>
+    <None Include="asd.fxc" />
     <None Include="bdef.bat" />
     <None Include="buildshaders.bat" />
     <None Include="..\..\devtools\bin\fxc_prep.pl" />
@@ -296,6 +299,8 @@
     <None Include="debug_shadow_ortho_ps30.fxc" />
     <None Include="defconstruct_vs30.fxc" />
     <None Include="deferred_shaders.txt" />
+    <None Include="forward_data_ps30.fxc" />
+    <None Include="forward_data_vs30.fxc" />
     <None Include="gaussianblur_6_ps30.fxc" />
     <None Include="gbuffer_ps30.fxc" />
     <None Include="gbuffer_translucent_ps30.fxc" />
@@ -303,6 +308,7 @@
     <None Include="lightingpass_global_ps30.fxc" />
     <None Include="lightingpass_point_ps30.fxc" />
     <None Include="lightingpass_spot_ps30.fxc" />
+    <None Include="multiblend_composite_ps30.fxc" />
     <None Include="passthru_vs30.fxc" />
     <None Include="screenspace_vs30.fxc" />
     <None Include="shadowpass_ps30.fxc" />
