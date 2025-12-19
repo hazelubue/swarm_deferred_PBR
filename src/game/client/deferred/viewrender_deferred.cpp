@@ -1488,6 +1488,8 @@ void CDeferredViewRender::DrawViewModels(const CViewSetup& view, bool drawViewmo
 	pRenderContext->PopMatrix();
 }
 
+
+
 //-----------------------------------------------------------------------------
 // Purpose: This renders the entire 3D view and the in-game hud/viewmodel
 // Input  : &view - 
@@ -1500,7 +1502,6 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	int slot = GET_ACTIVE_SPLITSCREEN_SLOT();
-
 	CViewSetup worldView = view;
 
 	CLightingEditor* pLightEditor = GetLightingEditor();
@@ -1557,8 +1558,8 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 		IViewRender* pViewRender = GetViewRenderInstance();
 		if (pViewRender)
 		{
-			CViewSetup originalView = pViewRender->GetOriginalViewSetup(); // Need to add this method
-			ProcessGlobalMatrixData(originalView);
+			//CViewSetup originalView = pViewRender->SetOriginalViewSetup();
+			ProcessGlobalMatrixData(*m_OriginalViewSetup);
 		}
 		
 		GetLightingManager()->LightSetup(worldView);

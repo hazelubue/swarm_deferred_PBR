@@ -900,10 +900,10 @@ void SetOriginalViewSetup(const CViewSetup& setup)
 	g_bOriginalViewSetupValid = true;
 }
 
-const CViewSetup& CViewRender::GetOriginalViewSetup() const
-{
-	return *m_OriginalViewSetup;
-}
+//const CViewSetup& CViewRender::GetOriginalViewSetup()
+//{
+//	return *m_OriginalViewSetup;
+//}
 
 //-----------------------------------------------------------------------------
 // Purpose: Render current view into specified rectangle
@@ -1013,7 +1013,7 @@ void CViewRender::Render( vrect_t *rect )
 		// This is the hook for per-split screen player views
 		C_BaseEntity::PreRenderEntities( hh );
 
-		//SetOriginalViewSetup(view);
+		SetOriginalViewSetup(view);
 
 		if ( ( ss_debug_draw_player.GetInt() < 0 ) || ( hh == ss_debug_draw_player.GetInt() ) )
 		{

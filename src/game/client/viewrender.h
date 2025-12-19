@@ -338,7 +338,7 @@ public:
 
 	virtual void	InitFadeData( void );
 
-	virtual const CViewSetup& GetOriginalViewSetup() const;
+	//virtual const CViewSetup& GetOriginalViewSetup();
 
 protected:
 	// Sets up the view parameters
@@ -495,6 +495,7 @@ protected:
 
 	// This stores the current view
  	CViewSetup		m_CurrentView;
+	CViewSetup*		m_OriginalViewSetup;
 
 	// VIS Overrides
 	// Set to true to turn off client side vis ( !!!! rendering will be slow since everything will draw )
