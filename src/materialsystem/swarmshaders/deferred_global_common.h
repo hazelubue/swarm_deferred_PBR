@@ -60,6 +60,9 @@
 
 #define DEFRTNAME_PROJECTABLE_VGUI "_rt_projvgui_"				// + %02i
 
+#define DEFRTNAME_REFLECTION "_rt_WaterReflection"
+#define DEFRTNAME_REFRACTION "_rt_WaterRefraction"
+
 
 /* One physical shadowmap for multiple cascades
  * The default projection shaders REQUIRE this

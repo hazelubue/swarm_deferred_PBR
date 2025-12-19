@@ -13,9 +13,14 @@ struct ForwardLightData
 {
 	float position[4];      // xyz = position, w = radius
 	float color[4];         // xyz = color, w = intensity  
+};
+
+struct ForwardSpotLightData
+{
 	float direction[4];     // xyz = direction, w = type (0=point, 1=spot, 2=directional)
 	float attenuation[4];   // x = constant, y = linear, z = quadratic, w = spotCutoff
 };
+
 
 struct lightData_Global_t
 {
@@ -105,7 +110,8 @@ public:
 		int numShadowedCookied, int numShadowed,
 		int numCookied, int numSimple ) = 0;
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture *pTexDepth,
+	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
+		ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum ) = 0;
 	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth ) = 0;
@@ -121,16 +127,21 @@ public:
 		float quadraticAtt = 0.0f, float spotCutoff = 45.0f) = 0;
 
 	virtual float* GetForwardLightData() = 0;
+	virtual float* GetForwardSpotlightData() = 0;
 
 	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights) = 0;
+	virtual void CommitForwardSpotLightData(const ForwardSpotLightData* pLights, int numLights) = 0;
 	virtual int GetForwardLights_NumRows() = 0;
+	virtual int GetForwardSpotLights_NumRows() = 0;
 	virtual int GetNumActiveForwardLights() = 0;
 
 private:
 	
 
 	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
+	CUtlVector<float> m_vecForwardSpotLightBuffer;
 	bool m_bForwardLightsDirty;
 };
 
@@ -164,7 +175,8 @@ public:
 		int numShadowedCookied, int numShadowed,
 		int numCookied, int numSimple );
 
-	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture *pTexDepth,
+	virtual void CommitTexture_General( ITexture *pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction, 
+		ITexture *pTexDepth,
 		ITexture *pTexLightingCtrl,
 		ITexture *pTexLightAccum );
 	virtual void CommitTexture_CascadedDepth( const int &index, ITexture *pTexShadowDepth );
@@ -201,6 +213,8 @@ public:
 	inline ITexture *GetTexture_LightAccum();
 
 	inline ITexture *GetTexture_LightCtrl();
+	inline ITexture* GetTexture_Reflection();
+	inline ITexture* GetTexture_Refraction();
 
 	inline ITexture *GetTexture_ShadowDepth_Ortho( const int &index );
 	inline ITexture *GetTexture_ShadowDepth_DP( const int &index );
@@ -215,16 +229,21 @@ public:
 		float quadraticAtt = 0.0f, float spotCutoff = 45.0f);
 
 	virtual void CommitForwardLightData(const ForwardLightData* pLights, int numLights);
+	virtual void CommitForwardSpotLightData(const ForwardSpotLightData* pLights, int numLights);
 
 	virtual float* GetForwardLightData();
+	virtual float* GetForwardSpotlightData();
 	virtual int GetForwardLights_NumRows();
+	virtual int GetForwardSpotLights_NumRows();
 	virtual int GetNumActiveForwardLights();
 
 private:
 
 	
 	CUtlVector<ForwardLightData> m_vecForwardLights;
+	CUtlVector<ForwardSpotLightData> m_vecForwardSpotLights;
 	CUtlVector<float> m_vecForwardLightBuffer;
+	CUtlVector<float> m_vecForwardSpotLightBuffer;
 	bool m_bForwardLightsDirty;
 
 	bool m_bDefLightingEnabled;
@@ -253,6 +272,8 @@ private:
 	ITexture *m_pTexDepth;
 	ITexture *m_pTexLightAccum;
 	ITexture *m_pTexLightCtrl;
+	ITexture * m_pReflection;
+	ITexture* m_pRefraction;
 
 	ITexture *m_pTexShadowDepth_Ortho[ MAX_SHADOW_ORTHO ];
 	ITexture *m_pTexShadowDepth_DP[ MAX_SHADOW_DP ];
@@ -357,6 +378,16 @@ ITexture *CDeferredExtension::GetTexture_LightAccum()
 ITexture *CDeferredExtension::GetTexture_LightCtrl()
 {
 	return m_pTexLightCtrl;
+}
+
+ITexture* CDeferredExtension::GetTexture_Reflection()
+{
+	return m_pReflection;
+}
+
+ITexture* CDeferredExtension::GetTexture_Refraction()
+{
+	return m_pRefraction;
 }
 ITexture *CDeferredExtension::GetTexture_ShadowDepth_Ortho( const int &index )
 {

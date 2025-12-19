@@ -1,7 +1,5 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // $MULTITEXTURE && $BASETEXTURE
-// $SIMPLEOVERLAY && $BASETEXTURE
-// $SIMPLEOVERLAY && !$FLOWMAP
 // $FLOWMAP && $MULTITEXTURE
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
 // ( $FLASHLIGHT || $LIGHTMAPWATERFOG ) && ( ( $BASETEXTURE && !$FLOWMAP ) || $MULTITEXTURE )
@@ -32,9 +30,9 @@ class water_deferred_ps30_Static_Index
 	unsigned int m_nABOVEWATER : 2;
 	unsigned int m_nFLOWMAP : 2;
 	unsigned int m_nFLOW_DEBUG : 2;
+	unsigned int m_nFLASHLIGHT : 2;
 	unsigned int m_nLIGHTMAPWATERFOG : 2;
 	unsigned int m_nFORCEFRESNEL : 2;
-	unsigned int m_nSIMPLEOVERLAY : 2;
 #ifdef _DEBUG
 	bool m_bBASETEXTURE : 1;
 	bool m_bMULTITEXTURE : 1;
@@ -43,9 +41,9 @@ class water_deferred_ps30_Static_Index
 	bool m_bABOVEWATER : 1;
 	bool m_bFLOWMAP : 1;
 	bool m_bFLOW_DEBUG : 1;
+	bool m_bFLASHLIGHT : 1;
 	bool m_bLIGHTMAPWATERFOG : 1;
 	bool m_bFORCEFRESNEL : 1;
-	bool m_bSIMPLEOVERLAY : 1;
 #endif	// _DEBUG
 public:
 	void SetBASETEXTURE( int i )
@@ -111,6 +109,15 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetFLASHLIGHT( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nFLASHLIGHT = i;
+#ifdef _DEBUG
+		m_bFLASHLIGHT = true;
+#endif	// _DEBUG
+	}
+
 	void SetLIGHTMAPWATERFOG( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -129,15 +136,6 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetSIMPLEOVERLAY( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nSIMPLEOVERLAY = i;
-#ifdef _DEBUG
-		m_bSIMPLEOVERLAY = true;
-#endif	// _DEBUG
-	}
-
 	water_deferred_ps30_Static_Index( IShaderShadow* pShaderShadow, IMaterialVar** params )
 	{
 		m_nBASETEXTURE = 0;
@@ -147,9 +145,9 @@ public:
 		m_nABOVEWATER = 0;
 		m_nFLOWMAP = 0;
 		m_nFLOW_DEBUG = 0;
+		m_nFLASHLIGHT = 0;
 		m_nLIGHTMAPWATERFOG = 0;
 		m_nFORCEFRESNEL = 0;
-		m_nSIMPLEOVERLAY = 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = false;
 		m_bMULTITEXTURE = false;
@@ -158,30 +156,53 @@ public:
 		m_bABOVEWATER = false;
 		m_bFLOWMAP = false;
 		m_bFLOW_DEBUG = false;
+		m_bFLASHLIGHT = false;
 		m_bLIGHTMAPWATERFOG = false;
 		m_bFORCEFRESNEL = false;
-		m_bSIMPLEOVERLAY = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bBASETEXTURE && m_bMULTITEXTURE && m_bREFLECT && m_bREFRACT && m_bABOVEWATER && m_bFLOWMAP && m_bFLOW_DEBUG && m_bLIGHTMAPWATERFOG && m_bFORCEFRESNEL && m_bSIMPLEOVERLAY );
+		Assert( m_bBASETEXTURE && m_bMULTITEXTURE && m_bREFLECT && m_bREFRACT && m_bABOVEWATER && m_bFLOWMAP && m_bFLOW_DEBUG && m_bFLASHLIGHT && m_bLIGHTMAPWATERFOG && m_bFORCEFRESNEL );
 		AssertMsg( !( m_nMULTITEXTURE && m_nBASETEXTURE ), "Invalid combo combination ( MULTITEXTURE && BASETEXTURE )" );
-		AssertMsg( !( m_nSIMPLEOVERLAY && m_nBASETEXTURE ), "Invalid combo combination ( SIMPLEOVERLAY && BASETEXTURE )" );
-		AssertMsg( !( m_nSIMPLEOVERLAY && !m_nFLOWMAP ), "Invalid combo combination ( SIMPLEOVERLAY && !FLOWMAP )" );
 		AssertMsg( !( m_nFLOWMAP && m_nMULTITEXTURE ), "Invalid combo combination ( FLOWMAP && MULTITEXTURE )" );
-		return ( 2 * m_nBASETEXTURE ) + ( 4 * m_nMULTITEXTURE ) + ( 8 * m_nREFLECT ) + ( 16 * m_nREFRACT ) + ( 32 * m_nABOVEWATER ) + ( 64 * m_nFLOWMAP ) + ( 128 * m_nFLOW_DEBUG ) + ( 384 * m_nLIGHTMAPWATERFOG ) + ( 768 * m_nFORCEFRESNEL ) + ( 1536 * m_nSIMPLEOVERLAY ) + 0;
+		AssertMsg( !( ( m_nFLASHLIGHT || m_nLIGHTMAPWATERFOG ) && ( ( m_nBASETEXTURE && !m_nFLOWMAP ) || m_nMULTITEXTURE ) ), "Invalid combo combination ( ( FLASHLIGHT || LIGHTMAPWATERFOG ) && ( ( BASETEXTURE && !FLOWMAP ) || MULTITEXTURE ) )" );
+		return ( 8 * m_nBASETEXTURE ) + ( 16 * m_nMULTITEXTURE ) + ( 32 * m_nREFLECT ) + ( 64 * m_nREFRACT ) + ( 128 * m_nABOVEWATER ) + ( 256 * m_nFLOWMAP ) + ( 512 * m_nFLOW_DEBUG ) + ( 1536 * m_nFLASHLIGHT ) + ( 3072 * m_nLIGHTMAPWATERFOG ) + ( 6144 * m_nFORCEFRESNEL ) + 0;
 	}
 };
 
-#define shaderStaticTest_water_deferred_ps30 psh_forgot_to_set_static_BASETEXTURE + psh_forgot_to_set_static_MULTITEXTURE + psh_forgot_to_set_static_REFLECT + psh_forgot_to_set_static_REFRACT + psh_forgot_to_set_static_ABOVEWATER + psh_forgot_to_set_static_FLOWMAP + psh_forgot_to_set_static_FLOW_DEBUG + psh_forgot_to_set_static_LIGHTMAPWATERFOG + psh_forgot_to_set_static_FORCEFRESNEL + psh_forgot_to_set_static_SIMPLEOVERLAY
+#define shaderStaticTest_water_deferred_ps30 psh_forgot_to_set_static_BASETEXTURE + psh_forgot_to_set_static_MULTITEXTURE + psh_forgot_to_set_static_REFLECT + psh_forgot_to_set_static_REFRACT + psh_forgot_to_set_static_ABOVEWATER + psh_forgot_to_set_static_FLOWMAP + psh_forgot_to_set_static_FLOW_DEBUG + psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_LIGHTMAPWATERFOG + psh_forgot_to_set_static_FORCEFRESNEL
 
 
 class water_deferred_ps30_Dynamic_Index
 {
+	unsigned int m_nFLASHLIGHTSHADOWS : 2;
+	unsigned int m_nUSE_FORWARD_RENDERING : 2;
 	unsigned int m_nPIXELFOGTYPE : 2;
+#ifdef _DEBUG
+	bool m_bFLASHLIGHTSHADOWS : 1;
+	bool m_bUSE_FORWARD_RENDERING : 1;
+#endif	// _DEBUG
 public:
+	void SetFLASHLIGHTSHADOWS( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nFLASHLIGHTSHADOWS = i;
+#ifdef _DEBUG
+		m_bFLASHLIGHTSHADOWS = true;
+#endif	// _DEBUG
+	}
+
+	void SetUSE_FORWARD_RENDERING( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nUSE_FORWARD_RENDERING = i;
+#ifdef _DEBUG
+		m_bUSE_FORWARD_RENDERING = true;
+#endif	// _DEBUG
+	}
+
 	void SetPIXELFOGTYPE( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
@@ -190,14 +211,21 @@ public:
 
 	water_deferred_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
+		m_nFLASHLIGHTSHADOWS = 0;
+		m_nUSE_FORWARD_RENDERING = 0;
 		m_nPIXELFOGTYPE = ( pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z ) ;
+#ifdef _DEBUG
+		m_bFLASHLIGHTSHADOWS = false;
+		m_bUSE_FORWARD_RENDERING = false;
+#endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		return ( 1 * m_nPIXELFOGTYPE ) + 0;
+		Assert( m_bFLASHLIGHTSHADOWS && m_bUSE_FORWARD_RENDERING );
+		return ( 1 * m_nFLASHLIGHTSHADOWS ) + ( 2 * m_nUSE_FORWARD_RENDERING ) + ( 4 * m_nPIXELFOGTYPE ) + 0;
 	}
 };
 
-#define shaderDynamicTest_water_deferred_ps30 1
+#define shaderDynamicTest_water_deferred_ps30 psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_USE_FORWARD_RENDERING
 

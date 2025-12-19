@@ -217,7 +217,6 @@
     <ClCompile Include="defpass_composite.cpp" />
     <ClCompile Include="defpass_composite_translucent.cpp" />
     <ClCompile Include="defpass_gbuffer.cpp" />
-    <ClCompile Include="defpass_gbuffer_water.cpp" />
     <ClCompile Include="defpass_shadow.cpp" />
     <ClCompile Include="IDeferredExt.cpp" />
     <ClCompile Include="lighting_global.cpp" />
@@ -225,7 +224,8 @@
     <ClCompile Include="lighting_pass_volum.cpp" />
     <ClCompile Include="lighting_world.cpp" />
     <ClCompile Include="lighting_volume.cpp" />
-    <ClCompile Include="ssgi.cpp" />
+    <ClCompile Include="skydome_atmosphere.cpp" />
+    <ClCompile Include="skydome_atmosphere_helper.cpp" />
     <ClCompile Include="volume_blend.cpp" />
     <ClCompile Include="volume_prepass.cpp" />
     <ClCompile Include="water.cpp" />
@@ -243,6 +243,7 @@
     <ClInclude Include="common_shadowmapping_fxc.h" />
     <ClInclude Include="common_vertexlitgeneric_dx9.h" />
     <ClInclude Include="common_vs_fxc.h" />
+    <ClInclude Include="common_water_pbr.h" />
     <ClInclude Include="cpp_shader_constant_register_map.h" />
     <ClInclude Include="deferred_context.h" />
     <ClInclude Include="deferred_global_common.h" />
@@ -252,12 +253,12 @@
     <ClInclude Include="defpass_composite.h" />
     <ClInclude Include="defpass_composite_translucent.h" />
     <ClInclude Include="defpass_gbuffer.h" />
-    <ClInclude Include="defpass_gbuffer_water.h" />
     <ClInclude Include="defpass_shadow.h" />
     <ClInclude Include="IDeferredExt.h" />
     <ClInclude Include="lighting_helper.h" />
     <ClInclude Include="lighting_pass_basic.h" />
     <ClInclude Include="lighting_pass_volum.h" />
+    <ClInclude Include="skydome_atmosphere_helper.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\dx9sdk\lib\d3dx9.lib" />

@@ -553,6 +553,7 @@ void CLightingManager::RenderLights( const CViewSetup &view, CDeferredViewRender
 		IMaterial *pMatVolumeWorld;
 		int constCount_simple;
 		int constCount_advanced;
+		int pMatLighType;
 	};
 
 	Lightpass_t lightTypes[] =
@@ -1022,73 +1023,95 @@ void CLightingManager::CollectForwardLights()
 	m_vecForwardLights.RemoveAll();
 	m_bForwardLightsDirty = true;
 
-	DebugMsg("Stage: CollectForwardLights - Starting collection\n");
+	FOR_EACH_VEC_FAST(def_light_t*, m_hRenderLights, l)
+	{
+		if (l->flDistance_ViewOrigin > (l->iVisible_Dist + l->iVisible_Range))
+			continue;
 
-	// Collect from rendered lights
-	DebugMsg("  Rendering %d lights, collecting forward lights...\n", m_hRenderLights.Count());
+		// Calculate light style fade
+		float flLightstyle = DoLightStyle(l);
+		float flMasterFade = flLightstyle * (1.0f - SATURATE((l->flDistance_ViewOrigin - l->iVisible_Dist) / l->iVisible_Range));
+
+		ForwardLightData lightData;
+
+		// [0]: position.xyz + radius.w
+		lightData.position[0] = l->pos.x;
+		lightData.position[1] = l->pos.y;
+		lightData.position[2] = l->pos.z;
+		lightData.position[3] = l->flRadius;
+
+		// [1]: color.xyz + intensity.w  
+		lightData.color[0] = l->col_diffuse.x * flMasterFade;
+		lightData.color[1] = l->col_diffuse.y * flMasterFade;
+		lightData.color[2] = l->col_diffuse.z * flMasterFade;
+		lightData.color[3] = l->IsSpot() ? 1.0f : 0.0f;  // Type in .w
+
+		m_vecForwardLights.AddToTail(lightData);
+	}
+	FOR_EACH_VEC_FAST_END
+}
+
+
+void CLightingManager::CollectSpotlightData()
+{
+	m_vecForwardSpotLights.RemoveAll();
+	m_bForwardLightsDirty = true;
 
 	FOR_EACH_VEC_FAST(def_light_t*, m_hRenderLights, l)
 	{
 		if (l->flDistance_ViewOrigin > (l->iVisible_Dist + l->iVisible_Range))
 			continue;
 
-		ForwardLightData lightData;
-
-		// Position and radius
-		lightData.position[0] = l->pos.x;
-		lightData.position[1] = l->pos.y;
-		lightData.position[2] = l->pos.z;
-		lightData.position[3] = l->flRadius;
-
-		// Color and intensity
 		float flLightstyle = DoLightStyle(l);
 		float flMasterFade = flLightstyle * (1.0f - SATURATE((l->flDistance_ViewOrigin - l->iVisible_Dist) / l->iVisible_Range));
 
-		lightData.color[0] = l->col_diffuse.x * flMasterFade;
-		lightData.color[1] = l->col_diffuse.y * flMasterFade;
-		lightData.color[2] = l->col_diffuse.z * flMasterFade;
-		lightData.color[3] = 1.0f; // Intensity multiplier
+		ForwardSpotLightData lightData;
 
-		// Direction and type
 		if (l->IsSpot())
 		{
-			lightData.direction[0] = l->backDir.x;
-			lightData.direction[1] = l->backDir.y;
-			lightData.direction[2] = l->backDir.z;
-			lightData.direction[3] = 1.0f; // Spot light
+			// Negate backDir to get forward direction
+			lightData.direction[0] = -l->backDir.x;
+			lightData.direction[1] = -l->backDir.y;
+			lightData.direction[2] = -l->backDir.z;
+			lightData.direction[3] = l->flSpotCone_Inner;  // Inner cone cosine
+
+			lightData.attenuation[0] = 1.0f;
+			lightData.attenuation[1] = 0.0f;
+			lightData.attenuation[2] = 0.0f;
+			lightData.attenuation[3] = l->flSpotCone_Outer;  // Outer cone cosine
 		}
 		else
 		{
-			lightData.direction[0] = 0;
-			lightData.direction[1] = 0;
-			lightData.direction[2] = 0;
-			lightData.direction[3] = 0.0f; // Point light
+			// Point light
+			lightData.direction[0] = 0.0f;
+			lightData.direction[1] = 0.0f;
+			lightData.direction[2] = 0.0f;
+			lightData.direction[3] = 0.0f;
+
+			lightData.attenuation[0] = 1.0f;
+			lightData.attenuation[1] = 0.0f;
+			lightData.attenuation[2] = 0.0f;
+			lightData.attenuation[3] = 0.0f;
 		}
 
-		// Attenuation
-		lightData.attenuation[0] = 1.0f; // Constant
-		lightData.attenuation[1] = 1.0f / l->flRadius; // Linear
-		lightData.attenuation[2] = 1.0f / (l->flRadius * l->flRadius); // Quadratic
-		lightData.attenuation[3] = l->IsSpot() ? l->flSpotCone_Outer : 180.0f; // Spot cutoff
-
-		m_vecForwardLights.AddToTail(lightData);
-
-		DebugMsg("  Added forward light %d: Pos(%.1f,%.1f,%.1f) R=%.1f Type=%d\n",
-			m_vecForwardLights.Count() - 1,
-			l->pos.x, l->pos.y, l->pos.z,
-			l->flRadius,
-			l->IsSpot() ? 1 : 0);
+		m_vecForwardSpotLights.AddToTail(lightData);
 	}
 	FOR_EACH_VEC_FAST_END
-
-		DebugMsg("Stage: CollectForwardLights - Collected %d forward lights\n", m_vecForwardLights.Count());
 }
+
 
 const ForwardLightData* CLightingManager::GetForwardLightData(int index) const
 {
 	if (index < 0 || index >= m_vecForwardLights.Count())
 		return NULL;
 	return &m_vecForwardLights[index];
+}
+
+const ForwardSpotLightData* CLightingManager::GetForwardSpotLightData(int index) const
+{
+	if (index < 0 || index >= m_vecForwardSpotLights.Count())
+		return NULL;
+	return &m_vecForwardSpotLights[index];
 }
 
 void CLightingManager::CommitForwardLightsToExtension()
@@ -1104,5 +1127,21 @@ void CLightingManager::CommitForwardLightsToExtension()
 	{
 		// Clear forward lights if none available
 		GetDeferredExt()->CommitForwardLightData(NULL, 0);
+	}
+}
+
+void CLightingManager::CommitForwardSpotLightsToExtension()
+{
+	if (m_vecForwardSpotLights.Count() > 0)
+	{
+		GetDeferredExt()->CommitForwardSpotLightData(
+			m_vecForwardSpotLights.Base(),
+			m_vecForwardSpotLights.Count()
+		);
+	}
+	else
+	{
+		// Clear forward lights if none available
+		GetDeferredExt()->CommitForwardSpotLightData(NULL, 0);
 	}
 }

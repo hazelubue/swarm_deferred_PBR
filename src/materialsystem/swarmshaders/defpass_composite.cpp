@@ -8,7 +8,7 @@
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
-ConVar building_cubemaps("building_cubemaps", "0");
+ConVar building_cubemaps("building_cubemaps", "1");
 
 void InitParmsComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
@@ -39,6 +39,9 @@ void InitPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 {
 	if (PARM_DEFINED(info.iAlbedo))
 		pShader->LoadTexture(info.iAlbedo);
+
+	/*if (PARM_DEFINED(info.SELFILLUM))
+		params[info.SELFILLUM]->SetIntValue(1);*/
 
 	if (PARM_DEFINED(info.iEnvmap))
 		pShader->LoadCubeMap(info.iEnvmap);
@@ -100,7 +103,7 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	const bool bBlendmodulate2 = bBlendmodulate && PARM_TEX(info.iBlendmodulate2);
 	const bool bBlendmodulate3 = bBlendmodulate && PARM_TEX(info.iBlendmodulate3);
 
-	const bool bSelfIllum = !bAlbedo2 && IS_FLAG_SET(MATERIAL_VAR_SELFILLUM);
+	const bool bSelfIllum = !bAlbedo2 && PARM_TEX(info.SELFILLUM);
 	const bool bSelfIllumMaskInEnvmapMask = bSelfIllum && bEnvmapMask && PARM_SET(info.iSelfIllumMaskInEnvmapAlpha);
 	const bool bSelfIllumMask = bSelfIllum && !bSelfIllumMaskInEnvmapMask && !bEnvmapMask && PARM_TEX(info.iSelfIllumMask);
 
@@ -111,8 +114,8 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	const bool bGBufferNormal = bEnvmap || bRimLight || bNeedsFresnel;
 	const bool bWorldEyeVec = bGBufferNormal;
 
-	//const bool bMRAO = PARM_SET(info.MRAOTEXTURE);
-
+	
+	
 
 	AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
 		"blended albedo not supported by gbuffer pass!");
@@ -280,15 +283,15 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 
 			if (bEnvmap)
 			{
-				if (building_cubemaps.GetBool())
+				/*if (building_cubemaps.GetBool())
 					tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_BLACK);
 				else
-				{
+				{*/
 					if (PARM_TEX(info.iEnvmap) && !bModel)
 						tmpBuf.BindTexture(pShader, SHADER_SAMPLER3, info.iEnvmap);
 					else
 						tmpBuf.BindStandardTexture(SHADER_SAMPLER3, TEXTURE_LOCAL_ENV_CUBEMAP);
-				}
+				//}
 
 				if (bEnvmapMask)
 					tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iEnvmapMask);
@@ -385,6 +388,26 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy());
 		}
 
+		/*MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
+
+		bool bWriteDepthToAlpha;
+		bool bWriteWaterFogToAlpha;
+		
+		bWriteDepthToAlpha = pShaderAPI->ShouldWriteDepthToDestAlpha();
+		bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
+		AssertMsg(!(bWriteDepthToAlpha && bWriteWaterFogToAlpha),
+			"Can't write two values to alpha at the same time.");
+		
+		float fWriteDepthToAlpha = bWriteDepthToAlpha && IsPC() ? 1.0f : 0.0f;
+		float fWriteWaterFogToDestAlpha = bWriteWaterFogToAlpha ? 1.0f : 0.0f;
+		float vShaderControls[4] = {
+			0.0,
+			fWriteDepthToAlpha,
+			fWriteWaterFogToDestAlpha,
+			0.0
+		};
+		pShaderAPI->SetPixelShaderConstant(12, vShaderControls, 1);*/
+
 		pShaderAPI->SetDefaultState();
 
 		if (bModel && bFastVTex)
@@ -398,6 +421,7 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 
 		DECLARE_DYNAMIC_PIXEL_SHADER(composite_ps30);
 		SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
+		//SET_DYNAMIC_PIXEL_SHADER_COMBO(WRITEWATERFOGTODESTALPHA, false);
 		SET_DYNAMIC_PIXEL_SHADER(composite_ps30);
 
 		if (bModel && bFastVTex)

@@ -7,6 +7,11 @@ const float2 g_vecFullScreenTexel : register(c1);
 const float4 g_vecFogParams : register(c2);
 const float3 g_vecOrigin : register(c3);
 
+static const int MAX_FORWARD_LIGHTS = 16;
+float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c63);
+float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c31);
+float4 g_ForwardLightCount : register(c11);
+
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
 {
     float3 dp1 = ddx(P);
@@ -25,7 +30,7 @@ float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out fl
 
 float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, 111.0f) * roughness;
+    return F0 + (max(1.0f.xxx - F0, F0) - F0) * pow(1.0f - cosTheta, 1.11f) * roughness;
 }
 
 float3 fresnelSchlick(float cosTheta, float3 F0)
@@ -183,94 +188,79 @@ float3 Diffuse_OrenNayar(float3 DiffuseColor, float Roughness, float NoV, float 
     return DiffuseColor / 3.1456 * (C1 + C2) * (1 + Roughness * 0.5);
 }
 
-void calculateLight(float3 lightIn, float4 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, float3 vWorldPos, float3 vEye, float roughness, float metalness, float lightDirectionAngle, float3 albedo, out float3 Diffuse, out float3 Specular)
+float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightPos, float radius)
 {
-    float3 L = normalize(lightIn);
-    float3 V = normalize(lightOut);
-    float3 N = normalize(normal);
+    float3 toLight = lightPos - worldPos;
+    float dist = length(toLight);
+    float3 L = toLight / dist;
 
-    float3 HalfAngle = normalize(L + V);
-    float3 H = (dot(HalfAngle, HalfAngle) > 0.0f) ? HalfAngle : N;
+    float distNorm = dist / radius;
+    float fade = saturate(1.0f - distNorm);
+    fade = fade * fade;
 
-    float cosLightIn = max(0.0f, dot(N, L));
-    float cosHalfAngle = max(0.0f, dot(N, H));
+    int spotDataIndex = lightIndex * 2;
 
-    float cosDirectAngle = max(0.0f, dot(L, H));
+    float3 spotForwardDir = g_ForwardSpotLightData[spotDataIndex].xyz;
+    float coneInner = g_ForwardSpotLightData[spotDataIndex].w;
+    float coneOuter = g_ForwardSpotLightData[spotDataIndex + 1].w;
 
-    float HV = max(0.0f, dot(H, V));
-    float HL = max(0.0f, dot(H, L));
-    float NdotVF = dot(normal, V);
-    float NdotV = max(0.0f, dot(normal, V));
-    float NV = max(0.0f, dot(N, V));
-    float LN = cosLightIn;
-    float VoH = max(0.0f, dot(V, H));
-    float VdotH = max(0.0f, dot(V, H));
-    float NdotL = max(0.0f, dot(N, L));
-    float vDotN = max(0.0f, dot(V, N));
+    float spotDot = dot(normalize(spotForwardDir), -L);
+    float spotAtten = smoothstep(coneOuter, coneInner, spotDot);
 
+    return fade * spotAtten;
+}
 
-    //corrected fresnel with correct values.
-    //old implentation caused dark burning spots on any material.
-    float3 F = fresnelSchlickRoughness(vDotN, fresnelReflectance, roughness);
-    float3 F2 = fresnelSchlickRoughness(NdotV, fresnelReflectance, roughness);
-    float3 F3 = fresnelSchlickRoughness(NdotL, fresnelReflectance, roughness);
+float3 calculateLight(int index, float NdotV, float NdotL, float VdotH, float NdotH,
+    float3 L, float3 normal, float3 vWorldPos, float3 vEye,
+    float roughness, float metalness, float3 albedo,
+    float3 effectiveLightColor, float attenuation, float lightType)
+{
+    float3 V = normalize(vEye - vWorldPos);
 
-    float alpha = roughness * roughness;
+    int dataIndex = index * 2;
 
-    float D = ndfGGX(cosHalfAngle, roughness);
-    // use Sam Pavloc's function.
-    float G = Visibility_SmithGGX(NdotV, NdotL, alpha);
-    // add specular occlusion for self shadowing.
-    //float specAO = ComputeSpecularAO(NdotV, ao, roughness);
-    // Calculate geometric attenuation for specular BRDF
-    //float G = GaSchlickGGXRemapped(cosLightIn, NdotV, roughness);
-    // Diffuse scattering happens due to light being refracted multiple times by a dielectric medium
-    // Metals on the other hand either reflect or absorb energ so diffuse contribution is always, zero
-    // To be energy conserving we must scale diffuse BRDF contribution based on Fresnel factor & metalness
-#if SPECULAR
-    // Metalness is not used if F0 map is available
-    float3 kd = float3(1, 1, 1) - F;
-#else
-    //float3 kdF2 = float3(1, 1, 1) - F2;
-    float3 kd = (float3(1, 1, 1) - F) * rcp(max(float3(0.1, 0.1, 0.1), float3(1, 1, 1) - F2));
-#endif
+    float3 lightPos = g_ForwardLightData[dataIndex].xyz;
+    float lightRadius = g_ForwardLightData[dataIndex].w;
 
-    // composite all of our fresnel, account for size distortion of lights.
-    // important that metalness is used here
+    float3 toLight = lightPos - vWorldPos;
+    float lightToWorldDist = length(toLight);
+
+    float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo.rgb, metalness);
+
+    float3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+    float3 F2 = fresnelSchlickRoughness(NdotV, F0, roughness);
+    float3 F3 = fresnelSchlickRoughness(NdotL, F0, roughness);
     float3 Fc = lerp(F, F2 * F3, saturate(roughness * (1.0 - metalness)));
 
-    //compute ambient here once instead of per loop.
-    //float3 ambient = g_flMixedData[index + 2].xyz;
+    float alpha = roughness * roughness;
+    float D = ndfGGX(NdotH, roughness);
 
-    //float groundIntensity = dot(ambient, float3(0.2126, 0.7152, 0.0722));
-    //groundIntensity = saturate(groundIntensity);
+    float G = Visibility_SmithGGX(NdotV, NdotL, alpha);
 
-    //float3 groundColor = albedo * groundIntensity;
+    float3 kd = (1.0 - F) * (1.0 - metalness);
 
-    //F2 is stable allows for non black spots of specular
-    float3 diffuseBRDF = Diffuse_OrenNayar(F, roughness, NV, LN, VoH) * g_DiffuseScale;
-    float3 sheenBRDF = SheenBRDF_DreamWorks(N, V, L, albedo, g_SheenStrength, roughness);
+    float3 diffuseBRDF = Diffuse_OrenNayar(kd * albedo, roughness, NdotV, NdotL, VdotH);
 
-    float3 specularBRDF = (Fc * D * G) / max(0.00001, 4.0f * cosLightIn * lightDirectionAngle);
-    //specularBRDF *= specAO;
-    //float3 CompositeAmbient = Ambient;/*DoAmbient( UV, vWorldPos, normal, vEye, roughness, albedo, ambient, groundColor);*/
+    float3 sheenBRDF = SheenBRDF_DreamWorks(normal, V, L, albedo, 0.01, roughness);
 
-    //composite everything
-    //float3 finalColor = (diffuseBRDF + specularBRDF * g_SpecularBoost + sheenBRDF + CompositeAmbient) * lightIntensity * LN;
+    float3 specularBRDF = (Fc * D * G) / max(0.00001, 4.0 * NdotV * NdotL);
 
-    Diffuse = (diffuseBRDF + sheenBRDF) * lightIntensity * LN;
-    Specular = specularBRDF * g_SpecularBoost * lightIntensity;
+    float3 diffuse = (diffuseBRDF + sheenBRDF) * effectiveLightColor * NdotL;
+    float3 specular = specularBRDF * effectiveLightColor * NdotL * 0.5;
 
-#if LIGHTMAPPED && !FLASHLIGHT
-    return specularBRDF * lightIntensity * LN;
-#else
+    if (lightType == 0.0)
+    {
+        diffuse *= attenuation;
+        specular *= attenuation;
+    }
+    else if (lightType == 1.0)
+    {
+        float spotAtten = ComputeSpotlightAttenuation(index, vWorldPos, lightPos, lightRadius);
+        diffuse *= spotAtten;
+        specular *= spotAtten;
+    }
 
-    //return the computed pbr light with tone mapping and gamma correction
-    //return finalColor;
-
-    //old method
-    //return (diffuseBRDF + specularBRDF * g_SpecularBoost + sheenBRDF) * lightIntensity * LN;
-#endif
+    return (diffuse + specular);
 }
 
 //void DoPointLightPBR(const int index, float3 normal,
@@ -298,30 +288,21 @@ void calculateLight(float3 lightIn, float4 lightIntensity, float3 lightOut, floa
 //    Specular *= distFade;
 //}
 
-void DoPointLightPBR(float3 normal,
-    float4 lightPos, float4 lightColor,
-    float lightToWorldDist, float3 worldPos,
-    float metalScalar, float roughness, float3 albedo, out float3 Diffuse, out float3 Specular)
-{
-    float3 L = normalize(lightPos - worldPos);
-    float3 V = normalize(g_vecOrigin.xyz - worldPos);
-    //float3 N = normalize(normal);
-
-    float lightRadius = lightPos.w;
-
-    float NdotL = max(0.0f, dot(normal, L));
-    float NdotV = max(0.0f, dot(normal, V));
-
-    float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metalScalar);
-
-    calculateLight(L, lightColor, V, normal, F0, worldPos, g_vecOrigin, roughness, metalScalar, NdotV, albedo, Diffuse, Specular);
-
-    float distFade = 1.0f - saturate(lightToWorldDist / max(lightRadius, 0.001));
-    distFade *= distFade;
-
-    Diffuse *= distFade; 
-    Specular *= distFade;
-}
+//float3 DoPointLightPBR(float3 normal,
+//    float4 lightPos, float4 lightColor,
+//    float lightToWorldDist, float3 worldPos,
+//    float metalScalar, float roughness, float3 albedo)
+//{
+//    float3 L = normalize(lightPos - worldPos);
+//    float3 V = normalize(g_vecOrigin.xyz - worldPos);
+//    //float3 N = normalize(normal);
+//
+//    float lightRadius = lightPos.w;
+//
+//    float3 flLighting = calculateLight(L, lightColor, V, normal, F0, worldPos, g_vecOrigin, roughness, metalScalar, NdotV, albedo);
+//    
+//    return flLighting;
+//}
 
 float mod(float x, float y)
 {
@@ -374,4 +355,64 @@ float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness)
 
     float3 samplefloat = tangent * H.x + bitangent * H.y + N * H.z;
     return normalize(samplefloat);
+}
+
+float4 customTex2D(in float Texture, in float2 uv)
+{
+    //clamp to 0 - 1
+    uv = clamp(uv, 0.0, 1.0);
+
+    float2 texSize = Texture;
+
+    //grab coord
+    float2 pixelCoord = uv * texSize;
+
+    int2 pixelPos = int2(pixelCoord);
+
+    //clamp pixel pos to texelsize 1 to 1
+    pixelPos = clamp(pixelPos, int2(0, 0), int2(texSize) - int2(1, 1));
+
+    //composite
+    float4 color = float4(Texture, pixelPos.xy, 0.0);
+
+    return color;
+}
+
+float GenerateMetallic(in float3 normal, in float4 albedo)
+{
+    float maxChannel = max(albedo.r, max(albedo.g, albedo.b));
+    float minChannel = min(albedo.r, min(albedo.g, albedo.b));
+    float saturation = (maxChannel - minChannel) / (maxChannel + 0.001);
+    float metallicFromSat = smoothstep(0.3, 0.7, saturation);
+
+    float normalVariation = length(ddx(normal)) + length(ddy(normal));
+    float smoothnessBoost = 1.0 - smoothstep(0.0, 0.3, normalVariation);
+
+    float metallic = metallicFromSat * (0.7 + smoothnessBoost * 0.3);
+
+    return saturate(metallic);
+}
+
+float GenerateRoughness(in float3 normal, in float4 albedo)
+{
+
+
+    //float3 defColor = float3(0.37, 1.5, 1.9);
+    float normalVariation = length(ddx(normal)) + length(ddy(normal)) * 8.0f;
+    float roughness = smoothstep(0.0, 1.0, normalVariation * 0.4);
+
+    float maxChannel = max(max(albedo.r, albedo.g), max(albedo.b, albedo.a));
+    float minChannel = min(min(albedo.r, albedo.g), min(albedo.b, albedo.a));
+    float variation = (maxChannel - minChannel) / (maxChannel + 0.001);
+
+    float brightnessRoughness = 1.0 - smoothstep(0.2, 1.0, variation);
+
+    float saturation = variation;
+    float desaturationBoost = smoothstep(0.3, 0.05, saturation) * 0.3;
+
+    roughness = roughness * 0.4 + brightnessRoughness * 0.6 + desaturationBoost;
+
+    roughness = max(roughness, 0.02);
+
+    return clamp(roughness, 0.15, 0.85);
 }

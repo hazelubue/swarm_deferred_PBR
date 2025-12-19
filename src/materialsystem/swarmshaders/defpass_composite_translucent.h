@@ -66,6 +66,8 @@ struct defParms_composite_translucent
 
 
 	int iRefraction;
+	int iLightTypePointVar;
+	int iLightTypeSpotVar;
 	// config
 	bool bForward;
 	bool bModel;

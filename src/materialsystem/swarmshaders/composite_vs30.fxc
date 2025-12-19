@@ -99,6 +99,7 @@ struct VS_OUTPUT
 	//float3 vProjPosXYW				: TEXCOORD1;
 	float3 worldPos					: TEXCOORD2;
 
+	float4 worldPos_ProjPosZ		: TEXCOORD1;
 #if EYEVEC
 	float3 worldToEye				: TEXCOORD3;
 #endif
@@ -189,6 +190,7 @@ VS_OUTPUT main( const VS_INPUT In )
 
 	Out.vProjPos = mul( float4( worldPos, 1 ), cViewProj );
 	Out.vTexCoord.xy = In.vTexCoord_0;
+    Out.worldPos_ProjPosZ = float4(worldPos, Out.vProjPos.z);
 	//Out.vProjPosXYW = Out.vProjPos.xyw;
 
 	Out.worldPos = worldPos;

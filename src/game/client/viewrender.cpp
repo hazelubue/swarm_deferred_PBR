@@ -50,6 +50,7 @@
 #include "modelrendersystem.h"
 #include "vgui/ISurface.h"
 #include "deferred/cdeferred_manager_client.h"
+#include "c_env_skydome.h"
 
 #define PARTICLE_USAGE_DEMO									// uncomment to get particle bar thing
 

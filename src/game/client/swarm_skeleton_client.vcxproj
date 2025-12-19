@@ -309,6 +309,7 @@
     <ClCompile Include="c_env_particlescript.cpp" />
     <ClCompile Include="c_env_projectedtexture.cpp" />
     <ClCompile Include="c_env_screenoverlay.cpp" />
+    <ClCompile Include="c_env_skydome.cpp" />
     <ClCompile Include="c_env_tonemap_controller.cpp" />
     <ClCompile Include="c_fire_smoke.cpp" />
     <ClCompile Include="c_fish.cpp" />
@@ -1338,6 +1339,7 @@
     <ClInclude Include="c_colorcorrection.h" />
     <ClInclude Include="c_env_ambient_light.h" />
     <ClInclude Include="c_env_projectedtexture.h" />
+    <ClInclude Include="c_env_skydome.h" />
     <ClInclude Include="c_gameinstructor.h" />
     <ClInclude Include="c_physics_prop_statue.h" />
     <ClInclude Include="c_postprocesscontroller.h" />

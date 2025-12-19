@@ -445,6 +445,7 @@
     <ClCompile Include="env_player_surface_trigger.cpp" />
     <ClCompile Include="env_projectedtexture.cpp" />
     <ClCompile Include="env_screenoverlay.cpp" />
+    <ClCompile Include="env_skydome.cpp" />
     <ClCompile Include="env_texturetoggle.cpp" />
     <ClCompile Include="env_tonemap_controller.cpp" />
     <ClCompile Include="..\shared\env_wind_shared.cpp" />

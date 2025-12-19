@@ -2,7 +2,7 @@ versioninfo
 {
 	"editorversion" "400"
 	"editorbuild" "8870"
-	"mapversion" "5"
+	"mapversion" "7"
 	"formatversion" "100"
 	"prefab" "0"
 }
@@ -107,7 +107,7 @@ bgimages_plus
 world
 {
 	"id" "1"
-	"mapversion" "5"
+	"mapversion" "7"
 	"classname" "worldspawn"
 	"comment" "Decompiled by BSPSource v1.4.7 from test4"
 	"detailmaterial" "detail/detailsprites"
@@ -2371,7 +2371,7 @@ world
 				"v" "-1984 -448 -256"
 				"v" "-1984 -448 -32"
 			}
-			"material" "NATURE/WATER_LAKE"
+			"material" "WATER/WATER_TIMOR"
 			"uaxis" "[0 1 0 0] 0.25"
 			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
@@ -2389,7 +2389,7 @@ world
 				"v" "-1728 -704 -256"
 				"v" "-1728 -704 -32"
 			}
-			"material" "NATURE/WATER_LAKE"
+			"material" "WATER/WATER_TIMOR"
 			"uaxis" "[0 1 0 0] 0.25"
 			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
@@ -2407,7 +2407,7 @@ world
 				"v" "-1984 -704 -256"
 				"v" "-1984 -704 -32"
 			}
-			"material" "NATURE/WATER_LAKE"
+			"material" "WATER/WATER_TIMOR"
 			"uaxis" "[1 0 0 0] 0.25"
 			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
@@ -2425,9 +2425,9 @@ world
 				"v" "-1728 -448 -256"
 				"v" "-1728 -448 -32"
 			}
-			"material" "NATURE/WATER_LAKE"
+			"material" "WATER/WATER_TIMOR"
 			"uaxis" "[-1 0 0 0] 0.25"
-			"vaxis" "[-0 -0 -1 0] 0.25"
+			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
 			"lightmapscale" "16"
 			"smoothing_groups" "0"
@@ -2443,7 +2443,7 @@ world
 				"v" "-1728 -704 -256"
 				"v" "-1728 -448 -256"
 			}
-			"material" "NATURE/WATER_LAKE"
+			"material" "WATER/WATER_TIMOR"
 			"uaxis" "[-1 0 0 0] 0.25"
 			"vaxis" "[0 -1 0 0] 0.25"
 			"rotation" "0"
@@ -2461,7 +2461,7 @@ world
 				"v" "-1728 -448 -32"
 				"v" "-1728 -704 -32"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
+			"material" "WATER/WATER_TIMOR"
 			"uaxis" "[1 0 0 0] 0.25"
 			"vaxis" "[0 -1 0 0] 0.25"
 			"rotation" "0"
@@ -2725,7 +2725,7 @@ world
 				"v" "-3136 352 -128"
 				"v" "-3136 352 -32"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
+			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP_PBR"
 			"uaxis" "[0 -1 0 0] 0.25"
 			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
@@ -2743,9 +2743,9 @@ world
 				"v" "-1984 -4096 -128"
 				"v" "-1984 -4096 -32"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
-			"uaxis" "[0 1 -0 0] 0.25"
-			"vaxis" "[0 -0 -1 0] 0.25"
+			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP_PBR"
+			"uaxis" "[0 1 0 0] 0.25"
+			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
 			"lightmapscale" "16"
 			"smoothing_groups" "0"
@@ -2761,7 +2761,7 @@ world
 				"v" "-3136 -4096 -128"
 				"v" "-3136 -4096 -32"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
+			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP_PBR"
 			"uaxis" "[1 0 0 0] 0.25"
 			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
@@ -2779,9 +2779,9 @@ world
 				"v" "-1984 352 -128"
 				"v" "-1984 352 -32"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
+			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP_PBR"
 			"uaxis" "[-1 0 0 0] 0.25"
-			"vaxis" "[-0 -0 -1 0] 0.25"
+			"vaxis" "[0 0 -1 0] 0.25"
 			"rotation" "0"
 			"lightmapscale" "16"
 			"smoothing_groups" "0"
@@ -2797,7 +2797,7 @@ world
 				"v" "-1984 -4096 -128"
 				"v" "-1984 352 -128"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
+			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP_PBR"
 			"uaxis" "[1 0 0 0] 0.25"
 			"vaxis" "[0 -1 0 0] 0.25"
 			"rotation" "0"
@@ -2815,7 +2815,7 @@ world
 				"v" "-1984 352 -32"
 				"v" "-1984 -4096 -32"
 			}
-			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP"
+			"material" "NATURE/TOXICSLIME_A3_SPEED_RAMP_PBR"
 			"uaxis" "[1 0 0 0] 0.25"
 			"vaxis" "[0 -1 0 0] 0.25"
 			"rotation" "0"
@@ -15012,8 +15012,8 @@ cameras
 	"activecamera" "0"
 	camera
 	{
-		"position" "[-1758.55 -1012.92 155.111]"
-		"look" "[-2005.11 -1079.91 79.7437]"
+		"position" "[-1719.04 -692.643 91.6487]"
+		"look" "[-1887.69 -522.807 -25.2724]"
 	}
 }
 cordons

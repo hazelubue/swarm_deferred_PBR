@@ -8,6 +8,9 @@ static CTextureReference g_tex_Normals;
 static CTextureReference g_tex_Water_Normals;
 static CTextureReference g_tex_Depth;
 
+static CTextureReference g_tex_Reflection;
+static CTextureReference g_tex_Refraction;
+
 static CTextureReference g_tex_LightCtrl;
 
 static CTextureReference g_tex_Lightaccum;
@@ -119,6 +122,19 @@ void InitDeferredRTs( bool bInitial )
 			MATERIAL_RT_DEPTH_NONE,
 			gbufferFlags, 0 ) );
 
+		g_tex_Reflection.Init(materials->CreateNamedRenderTargetTextureEx2(DEFRTNAME_REFLECTION,
+			dummy, dummy,
+			RT_SIZE_FULL_FRAME_BUFFER_ROUNDED_UP,
+			fmt_gbuffer2,
+			MATERIAL_RT_DEPTH_NONE,
+			gbufferFlags, 0));
+		
+		g_tex_Refraction.Init(materials->CreateNamedRenderTargetTextureEx2(DEFRTNAME_REFRACTION,
+			dummy, dummy,
+			RT_SIZE_FULL_FRAME_BUFFER_ROUNDED_UP,
+			fmt_gbuffer2,
+			MATERIAL_RT_DEPTH_NONE,
+			gbufferFlags, 0));
 
 		g_tex_Lightaccum.Init( materials->CreateNamedRenderTargetTextureEx2( DEFRTNAME_LIGHTACCUM,
 			dummy, dummy,
@@ -263,7 +279,7 @@ void InitDeferredRTs( bool bInitial )
 
 	materials->EndRenderTargetAllocation();
 
-	GetDeferredExt()->CommitTexture_General( g_tex_Normals, g_tex_Water_Normals, g_tex_Depth,
+	GetDeferredExt()->CommitTexture_General( g_tex_Normals, g_tex_Water_Normals, g_tex_Reflection, g_tex_Refraction, g_tex_Depth,
 		g_tex_LightCtrl,
 		g_tex_Lightaccum );
 
@@ -315,6 +331,16 @@ ITexture *GetDefRT_Depth()
 ITexture *GetDefRT_LightCtrl()
 {
 	return g_tex_LightCtrl;
+}
+
+ITexture* GetDefRT_Refraction()
+{
+	return g_tex_Refraction;
+}
+
+ITexture* GetDefRT_Reflection()
+{
+	return g_tex_Reflection;
 }
 
 ITexture *GetDefRT_Lightaccum()
