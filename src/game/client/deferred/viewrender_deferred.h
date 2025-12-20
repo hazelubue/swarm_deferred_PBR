@@ -40,9 +40,6 @@ public:
 	void			ViewDrawGBuffer( const CViewSetup &view, bool &bDrew3dSkybox, SkyboxVisibility_t &nSkyboxVisible,
 		bool bDrawViewModel);
 
-	void			ViewDrawGBufferWater(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
-		bool bDrawViewModel);
-
 	void			ViewDrawGBufferTranslucent(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
 		bool bDrawViewModel);
 
@@ -96,7 +93,6 @@ private:
 	float m_flRenderDelay[SHADOW_NUM_CASCADES];
 };
 
-
-
+extern CDeferredViewRender* m_OriginalViewSetup;
 
 #endif

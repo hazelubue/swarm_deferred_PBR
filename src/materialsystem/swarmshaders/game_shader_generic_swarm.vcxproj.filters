@@ -99,9 +99,6 @@
     <ClCompile Include="deferred_water.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="defpass_composite_translucent.cpp">
-      <Filter>Source Files\scene</Filter>
-    </ClCompile>
     <ClCompile Include="skydome_atmosphere.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
@@ -112,6 +109,12 @@
       <Filter>Source Files\scene</Filter>
     </ClCompile>
     <ClCompile Include="skydome_atmosphere_helper.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="defpass_gbuffer_translucent.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="defpass_composite_translucent.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
   </ItemGroup>
@@ -191,9 +194,6 @@
     <ClInclude Include="common_glass_pbr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="defpass_composite_translucent.h">
-      <Filter>Source Files\scene</Filter>
-    </ClInclude>
     <ClInclude Include="skydome_atmosphere_helper.h">
       <Filter>Source Files\scene</Filter>
     </ClInclude>
@@ -202,6 +202,18 @@
     </ClInclude>
     <ClInclude Include="utilstring_array.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="defpass_gbuffer_translucent.h">
+      <Filter>Source Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="defpass_composite_translucent.h">
+      <Filter>Source Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="reimaginedClouds.h">
+      <Filter>Shader Source\fxc</Filter>
+    </ClInclude>
+    <ClInclude Include="cloudCoord.h">
+      <Filter>Shader Source\fxc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -148,8 +148,6 @@ public:
 };
 
 
-
-extern CViewSetup* m_OriginalViewSetup;
 extern bool g_bOriginalViewSetupValid;
 
 extern IViewRender* view;

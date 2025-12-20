@@ -29,38 +29,6 @@ static ConVar mat_pbr_iblIntensity("mat_pbr_iblIntensity", "1000.0", FCVAR_CHEAT
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
-static void UTIL_StringToFloatArray(float* pVector, int count, const char* pString)
-{
-	char* pstr, * pfront, tempString[128];
-	int	j;
-
-	Q_strncpy(tempString, pString, sizeof(tempString));
-	pstr = pfront = tempString;
-
-	for (j = 0; j < count; j++)			// lifted from pr_edict.c
-	{
-		pVector[j] = atof(pfront);
-
-		// skip any leading whitespace
-		while (*pstr && *pstr <= ' ')
-			pstr++;
-
-		// skip to next whitespace
-		while (*pstr && *pstr > ' ')
-			pstr++;
-
-		if (!*pstr)
-			break;
-
-		pstr++;
-		pfront = pstr;
-	}
-	for (j++; j < count; j++)
-	{
-		pVector[j] = 0;
-	}
-}
-
 void InitParmsGBuffer_translucent(const defParms_gBuffer_translucent& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
 	if (PARM_NO_DEFAULT(info.iAlphatestRef) ||
@@ -165,14 +133,19 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 		if (bTranslucent)
 		{
 			pShaderShadow->EnableBlending(true);
+			//pShaderShadow->BlendFunc(SHADER_BLEND_ONE_MINUS_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_DST_ALPHA);
 		}
 
 		pShaderShadow->EnableSRGBWrite(false);
+
+
 
 		if (bNoCull)
 		{
 			pShaderShadow->EnableCulling(false);
 		}
+
+
 
 		int iVFmtFlags = VERTEX_POSITION | VERTEX_NORMAL;
 		int iUserDataSize = 0;

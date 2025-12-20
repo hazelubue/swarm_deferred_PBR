@@ -34,6 +34,11 @@ void InitParamsWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, const ch
 			Warning("***need to set $LIGHTMAPWATERFOG for material %s\n", pMaterialName);
 			params[info.LIGHTMAPWATERFOG]->SetIntValue(1);
 		}
+
+		/*if (!params[info.BASETEXTURE]->IsDefined())
+		{
+			params[info.BASETEXTURE]->SetStringValue("nature/water_lake_color");
+		}*/
 		
 		SET_FLAGS2( MATERIAL_VAR2_NEEDS_TANGENT_SPACES );
 		if( !params[info.CHEAPWATERSTARTDISTANCE]->IsDefined() )

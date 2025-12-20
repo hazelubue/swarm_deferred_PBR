@@ -217,6 +217,7 @@
     <ClCompile Include="defpass_composite.cpp" />
     <ClCompile Include="defpass_composite_translucent.cpp" />
     <ClCompile Include="defpass_gbuffer.cpp" />
+    <ClCompile Include="defpass_gbuffer_translucent.cpp" />
     <ClCompile Include="defpass_shadow.cpp" />
     <ClCompile Include="IDeferredExt.cpp" />
     <ClCompile Include="lighting_global.cpp" />
@@ -234,6 +235,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h" />
+    <ClInclude Include="cloudCoord.h" />
     <ClInclude Include="commandbuilder.h" />
     <ClInclude Include="common_deferred_fxc.h" />
     <ClInclude Include="common_fxc.h" />
@@ -255,11 +257,13 @@
     <ClInclude Include="defpass_composite.h" />
     <ClInclude Include="defpass_composite_translucent.h" />
     <ClInclude Include="defpass_gbuffer.h" />
+    <ClInclude Include="defpass_gbuffer_translucent.h" />
     <ClInclude Include="defpass_shadow.h" />
     <ClInclude Include="IDeferredExt.h" />
     <ClInclude Include="lighting_helper.h" />
     <ClInclude Include="lighting_pass_basic.h" />
     <ClInclude Include="lighting_pass_volum.h" />
+    <ClInclude Include="reimaginedClouds.h" />
     <ClInclude Include="skydome_atmosphere_helper.h" />
     <ClInclude Include="utilstring_array.h" />
   </ItemGroup>

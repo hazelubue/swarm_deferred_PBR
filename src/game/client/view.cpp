@@ -67,6 +67,7 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+#include <deferred/viewrender_deferred.h>
 
 void ToolFramework_AdjustEngineViewport(int& x, int& y, int& width, int& height);
 bool ToolFramework_SetupEngineView(Vector& origin, QAngle& angles, float& fov);
@@ -92,7 +93,8 @@ ConVar zoom_sensitivity_ratio("zoom_sensitivity_ratio", "1.0", 0, "Additional mo
 
 // Each MOD implements GetViewRenderInstance() and provides either a default object or a subclassed object!!!
 IViewRender* view = NULL;	// set in cldll_client_init.cpp if no mod creates their own
-static CViewSetup* m_OriginalViewSetup = NULL;
+CDeferredViewRender* m_OriginalViewSetup = NULL;
+//static CViewSetup* m_OriginalViewSetup = NULL;
 #if _DEBUG
 bool g_bRenderingCameraView = false;
 #endif
@@ -897,21 +899,26 @@ void CViewRender::SetUpOverView()
 	// render->DrawTopView( true );
 }
 
-void SetOriginalViewSetup(const CViewSetup& setup)
-{
-	if (!m_OriginalViewSetup)
-	{
-		// Allocate it on first use
-		m_OriginalViewSetup = new CViewSetup();
-	}
-	*m_OriginalViewSetup = setup;
-	g_bOriginalViewSetupValid = true;
-}
-
-//const CViewSetup& CViewRender::GetOriginalViewSetup()
+//void SetOriginalViewSetup(const CViewSetup& setup)
 //{
-//	return *m_OriginalViewSetup;
+//	if (!m_OriginalViewSetup)
+//	{
+//		// Allocate it on first use
+//		m_OriginalViewSetup = new CViewSetup();
+//	}
+//	*m_OriginalViewSetup = setup;
+//	g_bOriginalViewSetupValid = true;
 //}
+
+void CViewRender::GetOriginalViewSetup(const CViewSetup& setup)
+{
+	CDeferredViewRender* pDeferredView = static_cast<CDeferredViewRender*>(m_OriginalViewSetup);
+
+	if (pDeferredView)
+	{
+		pDeferredView->ProcessGlobalMatrixData(setup);
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Render current view into specified rectangle
@@ -1026,19 +1033,24 @@ void CViewRender::Render(vrect_t* rect)
 			CViewSetup hudViewSetup;
 			VGui_GetHudBounds(hh, hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height);
 
+			//if (m_OriginalViewSetup)
+			//{
+			//	SetOriginalViewSetup(*m_OriginalViewSetup);
+			//}
+			//else
+			//{
+			//	// Initialize it if it's NULL
+			//	static CViewSetup s_OriginalViewSetup;
+			//	m_OriginalViewSetup = &s_OriginalViewSetup;
+			//	SetOriginalViewSetup(*m_OriginalViewSetup);
+			//}
+
 			if (m_OriginalViewSetup)
 			{
-				SetOriginalViewSetup(view);
-			}
-			else
-			{
-				// Initialize it if it's NULL
-				static CViewSetup s_OriginalViewSetup;
-				m_OriginalViewSetup = &s_OriginalViewSetup;
-				SetOriginalViewSetup(view);
+				GetOriginalViewSetup(view);
 			}
 
-			RenderView(view, hudViewSetup, nClearFlags, flags);
+			RenderView(view, hudViewSetup, nClearFlags, flags);			
 		}
 
 		GetClientMode()->PostRender();

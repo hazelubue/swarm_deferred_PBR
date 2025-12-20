@@ -70,7 +70,7 @@ END_SHADER_PARAMS
 
 
 
-void SetupParmsGBuffer0(defParms_gBuffer0& p)
+void SetupParmsGBuffer0(defParms_gBuffer_translucent& p)
 {
 	p.bModel = false;
 
@@ -207,9 +207,9 @@ SHADER_INIT_PARAMS()
 
 	if (bDrawToGBuffer)
 	{
-		defParms_gBuffer0 parms_gbuffer;
+		defParms_gBuffer_translucent parms_gbuffer;
 		SetupParmsGBuffer0(parms_gbuffer);
-		InitParmsGBuffer(parms_gbuffer, this, params);
+		InitParmsGBuffer_translucent(parms_gbuffer, this, params);
 
 		defParms_shadow parms_shadow;
 		SetupParmsShadow(parms_shadow);
@@ -234,9 +234,9 @@ SHADER_INIT
 
 	if (bDrawToGBuffer)
 	{
-		defParms_gBuffer0 parms_gbuffer;
+		defParms_gBuffer_translucent parms_gbuffer;
 		SetupParmsGBuffer0(parms_gbuffer);
-		InitPassGBuffer(parms_gbuffer, this, params);
+		InitPassGBuffer_translucent(parms_gbuffer, this, params);
 
 		defParms_shadow parms_shadow;
 		SetupParmsShadow(parms_shadow);
@@ -266,19 +266,19 @@ SHADER_DRAW
 		: DEFERRED_RENDER_STAGE_INVALID;
 
 	const bool bDrawToGBuffer = DrawToGBuffer(params);
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	//const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	Assert(pShaderAPI == NULL ||
 		iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID);
 
 	if (bDrawToGBuffer)
 	{
-		if (!bTranslucent && pShaderShadow != NULL ||
-			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER)
+		if (pShaderShadow != NULL ||
+			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER_WATER)
 		{
-			defParms_gBuffer0 parms_gbuffer;
+			defParms_gBuffer_translucent parms_gbuffer;
 			SetupParmsGBuffer0(parms_gbuffer);
-			DrawPassGBuffer(parms_gbuffer, this, params, pShaderShadow, pShaderAPI,
+			DrawPassGBuffer_translucent(parms_gbuffer, this, params, pShaderShadow, pShaderAPI,
 				vertexCompression, pDefContext);
 		}
 		else

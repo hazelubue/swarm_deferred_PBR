@@ -25,6 +25,7 @@ struct Skydome_Vars_t
 	Skydome_Vars_t() { memset( this, 0xFF, sizeof(*this) ); }
 
 	int m_nLUTTexture;
+	int m_nCloudNoise;
 	int m_nFlashlightTexture;
 	int m_nFlashlightTextureFrame;
 };

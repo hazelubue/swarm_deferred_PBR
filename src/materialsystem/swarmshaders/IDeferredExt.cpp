@@ -205,29 +205,25 @@ void CDeferredExtension::AddForwardLight(const Vector& pos, float radius,
     ForwardLightData light;
     ForwardSpotLightData SpotLight;
 
-    // Position + radius
     light.position[0] = pos.x;
     light.position[1] = pos.y;
     light.position[2] = pos.z;
     light.position[3] = radius;
 
-    // Color + light type (0=point, 1=spot)
     light.color[0] = color.x * intensity;
     light.color[1] = color.y * intensity;
     light.color[2] = color.z * intensity;
-    light.color[3] = (float)type;  // Store type here
+    light.color[3] = (float)type; 
 
-    // Direction + inner cone
     SpotLight.direction[0] = dir.x;
     SpotLight.direction[1] = dir.y;
     SpotLight.direction[2] = dir.z;
-    SpotLight.direction[3] = constantAtt;  // Can be used for inner cone cosine
+    SpotLight.direction[3] = constantAtt; 
 
-    // Attenuation + outer cone
     SpotLight.attenuation[0] = linearAtt;
     SpotLight.attenuation[1] = quadraticAtt;
-    SpotLight.attenuation[2] = 0.0f;  // Unused
-    SpotLight.attenuation[3] = spotCutoff;  // Outer cone cosine
+    SpotLight.attenuation[2] = 0.0f;
+    SpotLight.attenuation[3] = spotCutoff; 
 
     m_vecForwardLights.AddToTail(light);
     m_bForwardLightsDirty = true;

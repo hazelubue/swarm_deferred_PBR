@@ -116,14 +116,14 @@ bool CDeferredManagerClient::Init()
 		}
 	}
 
-	if ( !m_bDefRenderingEnabled )
+	/*if ( !m_bDefRenderingEnabled )
 	{
 		Assert( g_pCurrentViewRender == NULL );
 
 		Warning( "Your hardware does not seem to support shader model 3.0. If you think that this is an error (hybrid GPUs), add -forcedeferred as start parameter.\n" );
 		g_pCurrentViewRender = new CViewRender();
-	}
-	else
+	}*/
+	if ( m_bDefRenderingEnabled )
 	{
 #define VENDOR_NVIDIA 0x10DE
 #define VENDOR_INTEL 0x8086

@@ -39,7 +39,7 @@ public:
 	int GetIndex() const
 	{
 		Assert( m_bCONVERT_TO_SRGB );
-		return ( 2 * m_nCONVERT_TO_SRGB ) + 0;
+		return ( 4 * m_nCONVERT_TO_SRGB ) + 0;
 	}
 };
 
@@ -49,8 +49,10 @@ public:
 class skydome_ps30_Dynamic_Index
 {
 	unsigned int m_nRENDER_SKY : 2;
+	unsigned int m_nSTARFIELD_ENABLED : 2;
 #ifdef _DEBUG
 	bool m_bRENDER_SKY : 1;
+	bool m_bSTARFIELD_ENABLED : 1;
 #endif	// _DEBUG
 public:
 	void SetRENDER_SKY( int i )
@@ -62,20 +64,31 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetSTARFIELD_ENABLED( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nSTARFIELD_ENABLED = i;
+#ifdef _DEBUG
+		m_bSTARFIELD_ENABLED = true;
+#endif	// _DEBUG
+	}
+
 	skydome_ps30_Dynamic_Index( IShaderDynamicAPI* pShaderAPI )
 	{
 		m_nRENDER_SKY = 0;
+		m_nSTARFIELD_ENABLED = 0;
 #ifdef _DEBUG
 		m_bRENDER_SKY = false;
+		m_bSTARFIELD_ENABLED = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bRENDER_SKY );
-		return ( 1 * m_nRENDER_SKY ) + 0;
+		Assert( m_bRENDER_SKY && m_bSTARFIELD_ENABLED );
+		return ( 1 * m_nRENDER_SKY ) + ( 2 * m_nSTARFIELD_ENABLED ) + 0;
 	}
 };
 
-#define shaderDynamicTest_skydome_ps30 psh_forgot_to_set_dynamic_RENDER_SKY
+#define shaderDynamicTest_skydome_ps30 psh_forgot_to_set_dynamic_RENDER_SKY + psh_forgot_to_set_dynamic_STARFIELD_ENABLED
 
