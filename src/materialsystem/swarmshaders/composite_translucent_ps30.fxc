@@ -6,9 +6,6 @@
 // STATIC:		"ENVMAPMASK"		"0..1"
 // STATIC:		"ENVMAPFRESNEL"		"0..1"
 
-// STATIC:		"RIMLIGHT"						"0..1"
-// STATIC:		"RIMLIGHTMODULATELIGHT"			"0..1"
-
 // STATIC:		"BASETEXTURE2"		"0..1"
 // STATIC:		"BLENDMODULATE"		"0..1"
 // STATIC:		"MULTIBLEND"		"0..1"
@@ -83,11 +80,6 @@ sampler sBlendmodulate						: register( s6 );
 const float3 g_flFresnelRanges				: register( c7 );
 #endif
 
-#if RIMLIGHT
-const float3 g_flRimLight_Tint						: register( c8 );
-const float2 g_flRimLight_Exponent_AlbedoScale		: register( c9 );
-#endif
-
 #if ENVMAPMASK && BASETEXTURE2
 sampler sEnvmapMask2						: register( s7 );
 #endif
@@ -110,10 +102,18 @@ sampler sSelfIllumMask						: register( s4 ); // override envmap mask
 #endif
 #endif
 
+sampler sShadowDepth						: register( s11 );
+
 const float4 g_GlobalLightDir				: register(c12); // xyz = direction, w = has shadow
 const float4 g_GlobalLightDiffuse		    : register(c13); // xyz = diffuse color
 const float4 g_GlobalLightAmbHigh			: register(c14); // xyz = ambient high color
 const float4 g_GlobalLightAmbLow			: register(c15); // xyz = ambient low color
+
+const float4x3 g_matOrtho[2]				: register(c16);
+const float4 g_vecUVTransform[2]			: register(c22);
+const float3 g_vecSlopeData[2]				: register(c24);
+const float4 g_vecFilterConfig_A[2]			: register(c26); //= (float4[2]) 0;
+const float4 g_vecFilterConfig_B[2]			: register(c8); //= (float4[2]) 0;
 
 struct PS_INPUT
 {
@@ -298,9 +298,14 @@ PS_OUTPUT main(const PS_INPUT In)
     float NdotH_global = max(0.0f, dot(N, H_global));
     float VdotH_global = max(0.0f, dot(V, H_global));
 
+    float shadow = (float) 0;
+    shadow += PerformCascadedShadow(
+        sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
+        g_vecFilterConfig_A, g_vecFilterConfig_B, N, dot(g_GlobalLightDir.xyz, N));
+    
     float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
 	
-    compositeLighting += globalLighting;
+    compositeLighting += globalLighting /*+ shadow*/;
 
 #if ENVMAP
 	float flSpecularFactor;

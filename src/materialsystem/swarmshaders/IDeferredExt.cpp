@@ -35,6 +35,8 @@ CDeferredExtension::CDeferredExtension()
 	m_iNumCommon_Shadowed = 0;
 	m_iNumCommon_Cookied = 0;
 	m_iNumCommon_Simple = 0;
+
+    m_bRegeneratorSet = false;
 }
 
 CDeferredExtension::~CDeferredExtension()
@@ -352,14 +354,54 @@ int CDeferredExtension::GetNumActiveForwardLights()
     return m_vecForwardLights.Count();
 }
 
+int CDeferredExtension::GetLightBufferSize()
+{
+    return m_vecForwardLightBuffer.Count();
+}
+
+class CLightDataRegenerator : public ITextureRegenerator
+{
+public:
+    CLightDataRegenerator(CDeferredExtension* pExtension) : m_pExtension(pExtension) {}
+
+    virtual void RegenerateTextureBits(ITexture* pTexture, IVTFTexture* pVTFTexture, Rect_t* pRect)
+    {
+        float* plightData = m_pExtension->GetForwardLightData();
+        if (!plightData)
+            return;
+
+        unsigned char* pImageData = pVTFTexture->ImageData();
+
+        // Get the actual buffer size from the vector
+        // This includes light count (4 floats) + all light data
+        int totalBytes = m_pExtension->GetLightBufferSize() * sizeof(float);
+
+        memcpy(pImageData, plightData, totalBytes);
+    }
+
+    virtual void Release()
+    {
+        delete this;
+    }
+
+private:
+    CDeferredExtension* m_pExtension;
+};
+
 void CDeferredExtension::FillDataForFramebuffer()
 {
-    //// Get light data
-    //GetForwardLightData();
-    //GetForwardSpotlightData();
+    float* plightData = GetForwardLightData();
+    if (!plightData || !m_pForwardData)
+        return;
 
-    //pRenderContext->PopRenderTargetAndViewport();
+    if (m_pForwardData->IsProcedural())
+    {
+        if (!m_bRegeneratorSet)
+        {
+            m_pForwardData->SetTextureRegenerator(new CLightDataRegenerator(this));
+            m_bRegeneratorSet = true;
+        }
 
-    //pRenderContext->CopyRenderTargetToTextureEx(m_pForwardData, 0, NULL, NULL);
-
+        m_pForwardData->Download();
+    }
 }

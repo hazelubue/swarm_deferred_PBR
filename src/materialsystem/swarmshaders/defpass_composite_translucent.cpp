@@ -119,7 +119,7 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 	const bool bEnvmapFresnel = bEnvmap && PARM_SET(info.iEnvmapFresnel);
 
 	const bool bRimLight = PARM_SET(info.iRimlightEnable);
-	const bool bRimLightModLight = bRimLight && PARM_SET(info.iRimlightModLight);
+	//const bool bRimLightModLight = bRimLight && PARM_SET(info.iRimlightModLight);
 	const bool bBlendmodulate = bAlbedo2 && PARM_TEX(info.iBlendmodulate);
 	const bool bBlendmodulate2 = bBlendmodulate && PARM_TEX(info.iBlendmodulate2);
 	const bool bBlendmodulate3 = bBlendmodulate && PARM_TEX(info.iBlendmodulate3);
@@ -268,8 +268,6 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPMASK, bEnvmapMask);
 			SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPFRESNEL, bEnvmapFresnel);
 			SET_STATIC_PIXEL_SHADER_COMBO(PHONGFRESNEL, bPhongFresnel);
-			SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHT, bRimLight);
-			SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHTMODULATELIGHT, bRimLightModLight);
 			SET_STATIC_PIXEL_SHADER_COMBO(BASETEXTURE2, bAlbedo2 && !bMultiBlend);
 			SET_STATIC_PIXEL_SHADER_COMBO(BLENDMODULATE, bBlendmodulate);
 			SET_STATIC_PIXEL_SHADER_COMBO(MULTIBLEND, bMultiBlend);
@@ -429,6 +427,33 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		}
 
 		//pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_ForwardData());
+
+		lightData_Global_t dataGlobal = GetDeferredExt()->GetLightData_Global();
+
+		//if (dataGlobal.bShadow)
+		//{
+		//	for (int i = 0; i < 4; i++)
+		//	{
+		//		const shadowData_ortho_t& data = GetDeferredExt()->GetShadowData_Ortho(i);
+
+		//		pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_ShadowDepth_Ortho(0));
+
+		//		COMPILE_TIME_ASSERT(CSM_USE_COMPOSITED_TARGET == 1); // This shader relies on composited cascades!
+		//		COMPILE_TIME_ASSERT(SHADOW_NUM_CASCADES == 2); // This shader has been made for 2 cascades!
+		//		
+		//		pShaderAPI->SetPixelShaderConstant(16, data.matWorldToTexture.Base(), 3);
+		//		pShaderAPI->SetPixelShaderConstant(22, data.vecUVTransform.Base());
+		//		pShaderAPI->SetPixelShaderConstant(24, data.vecSlopeSettings.Base());
+
+		//		float fl_0[4] = { 0, 0, 0, 0 };
+		//		float fl_1[4] = { 0, 0, 0, 0 };
+
+		//		MakeShadowProjectionConstants(fl_0, fl_1, data.iRes_x, data.iRes_y);
+
+		//		pShaderAPI->SetPixelShaderConstant(26, fl_0);
+		//		pShaderAPI->SetPixelShaderConstant(8, fl_1);
+		//	}
+		//}
 
 		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE));
 

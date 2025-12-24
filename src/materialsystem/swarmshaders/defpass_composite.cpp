@@ -264,7 +264,12 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	}
 		DYNAMIC_STATE
 	{
-		Assert(pDeferredContext != NULL);
+
+		if (!pDeferredContext)
+		{
+			Warning("Deferred context is NULL!\n");
+			return;
+		}
 
 		if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE)
 			|| building_cubemaps.GetBool())
@@ -443,9 +448,6 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		}
 
 		CommitBaseDeferredConstants_Origin(pShaderAPI, 3);
-
-		float flIblIntensity[4] = { mat_ibl_intensity.GetFloat(), 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(24, flIblIntensity);
 
 		if (bWorldEyeVec)
 		{

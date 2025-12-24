@@ -17,8 +17,12 @@
 
 ConVar cl_sky_turbidity("cl_sky_turbidity", "1.9");
 ConVar cl_sky_stars_render("cl_sky_stars_render", "1");
-//ConVar r_sky_coverage1("r_sky_coverage1", "0.7");
-//ConVar r_sky_coverage2("r_sky_coverage2", "0.3");
+ConVar r_sky_coverage("r_sky_coverage", "0.5, 0.3, 0.1, 0.666");
+ConVar r_sky_coverage2("r_sky_coverage2", "0.8, 0.1, 0.5, 0.666");
+ConVar r_sky_cloud_quality("r_sky_cloud_quality", "1.0");
+ConVar r_sky_cloud_coverage("r_sky_cloud_coverage", "0.8");
+
+
 //ConVar r_sky_coverage3("r_sky_coverage3", "0.1");
 //ConVar r_sky_coverage4("r_sky_coverage4", "0.777");
 static ConVar r_csm_time("r_csm_time", "-1", 0, "-1 = use entity angles, everything else = force"); // HACKHACK: need a better way to get this variable
@@ -303,15 +307,29 @@ void DrawSkydome_Internal(CBaseVSShader* pShader, IMaterialVar** params, IShader
 		flTime[1] = flTime[2] = flTime[3] = flTime[0];
 		pShaderAPI->SetPixelShaderConstant(9, flTime);
 
-		/*float coverage1[4] = { r_sky_coverage1.GetFloat(), 0.0f, 0.0f, 0.0f };
-		float coverage2[4] = { r_sky_coverage2.GetFloat(), 0.0f, 0.0f, 0.0f };
-		float coverage3[4] = { r_sky_coverage3.GetFloat(), 0.0f, 0.0f, 0.0f };
-		float coverage4[4] = { r_sky_coverage4.GetFloat(), 0.0f, 0.0f, 0.0f };
+		float coverage1[4];
+		const char* coverageStr = r_sky_coverage.GetString();
+		sscanf(coverageStr, "%f, %f, %f, %f", &coverage1[0], &coverage1[1], &coverage1[2], &coverage1[3]);
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_20, coverage1);
 
-		pShaderAPI->SetPixelShaderConstant(11, coverage1);
-		pShaderAPI->SetPixelShaderConstant(12, coverage2);
-		pShaderAPI->SetPixelShaderConstant(13, coverage3);
-		pShaderAPI->SetPixelShaderConstant(14, coverage4);*/
+		float coverage2[4];
+		const char* coverageStr2 = r_sky_coverage2.GetString();
+		sscanf(coverageStr2, "%f, %f, %f, %f", &coverage2[0], &coverage2[1], &coverage2[2], &coverage2[3]);
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_24, coverage2);
+
+		float cloudParams[4];
+		cloudParams[0] = r_sky_cloud_quality.GetFloat();
+		cloudParams[1] = 0.0f;
+		cloudParams[2] = 0.0f;
+		cloudParams[3] = 0.0f;
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_26, cloudParams);
+
+		float cloudCoverage[4];
+		cloudCoverage[0] = r_sky_cloud_coverage.GetFloat();
+		cloudCoverage[1] = 0.0f;
+		cloudCoverage[2] = 0.0f;
+		cloudCoverage[3] = 0.0f;
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_28, cloudCoverage);
 
 	}
 

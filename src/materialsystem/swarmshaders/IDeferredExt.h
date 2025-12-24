@@ -158,6 +158,7 @@ public:
 	virtual int GetNumActiveForwardLights() = 0;
 
 	virtual void FillDataForFramebuffer() = 0;
+	virtual int GetLightBufferSize() = 0;
 	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height) = 0;
 
 
@@ -279,9 +280,11 @@ public:
 	virtual int GetForwardSpotLights_NumRows();
 	virtual int GetNumActiveForwardLights();
 	virtual void FillDataForFramebuffer();
+	virtual int GetLightBufferSize();
 	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height);
 
 private:
+	bool m_bRegeneratorSet;
 
 	float m_curTime;
 

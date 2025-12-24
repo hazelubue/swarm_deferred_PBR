@@ -161,8 +161,8 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 
 		bool bForceFresnel = ( params[info.FORCEFRESNEL]->GetFloatValue() != -1.0f );
 
-		const bool bIsTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-		bool bForwardRendered = bIsTranslucent;
+		//const bool bIsTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+		bool bForwardRendered = true;
 
 		if ( bHasFlowmap )
 		{

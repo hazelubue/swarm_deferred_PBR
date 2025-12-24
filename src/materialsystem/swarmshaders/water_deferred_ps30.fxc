@@ -64,6 +64,7 @@ sampler BaseTextureSampler		: register( s10 );
 
 	sampler sLightAccum				: register( s9 );
 	sampler sMRAO					: register( s11 );
+	//sampler sShadowDepth			: register( s12 );
 	
 const float4 g_vRefractTint : register(c1);
 const float4 g_vReflectTint : register(c4);
@@ -126,6 +127,12 @@ const float4 g_GlobalLightDiffuse : register(c35); // xyz = diffuse color
 const float4 g_GlobalLightAmbHigh : register(c32); // xyz = ambient high color
 const float4 g_GlobalLightAmbLow : register(c33); // xyz = ambient low color
 const float3 g_vecOrigin : register(c36);
+
+//const float4x3 g_matOrtho[2] : register(c2);
+//const float4 g_vecUVTransform[2] : register(c8);
+//const float3 g_vecSlopeData[2] : register(c10);
+//const float4 g_vecFilterConfig_A[2] : register(c12);
+//const float4 g_vecFilterConfig_B[2] : register(c14);
 
 
 
@@ -552,6 +559,16 @@ float4 main(PS_INPUT i) : COLOR
     float NdotH_global = max(0.0f, dot(N, H_global));
     float VdotH_global = max(0.0f, dot(V, H_global));
 
+	//float shadowMult = 1.0f;
+    
+ //   if (flDepth < DEPTH_RECONSTRUCTION_LIMIT)
+ //   {
+ //       shadowMult = PerformCascadedShadow(
+ //           sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
+ //           g_vecFilterConfig_A, g_vecFilterConfig_B, N, dot(L_global, N)
+ //       );
+ //   }
+	
     float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N, worldPos, g_vecOrigin, roughness, metallic, baseSampleAlpha.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
 	
     compositeLighting += globalLighting;

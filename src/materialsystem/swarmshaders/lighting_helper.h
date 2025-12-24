@@ -87,6 +87,27 @@ FORCEINLINE void CommitShadowProjectionConstants_Ortho_Composite( IShaderDynamic
 	}
 }
 
+FORCEINLINE void CommitShadowProjectionConstants_Ortho_Composite_Forward(IShaderDynamicAPI* pShaderAPI,
+	const int numCascades, int iFirstRegister)
+{
+	int stepsLeft = numCascades;
+	for (int i = 0; i < numCascades; i++)
+	{
+		const shadowData_ortho_t& data = GetDeferredExt()->GetShadowData_Ortho(i);
+		int iCurRegister = iFirstRegister + i * 3;
+
+		pShaderAPI->SetPixelShaderConstant(iCurRegister, data.matWorldToTexture.Base(), 3);
+		iCurRegister += i;
+		iCurRegister += stepsLeft * 3;
+		pShaderAPI->SetPixelShaderConstant(iCurRegister, data.vecUVTransform.Base());
+		iCurRegister += numCascades;
+		pShaderAPI->SetPixelShaderConstant(iCurRegister, data.vecSlopeSettings.Base());
+		iCurRegister += numCascades;
+
+		stepsLeft--;
+	}
+}
+
 FORCEINLINE void CommitShadowProjectionConstants_DPSM( IShaderDynamicAPI *pShaderAPI,
 	int iFirstRegister )
 {

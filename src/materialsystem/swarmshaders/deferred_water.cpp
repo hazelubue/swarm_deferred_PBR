@@ -193,9 +193,9 @@ void SetupParamsWater(defParms_Water& info)
 bool DrawToGBuffer(IMaterialVar** params)
 {
 	const bool bIsDecal = IS_FLAG_SET(MATERIAL_VAR_DECAL);
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+	//const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
-	return !bTranslucent && !bIsDecal;
+	return /*!bTranslucent &&*/ !bIsDecal;
 }
 SHADER_INIT_PARAMS()
 {
@@ -274,7 +274,7 @@ SHADER_DRAW
 	if (bDrawToGBuffer)
 	{
 		if (pShaderShadow != NULL ||
-			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER_WATER)
+			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER)
 		{
 			defParms_gBuffer_translucent parms_gbuffer;
 			SetupParmsGBuffer0(parms_gbuffer);

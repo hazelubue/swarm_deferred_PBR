@@ -130,11 +130,11 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 	SHADOW_STATE
 	{
 		pShaderShadow->SetDefaultState();
-		if (bTranslucent)
-		{
-			pShaderShadow->EnableBlending(true);
-			//pShaderShadow->BlendFunc(SHADER_BLEND_ONE_MINUS_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_DST_ALPHA);
-		}
+		//if (bTranslucent)
+		//{
+		//	pShaderShadow->EnableBlending(true);
+		//	//pShaderShadow->BlendFunc(SHADER_BLEND_ONE_MINUS_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_DST_ALPHA);
+		//}
 
 		pShaderShadow->EnableSRGBWrite(false);
 

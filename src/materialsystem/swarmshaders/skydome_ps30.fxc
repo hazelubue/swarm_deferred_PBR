@@ -4,8 +4,8 @@
 //
 //==================================================================================================
 
-// DYNAMIC: "RENDER_SKY"			"0..1"
-// DYNAMIC: "STARFIELD_ENABLED"     "0..1"
+// DYNAMIC: "RENDER_SKY"			    "0..1"
+// DYNAMIC: "STARFIELD_ENABLED"         "0..1"
 // STATIC: "CONVERT_TO_SRGB"			"0..0"
 
 #include "common_flashlight_fxc.h"
@@ -17,7 +17,7 @@
 #define jSteps 7
 
 uniform sampler2D LUTSample : register(s0); // Base map, selfillum in alpha
-uniform sampler2D CloudNoiseTex : register(s1); // Cloud noise texture
+uniform sampler2D CloudNoiseTex : register(s1); // Cloud noise texture\
 
 float4 g_SunPos : register(c0);
 float4 g_SkyLum : register(c1);
@@ -30,8 +30,11 @@ float4 g_perezCoeff[5] : register(c3);
 float g_Time            : register(c9);
 float3 g_cameraPos : register(c10); 
 
-//float4 g_Coverage1 : register(c11);
-//float4 g_Coverage2 : register(c12);
+float4 g_CloudCoverage : register(c20);
+float4 g_CloudCoverage2 : register(c24);
+float4 g_CloudQualityParams : register(c26);
+float4 g_CloudParams : register(c28);
+
 //float4 g_Coverage3 : register(c13);
 //float4 g_Coverage4 : register(c14);
 
@@ -203,12 +206,14 @@ PS_OUTPUT main(PS_INPUT i)
     float3 starColor = renderStars(rotatedPos);
     
     float cloudLinearDepth = 0.0;
-    float3 clouds = GetVolumetricClouds(10.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), skyColor, CloudNoiseTex).rgb;
+    
+    float3 clouds_topLayer = GetVolumetricClouds(10.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), CloudNoiseTex, 1).rgb;
+    float3 clouds_bottomLayer = GetVolumetricClouds(5.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), CloudNoiseTex, 0).rgb;
     
 #if !STARFIELD_ENABLED
-    float3 color = skyColor + coloredSun + clouds;
+    float3 color = skyColor + coloredSun + clouds_topLayer + clouds_bottomLayer;
 #else
-    float3 color = skyColor + coloredSun + starColor + clouds;
+    float3 color = skyColor + coloredSun + starColor + clouds_topLayer + clouds_bottomLayer;
 #endif
     
     o.vColor_0 = float4(color.rgb, 1.0);
