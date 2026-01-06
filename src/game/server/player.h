@@ -1089,6 +1089,7 @@ private:
 protected:
 // Not transmitted
 	float					m_flWaterJumpTime;  // used to be called teleport_time
+	int					m_nAirJumpsRemaining;
 	Vector					m_vecWaterJumpVel;
 	int						m_nImpulse;
 	float					m_flSwimSoundTime;

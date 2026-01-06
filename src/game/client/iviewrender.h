@@ -52,6 +52,7 @@ enum DrawFlags_t
 	DF_UNUSED5				= 0x10000,
 	DF_SAVEGAMESCREENSHOT	= 0x20000,
 	DF_CLIP_SKYBOX			= 0x40000,
+	DF_SKIP_NODRAW			= 0x80000, 
 
 	DF_SHADOW_DEPTH_MAP		= 0x100000	// Currently rendering a shadow depth map
 };
@@ -148,8 +149,6 @@ public:
 };
 
 
-
-extern CViewSetup* m_OriginalViewSetup;
 extern bool g_bOriginalViewSetupValid;
 
 extern IViewRender* view;

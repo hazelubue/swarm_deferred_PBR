@@ -77,6 +77,7 @@
 
 
 
+
 #ifdef HL2_DLL
 #include "combine_mine.h"
 #include "weapon_physcannon.h"
@@ -361,6 +362,7 @@ BEGIN_DATADESC( CBasePlayer )
 	
 	DEFINE_FIELD( m_flMaxspeed, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flWaterJumpTime, FIELD_TIME ),
+	DEFINE_FIELD( m_nAirJumpsRemaining, FIELD_TIME),
 	DEFINE_FIELD( m_vecWaterJumpVel, FIELD_VECTOR ),
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_TIME ),
@@ -4955,6 +4957,7 @@ void CBasePlayer::Spawn( void )
 	
 	m_flFieldOfView		= 0.766;// some NPCs use this to determine whether or not the player is looking at them.
 
+
 	m_vecAdditionalPVSOrigin = vec3_origin;
 	m_vecCameraPVSOrigin = vec3_origin;
 
@@ -5054,6 +5057,8 @@ void CBasePlayer::Spawn( void )
 
 	// track where we are in the nav mesh
 	UpdateLastKnownArea();
+
+	m_nAirJumpsRemaining = 1;
 
 	BaseClass::Spawn();
 

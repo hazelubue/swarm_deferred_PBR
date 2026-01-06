@@ -4,17 +4,28 @@
 //
 //==================================================================================================
 
-// DYNAMIC: "RENDER_SKY"			"0..1"
+// DYNAMIC: "RENDER_SKY"			    "0..1"
+// DYNAMIC: "STARFIELD_ENABLED"         "0..1"
 // STATIC: "CONVERT_TO_SRGB"			"0..0"
 
 #include "common_flashlight_fxc.h"
 #include "shader_constant_register_map.h"
+
+
+
+
 
 #define PI 3.1415926
 #define iSteps 14
 #define jSteps 7
 
 uniform sampler2D LUTSample : register(s0); // Base map, selfillum in alpha
+
+uniform sampler2D noisetex : register(s1); // Cloud noise texture
+
+sampler3D SAMPLER_WORLEY_BUBBLY : register(s2);
+sampler3D SAMPLER_WORLEY_SWIRLEY : register(s3);
+
 
 float4 g_SunPos : register(c0);
 float4 g_SkyLum : register(c1);
@@ -23,6 +34,17 @@ const float4 g_SunColor : register(c8);
 
 float4 g_parameters : register(c2); // x - sun size, y - sun bloom, z - exposition,  w - time
 float4 g_perezCoeff[5] : register(c3);
+
+float g_Time            : register(c9);
+float3 g_cameraPos : register(c10); 
+
+float4 g_CloudCoverage : register(c20);
+float4 g_CloudCoverage2 : register(c24);
+float4 g_CloudQualityParams : register(c26);
+float4 g_CloudParams : register(c28);
+
+//float4 g_Coverage3 : register(c13);
+//float4 g_Coverage4 : register(c14);
 
 /**** TWEAK *****************************************************************/
 #define COVERAGE		g_Coverage
@@ -84,6 +106,70 @@ float3 convertXYZ2RGB(float3 _xyz)
     return rgb;
 }
 
+float hash_iq(float n)
+{
+    return frac(sin(n) * 753.5453123);
+}
+
+float noise_iq3(float3 x)
+{
+    float3 p = floor(x), f = frac(x);
+    f = f * f * (3.0 - 2.0 * f);
+    float n = p.x + p.y * 157.0 + 113.0 * p.z;
+
+    return lerp(
+        lerp(lerp(hash_iq(n), hash_iq(n + 1.0), f.x),
+             lerp(hash_iq(n + 157), hash_iq(n + 158), f.x), f.y),
+        lerp(lerp(hash_iq(n + 113), hash_iq(n + 114), f.x),
+             lerp(hash_iq(n + 270), hash_iq(n + 271), f.x), f.y),
+        f.z
+    );
+}
+
+float3 renderStars(float3 dir)
+{
+    float n = noise_iq3(dir * 500.0 + g_Time * 0.05); // twinkle
+    float bright = pow(saturate(n), 50.0);
+
+    // Fade near horizon
+    float horizonFade = smoothstep(0.0, 0.2, dir.y);
+
+    return bright * float3(1.0, 1.0, 1.0);
+}
+
+float3 rotateAroundAxis(float3 Vector, float3 axis, float angle)
+{
+    // Rodrigues' rotation formula
+    float cosA = cos(angle);
+    float sinA = sin(angle);
+    
+    return 
+    Vector* cosA
+    +cross(axis, Vector) * sinA + axis * dot(axis, Vector) * (1 - cosA);
+}
+
+struct CloudParams
+{
+    float2 l0_coverage;
+    float l0_cumulus_stratus_blend;
+    float l0_altitude_scale;
+    float2 l0_detail_weights;
+    float2 l0_edge_sharpening;
+    float l0_scattering_coeff;
+    float l0_extinction_coeff;
+    float l0_shadow;
+    float cumulus_congestus_blend;
+};
+
+//#include "reimaginedClouds.h"
+//#include "clouds/altocumulus.h"
+//#include "clouds/cumulus_congestus.h"
+//#include "clouds/cirrus.h"
+//#include "clouds/noctilucent.h"
+
+#include "clouds/clouds.h"
+#include "clouds/reimaginedClouds_old.h"
+
 struct PS_INPUT
 {
     float3 worldPos : POSITION1;
@@ -101,7 +187,17 @@ struct PS_OUTPUT
 PS_OUTPUT main(PS_INPUT i)
 {
     PS_OUTPUT o;
-	
+
+    //clouds_params.l0_coverage = g_CloudCoverage.xy;
+    //clouds_params.l0_cumulus_stratus_blend = g_CloudCoverage.z;
+    //clouds_params.l0_altitude_scale = g_CloudCoverage.w;
+    //clouds_params.l0_detail_weights = g_CloudCoverage2.xy;
+    //clouds_params.l0_edge_sharpening = g_CloudCoverage2.zw;
+    //clouds_params.l0_scattering_coeff = g_CloudParams.x;
+    //clouds_params.l0_extinction_coeff = g_CloudParams.y;
+    //clouds_params.l0_shadow = g_CloudParams.z;
+    //clouds_params.cumulus_congestus_blend = g_CloudParams.w;
+        
     // Perez coefficients.
     float3 A = g_perezCoeff[0].xyz;
     float3 B = g_perezCoeff[1].xyz;
@@ -110,7 +206,13 @@ PS_OUTPUT main(PS_INPUT i)
     float3 E = g_perezCoeff[4].xyz;
 
     float3 direction = normalize(i.modelPos.xyz);
+    float3 rayDir = normalize(float3(i.modelPos.x, i.modelPos.z, i.modelPos.y));
     float3 lightDir = normalize(g_SunPos.xyz);
+    float rotationAngle = g_Time;
+    
+    float3 rotatedPos = rotateAroundAxis(rayDir, lightDir, lightDir.z);
+    
+    //float3 rotatingPos = cross(lightDir, rayDir);
 
     float3 skyDir = float3(0.0, 0.0, 1.0);
     float costeta = max(dot(direction, skyDir), 0.001);
@@ -139,8 +241,48 @@ PS_OUTPUT main(PS_INPUT i)
     float3 sunColor = g_SunColor;
     float3 coloredSun = sun2 * sunColor;
     
-    float3 color = skyColor + coloredSun;
+    float3 starColor = renderStars(rotatedPos);
+    float dither = n4rand_ss(i.projPos.xy); 
+    
+ 
+    float cloudLinearDepth = 0.0;
+    
+    float3 clouds_topLayer = GetVolumetricClouds(10.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), noisetex, 1).rgb;
+    float3 clouds_bottomLayer = GetVolumetricClouds(5.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), noisetex, 0).rgb;
 
+    //float distance_to_terrain = -1.0;
+    
+    //float3 air_viewer_pos = float3(g_cameraPos.x, planet_radius + g_cameraPos.y, g_cameraPos.z);
+    float3 clear_sky = skyColor + coloredSun;
+    
+    //cameraPosition = g_cameraPos;
+    //world_age = g_Time;
+    //sun_dir = normalize(g_SunPos.xyz);
+    //moon_dir = normalize(g_SunPos.xyz);
+    //sun_color = sunColor;
+    //moon_color = sunColor;
+    //sky_color = skyColor;
+    //sunlight_color = sunColor;
+    
+    //CloudsResult cumulus_result = draw_cumulus_clouds(
+    //    air_viewer_pos,
+    //    rayDir,
+    //    clear_sky,
+    //    distance_to_terrain,
+    //    dither
+    //);
+
+    //float3 clouds_cumulus = cumulus_result.scattering.rgb;
+    //float cloud_transmittance = cumulus_result.transmittance;
+    
+    float3 finalSky = clear_sky + clouds_bottomLayer + clouds_topLayer;
+    
+#if !STARFIELD_ENABLED
+    float3 color = finalSky;
+#else
+    float3 color = finalSky + starColor;
+#endif
+    
     o.vColor_0 = float4(color.rgb, 1.0);
     o.vColor_1 = float4(normalize(float3(i.modelPos.xyz)) * -1.0f, 1.0);
     o.vColor_2 = float4(0.0f.xxx, 0.0);

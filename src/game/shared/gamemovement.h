@@ -46,6 +46,7 @@ public:
 	virtual const Vector&	GetPlayerMaxs( bool ducked ) const;
 	virtual const Vector&	GetPlayerViewOffset( bool ducked ) const;
 	virtual void SetupMovementBounds( CMoveData *pMove );
+	virtual void PerformLurchChecks();
 
 	virtual bool		IsMovingPlayerStuck( void ) const;
 	virtual CBasePlayer *GetMovingPlayer( void ) const;
@@ -61,6 +62,7 @@ public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false, CBasePlayer *testPlayer = NULL ) const;	///< returns the solid mask for the given player, so bots can have a more-restrictive set
 	CBasePlayer		*player;
 	CMoveData *GetMoveData() { return mv; }
+
 protected:
 	// Input/Output for this movement
 	CMoveData		*mv;

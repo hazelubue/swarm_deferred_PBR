@@ -73,9 +73,10 @@
 #include "c_asw_render_targets.h"
 #include "clientmode_asw.h"
 #endif
-
+#include <deferred/viewrender_deferred.h>
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+
 
 
 static void testfreezeframe_f( void )
@@ -899,7 +900,7 @@ bool IsCurrentViewAccessAllowed()
 }
 
 static ConVar mat_lpreview_mode( "mat_lpreview_mode", "-1", FCVAR_CHEAT );
-void SetupCurrentView( const Vector &vecOrigin, const QAngle &angles, view_id_t viewID, bool bDrawWorldNormal = false, bool bCullFrontFaces = false )
+void SetupCurrentView( const Vector &vecOrigin, const QAngle &angles, view_id_t viewID, bool bDrawWorldNormal, bool bCullFrontFaces )
 {
 	// Store off view origin and angles
 	g_vecCurrentRenderOrigin = vecOrigin;
@@ -2274,466 +2275,467 @@ void ParticleUsageDemo( void )
 }
 #endif
 
-
 //-----------------------------------------------------------------------------
 // Purpose: This renders the entire 3D view and the in-game hud/viewmodel
 // Input  : &view - 
 //			whatToDraw - 
 //-----------------------------------------------------------------------------
 // This renders the entire 3D view.
-void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw )
-{
-	m_UnderWaterOverlayMaterial.Shutdown();					// underwater view will set
-
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	int slot = GET_ACTIVE_SPLITSCREEN_SLOT();
-
-	m_CurrentView = view;
-
-	C_BaseAnimating::AutoAllowBoneAccess boneaccess( true, true );
-	VPROF( "CViewRender::RenderView" );
-
-	// Don't want Left4Dead running less than DX 9
-	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 )
-	{
-		// We know they were running at least 9.0 when the game started...we check the 
-		// value in ClientDLL_Init()...so they must be messing with their DirectX settings.
-		if ( Q_stricmp( COM_GetModDirectory(), "left4dead" ) == 0 )
-		{
-			static bool bFirstTime = true;
-			if ( bFirstTime )
-			{
-				bFirstTime = false;
-				Msg( "This game has a minimum requirement of Shader Model 2.0 to run properly.\n" );
-			}
-			return;
-		}
-	}
-
-	{
-		// HACK: server-side weapons use the viewmodel model, and client-side weapons swap that out for
-		// the world model in DrawModel.  This is too late for some bone setup work that happens before
-		// DrawModel, so here we just iterate all weapons we know of and fix them up ahead of time.
-		MDLCACHE_CRITICAL_SECTION();
-		CUtlLinkedList< CBaseCombatWeapon * > &weaponList = C_BaseCombatWeapon::GetWeaponList();
-		FOR_EACH_LL( weaponList, it )
-		{
-			C_BaseCombatWeapon *weapon = weaponList[it];
-			if ( !weapon->IsDormant() )
-			{
-				weapon->EnsureCorrectRenderingModel();
-			}
-		}
-	}
-
-	CMatRenderContextPtr pRenderContext( materials );
-	ITexture *saveRenderTarget = pRenderContext->GetRenderTarget();
-	pRenderContext.SafeRelease(); // don't want to hold for long periods in case in a locking active share thread mode
-
-	if ( !m_FreezeParams[ slot ].m_bTakeFreezeFrame && m_FreezeParams[ slot ].m_flFreezeFrameUntil > gpGlobals->curtime )
-	{
-		CRefPtr<CFreezeFrameView> pFreezeFrameView = new CFreezeFrameView( this );
-		pFreezeFrameView->Setup( view );
-		AddViewToScene( pFreezeFrameView );
-
-		g_bRenderingView = true;
-		AllowCurrentViewAccess( true );
-	}
-	else
-	{
-		g_flFreezeFlash[ slot ] = 0.0f;
-
-	#ifdef USE_MONITORS
-		if ( cl_drawmonitors.GetBool() && 
-			( ( whatToDraw & RENDERVIEW_SUPPRESSMONITORRENDERING ) == 0 ) )
-		{
-			DrawMonitors( view );	
-		}
-	#endif
-
-
-
-		g_bRenderingView = true;
-
-		RenderPreScene( view );
-
-		// Must be first 
-		render->SceneBegin();
-
-		g_pColorCorrectionMgr->UpdateColorCorrection();
-
-		// Send the current tonemap scalar to the material system
-		UpdateMaterialSystemTonemapScalar();
-
-		// clear happens here probably
-		SetupMain3DView( slot, view, hudViewSetup, nClearFlags, saveRenderTarget );
-
-		g_pClientShadowMgr->UpdateSplitscreenLocalPlayerShadowSkip();
-
-		bool bDrew3dSkybox = false;
-		SkyboxVisibility_t nSkyboxVisible = SKYBOX_NOT_VISIBLE;
-
-		// Don't bother with the skybox if we're drawing an ND buffer for the SFM
-		if ( !view.m_bDrawWorldNormal )
-		{
-			// if the 3d skybox world is drawn, then don't draw the normal skybox
-			if ( true ) // For pix event
-			{
-				#if PIX_ENABLE
-				{
-					CMatRenderContextPtr pRenderContext( materials );
-					PIXEVENT( pRenderContext, "Skybox Rendering" );
-				}
-				#endif
-
-				CSkyboxView *pSkyView = new CSkyboxView( this );
-				if ( ( bDrew3dSkybox = pSkyView->Setup( view, &nClearFlags, &nSkyboxVisible ) ) != false )
-				{
-					AddViewToScene( pSkyView );
-				}
-				SafeRelease( pSkyView );
-			}
-		}
-
-		// Force it to clear the framebuffer if they're in solid space.
-		if ( ( nClearFlags & VIEW_CLEAR_COLOR ) == 0 )
-		{
-			MDLCACHE_CRITICAL_SECTION();
-			if ( enginetrace->GetPointContents( view.origin ) == CONTENTS_SOLID )
-			{
-				nClearFlags |= VIEW_CLEAR_COLOR;
-			}
-		}
-
-		PreViewDrawScene( view );
-
-		// Render world and all entities, particles, etc.
-		if( !g_pIntroData )
-		{
-			#if PIX_ENABLE
-			{
-				CMatRenderContextPtr pRenderContext( materials );
-				PIXEVENT( pRenderContext, "ViewDrawScene()" );
-			}
-			#endif
-			ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, view, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
-		}
-		else
-		{
-			#if PIX_ENABLE
-			{
-				CMatRenderContextPtr pRenderContext( materials );
-				PIXEVENT( pRenderContext, "ViewDrawScene_Intro()" );
-			}
-			#endif
-			ViewDrawScene_Intro( view, nClearFlags, *g_pIntroData );
-		}
-
-		// We can still use the 'current view' stuff set up in ViewDrawScene
-		AllowCurrentViewAccess( true );
-
-		PostViewDrawScene( view );
-
-		engine->DrawPortals();
-
-		DisableFog();
-
-		// Finish scene
-		render->SceneEnd();
-
-		// Draw lightsources if enabled
-		render->DrawLights();
-
-		RenderPlayerSprites();
-
-		// Image-space motion blur and depth of field
-		#if defined( _X360 )
-		{
-			CMatRenderContextPtr pRenderContext( materials );
-			pRenderContext->PushVertexShaderGPRAllocation( 16 ); //Max out pixel shader threads
-			pRenderContext.SafeRelease();
-		}
-		#endif
-
-		if ( !building_cubemaps.GetBool() )
-		{
-			if ( IsDepthOfFieldEnabled() )
-			{
-				pRenderContext.GetFrom( materials );
-				{
-					PIXEVENT( pRenderContext, "DoDepthOfField()" );
-					DoDepthOfField( view );
-				}
-				pRenderContext.SafeRelease();
-			}
-
-			if ( ( view.m_nMotionBlurMode != MOTION_BLUR_DISABLE ) && ( mat_motion_blur_enabled.GetInt() ) )
-			{
-				pRenderContext.GetFrom( materials );
-				{
-					PIXEVENT( pRenderContext, "DoImageSpaceMotionBlur()" );
-					DoImageSpaceMotionBlur( view );
-				}
-				pRenderContext.SafeRelease();
-			}
-		}
-
-		#if defined( _X360 )
-		{
-			CMatRenderContextPtr pRenderContext( materials );
-			pRenderContext->PopVertexShaderGPRAllocation();
-			pRenderContext.SafeRelease();
-		}
-		#endif
-
-		// Now actually draw the viewmodel
-		DrawViewModels( view, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
-
-		g_ShaderEditorSystem->CustomPostRender();
-
-		DrawUnderwaterOverlay();
-
-		PixelVisibility_EndScene();
-
-		#if defined( _X360 )
-		{
-			CMatRenderContextPtr pRenderContext( materials );
-			pRenderContext->PushVertexShaderGPRAllocation( 16 ); //Max out pixel shader threads
-			pRenderContext.SafeRelease();
-		}
-		#endif
-
-		// Draw fade over entire screen if needed
-		byte color[4];
-		bool blend;
-		GetViewEffects()->GetFadeParams( &color[0], &color[1], &color[2], &color[3], &blend );
-
-		// Store off color fade params to be applied in fullscreen postprocess pass
-		SetViewFadeParams( color[0], color[1], color[2], color[3], blend );
-
-		// Draw an overlay to make it even harder to see inside smoke particle systems.
-		DrawSmokeFogOverlay();
-
-		// Overlay screen fade on entire screen
-		PerformScreenOverlay( view.x, view.y, view.width, view.height );
-
-		// Prevent sound stutter if going slow
-		engine->Sound_ExtraUpdate();	
-
-		if ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_NONE )
-		{
-			pRenderContext.GetFrom( materials );
-			pRenderContext->SetToneMappingScaleLinear(Vector(1,1,1));
-			pRenderContext.SafeRelease();
-		}
-
-		if ( !building_cubemaps.GetBool() && view.m_bDoBloomAndToneMapping )
-		{
-			pRenderContext.GetFrom( materials );
-			{
-				static bool bAlreadyShowedLoadTime = false;
-				
-				if ( ! bAlreadyShowedLoadTime )
-				{
-					bAlreadyShowedLoadTime = true;
-					if ( CommandLine()->CheckParm( "-timeload" ) )
-					{
-						Warning( "time to initial render = %f\n", Plat_FloatTime() );
-					}
-				}
-
-				PIXEVENT( pRenderContext, "DoEnginePostProcessing()" );
-
-				bool bFlashlightIsOn = false;
-				C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
-				if ( pLocal )
-				{
-					bFlashlightIsOn = pLocal->IsEffectActive( EF_DIMLIGHT );
-				}
-				DoEnginePostProcessing( view.x, view.y, view.width, view.height, bFlashlightIsOn );
-			}
-			pRenderContext.SafeRelease();
-		}
-
-		// And here are the screen-space effects
-
-		if ( IsPC() )
-		{
-			// Grab the pre-color corrected frame for editing purposes
-			engine->GrabPreColorCorrectedFrame( view.x, view.y, view.width, view.height );
-		}
-
-		PerformScreenSpaceEffects( view.x, view.y, view.width, view.height );
-
-
-		#if defined( _X360 )
-		{
-			CMatRenderContextPtr pRenderContext( materials );
-			pRenderContext->PopVertexShaderGPRAllocation();
-			pRenderContext.SafeRelease();
-		}
-		#endif
-
-		GetClientMode()->DoPostScreenSpaceEffects( &view );
-
-		CleanupMain3DView( view );
-
-		if ( m_FreezeParams[ slot ].m_bTakeFreezeFrame )
-		{
-			pRenderContext = materials->GetRenderContext();
-			if ( IsX360() )
-			{
-				// 360 doesn't create the Fullscreen texture
-				pRenderContext->CopyRenderTargetToTextureEx( GetFullFrameFrameBufferTexture( 1 ), 0, NULL, NULL );
-			}
-			else
-			{
-				pRenderContext->CopyRenderTargetToTextureEx( GetFullscreenTexture(), 0, NULL, NULL );
-			}
-			pRenderContext.SafeRelease();
-			m_FreezeParams[ slot ].m_bTakeFreezeFrame = false;
-		}
-
-		pRenderContext = materials->GetRenderContext();
-		pRenderContext->SetRenderTarget( saveRenderTarget );
-		pRenderContext.SafeRelease();
-
-		// Draw the overlay
-		if ( m_bDrawOverlay )
-		{	   
-			// This allows us to be ok if there are nested overlay views
-			CViewSetup currentView = m_CurrentView;
-			CViewSetup tempView = m_OverlayViewSetup;
-			tempView.fov = ScaleFOVByWidthRatio( tempView.fov, tempView.m_flAspectRatio / ( 4.0f / 3.0f ) );
-			tempView.m_bDoBloomAndToneMapping = false;				// FIXME: Hack to get Mark up and running
-			tempView.m_nMotionBlurMode = MOTION_BLUR_DISABLE;		// FIXME: Hack to get Mark up and running
-			m_bDrawOverlay = false;
-			RenderView( tempView, hudViewSetup, m_OverlayClearFlags, m_OverlayDrawFlags );
-			m_CurrentView = currentView;
-		}
-	}
-
-	// Clear a row of pixels at the edge of the viewport if it isn't at the edge of the screen
-	if ( VGui_IsSplitScreen() )
-	{
-		CMatRenderContextPtr pRenderContext( materials );
-		pRenderContext->PushRenderTargetAndViewport();
-
-		int nScreenWidth, nScreenHeight;
-		g_pMaterialSystem->GetBackBufferDimensions( nScreenWidth, nScreenHeight );
-
-		// NOTE: view.height is off by 1 on the PC in a release build, but debug is correct! I'm leaving this here to help track this down later.
-		// engine->Con_NPrintf( 25 + hh, "view( %d, %d, %d, %d ) GetBackBufferDimensions( %d, %d )\n", view.x, view.y, view.width, view.height, nScreenWidth, nScreenHeight );
-
-		if ( view.x != 0 ) // if left of viewport isn't at 0
-		{
-			pRenderContext->Viewport( view.x, view.y, 1, view.height );
-			pRenderContext->ClearColor3ub( 0, 0, 0 );
-			pRenderContext->ClearBuffers( true, false );
-		}
-
-		if ( ( view.x + view.width ) != nScreenWidth ) // if right of viewport isn't at edge of screen
-		{
-			pRenderContext->Viewport( view.x + view.width - 1, view.y, 1, view.height );
-			pRenderContext->ClearColor3ub( 0, 0, 0 );
-			pRenderContext->ClearBuffers( true, false );
-		}
-
-		if ( view.y != 0 ) // if top of viewport isn't at 0
-		{
-			pRenderContext->Viewport( view.x, view.y, view.width, 1 );
-			pRenderContext->ClearColor3ub( 0, 0, 0 );
-			pRenderContext->ClearBuffers( true, false );
-		}
-
-		if ( ( view.y + view.height ) != nScreenHeight ) // if bottom of viewport isn't at edge of screen
-		{
-			pRenderContext->Viewport( view.x, view.y + view.height - 1, view.width, 1 );
-			pRenderContext->ClearColor3ub( 0, 0, 0 );
-			pRenderContext->ClearBuffers( true, false );
-		}
-
-		pRenderContext->PopRenderTargetAndViewport();
-		pRenderContext->Release();
-	}
-
-	// Draw the 2D graphics
-	m_CurrentView = hudViewSetup;
-	pRenderContext = materials->GetRenderContext();
-	if ( true )
-	{
-		PIXEVENT( pRenderContext, "2D Client Rendering" );
-
-		render->Push2DView( hudViewSetup, 0, saveRenderTarget, GetFrustum() );
-
-		Render2DEffectsPreHUD( hudViewSetup );
-
-		if ( whatToDraw & RENDERVIEW_DRAWHUD )
-		{
-			VPROF_BUDGET( "VGui_DrawHud", VPROF_BUDGETGROUP_OTHER_VGUI );
-			// paint the vgui screen
-			VGui_PreRender();
-
-			CUtlVector< vgui::VPANEL > vecHudPanels;
-
-			vecHudPanels.AddToTail( VGui_GetClientDLLRootPanel() );
-
-			// This block is suspect - why are we resizing fullscreen panels to be the size of the hudViewSetup
-			// which is potentially only half the screen
-			if ( GET_ACTIVE_SPLITSCREEN_SLOT() == 0 )
-			{
-				vecHudPanels.AddToTail( VGui_GetFullscreenRootVPANEL() );
-
-#if defined( TOOLFRAMEWORK_VGUI_REFACTOR )
-				vecHudPanels.AddToTail( enginevgui->GetPanel( PANEL_GAMEUIDLL ) );
-#endif
-				vecHudPanels.AddToTail( enginevgui->GetPanel( PANEL_CLIENTDLL_TOOLS ) );
-			}
-
-			PositionHudPanels( vecHudPanels, hudViewSetup );
-
-			// The crosshair, etc. needs to get at the current setup stuff
-			AllowCurrentViewAccess( true );
-
-			// Draw the in-game stuff based on the actual viewport being used
-			render->VGui_Paint( PAINT_INGAMEPANELS );
-
-			AllowCurrentViewAccess( false );
-
-			VGui_PostRender();
-
-			GetClientMode()->PostRenderVGui();
-			pRenderContext->Flush();
-		}
-
-		CDebugViewRender::Draw2DDebuggingInfo( hudViewSetup );
-
-		Render2DEffectsPostHUD( hudViewSetup );
-
-		g_bRenderingView = false;
-
-		// We can no longer use the 'current view' stuff set up in ViewDrawScene
-		AllowCurrentViewAccess( false );
-
-		if ( IsPC() )
-		{
-			CDebugViewRender::GenerateOverdrawForTesting();
-		}
-
-		render->PopView( GetFrustum() );
-	}
-	pRenderContext.SafeRelease();
-
-	g_WorldListCache.Flush();
-
-	m_CurrentView = view;
-
-#ifdef PARTICLE_USAGE_DEMO
-	ParticleUsageDemo();
-#endif
-
-
-}
+//void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw )
+//{
+//	m_UnderWaterOverlayMaterial.Shutdown();					// underwater view will set
+//
+//	ASSERT_LOCAL_PLAYER_RESOLVABLE();
+//	int slot = GET_ACTIVE_SPLITSCREEN_SLOT();
+//
+//	m_CurrentView = view;
+//
+//	//GetOriginalViewSetup(m_CurrentView);
+//
+//	C_BaseAnimating::AutoAllowBoneAccess boneaccess( true, true );
+//	VPROF( "CViewRender::RenderView" );
+//
+//	// Don't want Left4Dead running less than DX 9
+//	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 )
+//	{
+//		// We know they were running at least 9.0 when the game started...we check the 
+//		// value in ClientDLL_Init()...so they must be messing with their DirectX settings.
+//		if ( Q_stricmp( COM_GetModDirectory(), "left4dead" ) == 0 )
+//		{
+//			static bool bFirstTime = true;
+//			if ( bFirstTime )
+//			{
+//				bFirstTime = false;
+//				Msg( "This game has a minimum requirement of Shader Model 2.0 to run properly.\n" );
+//			}
+//			return;
+//		}
+//	}
+//
+//	{
+//		// HACK: server-side weapons use the viewmodel model, and client-side weapons swap that out for
+//		// the world model in DrawModel.  This is too late for some bone setup work that happens before
+//		// DrawModel, so here we just iterate all weapons we know of and fix them up ahead of time.
+//		MDLCACHE_CRITICAL_SECTION();
+//		CUtlLinkedList< CBaseCombatWeapon * > &weaponList = C_BaseCombatWeapon::GetWeaponList();
+//		FOR_EACH_LL( weaponList, it )
+//		{
+//			C_BaseCombatWeapon *weapon = weaponList[it];
+//			if ( !weapon->IsDormant() )
+//			{
+//				weapon->EnsureCorrectRenderingModel();
+//			}
+//		}
+//	}
+//
+//	CMatRenderContextPtr pRenderContext( materials );
+//	ITexture *saveRenderTarget = pRenderContext->GetRenderTarget();
+//	pRenderContext.SafeRelease(); // don't want to hold for long periods in case in a locking active share thread mode
+//
+//	if ( !m_FreezeParams[ slot ].m_bTakeFreezeFrame && m_FreezeParams[ slot ].m_flFreezeFrameUntil > gpGlobals->curtime )
+//	{
+//		CRefPtr<CFreezeFrameView> pFreezeFrameView = new CFreezeFrameView( this );
+//		pFreezeFrameView->Setup( view );
+//		AddViewToScene( pFreezeFrameView );
+//
+//		g_bRenderingView = true;
+//		AllowCurrentViewAccess( true );
+//	}
+//	else
+//	{
+//		g_flFreezeFlash[ slot ] = 0.0f;
+//
+//	#ifdef USE_MONITORS
+//		if ( cl_drawmonitors.GetBool() && 
+//			( ( whatToDraw & RENDERVIEW_SUPPRESSMONITORRENDERING ) == 0 ) )
+//		{
+//			DrawMonitors( view );	
+//		}
+//	#endif
+//
+//
+//
+//		g_bRenderingView = true;
+//
+//		RenderPreScene( view );
+//
+//		// Must be first 
+//		render->SceneBegin();
+//
+//		g_pColorCorrectionMgr->UpdateColorCorrection();
+//
+//		// Send the current tonemap scalar to the material system
+//		UpdateMaterialSystemTonemapScalar();
+//
+//		// clear happens here probably
+//		SetupMain3DView( slot, view, hudViewSetup, nClearFlags, saveRenderTarget );
+//
+//		g_pClientShadowMgr->UpdateSplitscreenLocalPlayerShadowSkip();
+//
+//		bool bDrew3dSkybox = false;
+//		SkyboxVisibility_t nSkyboxVisible = SKYBOX_NOT_VISIBLE;
+//
+//		// Don't bother with the skybox if we're drawing an ND buffer for the SFM
+//		if ( !view.m_bDrawWorldNormal )
+//		{
+//			// if the 3d skybox world is drawn, then don't draw the normal skybox
+//			if ( true ) // For pix event
+//			{
+//				#if PIX_ENABLE
+//				{
+//					CMatRenderContextPtr pRenderContext( materials );
+//					PIXEVENT( pRenderContext, "Skybox Rendering" );
+//				}
+//				#endif
+//
+//				CSkyboxView *pSkyView = new CSkyboxView( this );
+//				if ( ( bDrew3dSkybox = pSkyView->Setup( view, &nClearFlags, &nSkyboxVisible ) ) != false )
+//				{
+//					AddViewToScene( pSkyView );
+//				}
+//				SafeRelease( pSkyView );
+//			}
+//		}
+//
+//		// Force it to clear the framebuffer if they're in solid space.
+//		if ( ( nClearFlags & VIEW_CLEAR_COLOR ) == 0 )
+//		{
+//			MDLCACHE_CRITICAL_SECTION();
+//			if ( enginetrace->GetPointContents( view.origin ) == CONTENTS_SOLID )
+//			{
+//				nClearFlags |= VIEW_CLEAR_COLOR;
+//			}
+//		}
+//
+//		PreViewDrawScene( view );
+//
+//		// Render world and all entities, particles, etc.
+//		if( !g_pIntroData )
+//		{
+//			#if PIX_ENABLE
+//			{
+//				CMatRenderContextPtr pRenderContext( materials );
+//				PIXEVENT( pRenderContext, "ViewDrawScene()" );
+//			}
+//			#endif
+//			ViewDrawScene( bDrew3dSkybox, nSkyboxVisible, view, nClearFlags, VIEW_MAIN, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
+//		}
+//		else
+//		{
+//			#if PIX_ENABLE
+//			{
+//				CMatRenderContextPtr pRenderContext( materials );
+//				PIXEVENT( pRenderContext, "ViewDrawScene_Intro()" );
+//			}
+//			#endif
+//			ViewDrawScene_Intro( view, nClearFlags, *g_pIntroData );
+//		}
+//
+//		// We can still use the 'current view' stuff set up in ViewDrawScene
+//		AllowCurrentViewAccess( true );
+//
+//		PostViewDrawScene( view );
+//
+//		engine->DrawPortals();
+//
+//		DisableFog();
+//
+//		// Finish scene
+//		render->SceneEnd();
+//
+//		// Draw lightsources if enabled
+//		render->DrawLights();
+//
+//		RenderPlayerSprites();
+//
+//		// Image-space motion blur and depth of field
+//		#if defined( _X360 )
+//		{
+//			CMatRenderContextPtr pRenderContext( materials );
+//			pRenderContext->PushVertexShaderGPRAllocation( 16 ); //Max out pixel shader threads
+//			pRenderContext.SafeRelease();
+//		}
+//		#endif
+//
+//		if ( !building_cubemaps.GetBool() )
+//		{
+//			if ( IsDepthOfFieldEnabled() )
+//			{
+//				pRenderContext.GetFrom( materials );
+//				{
+//					PIXEVENT( pRenderContext, "DoDepthOfField()" );
+//					DoDepthOfField( view );
+//				}
+//				pRenderContext.SafeRelease();
+//			}
+//
+//			if ( ( view.m_nMotionBlurMode != MOTION_BLUR_DISABLE ) && ( mat_motion_blur_enabled.GetInt() ) )
+//			{
+//				pRenderContext.GetFrom( materials );
+//				{
+//					PIXEVENT( pRenderContext, "DoImageSpaceMotionBlur()" );
+//					DoImageSpaceMotionBlur( view );
+//				}
+//				pRenderContext.SafeRelease();
+//			}
+//		}
+//
+//		#if defined( _X360 )
+//		{
+//			CMatRenderContextPtr pRenderContext( materials );
+//			pRenderContext->PopVertexShaderGPRAllocation();
+//			pRenderContext.SafeRelease();
+//		}
+//		#endif
+//
+//		// Now actually draw the viewmodel
+//		DrawViewModels( view, whatToDraw & RENDERVIEW_DRAWVIEWMODEL );
+//
+//		g_ShaderEditorSystem->CustomPostRender();
+//
+//		DrawUnderwaterOverlay();
+//
+//		PixelVisibility_EndScene();
+//
+//		#if defined( _X360 )
+//		{
+//			CMatRenderContextPtr pRenderContext( materials );
+//			pRenderContext->PushVertexShaderGPRAllocation( 16 ); //Max out pixel shader threads
+//			pRenderContext.SafeRelease();
+//		}
+//		#endif
+//
+//		// Draw fade over entire screen if needed
+//		byte color[4];
+//		bool blend;
+//		GetViewEffects()->GetFadeParams( &color[0], &color[1], &color[2], &color[3], &blend );
+//
+//		// Store off color fade params to be applied in fullscreen postprocess pass
+//		SetViewFadeParams( color[0], color[1], color[2], color[3], blend );
+//
+//		// Draw an overlay to make it even harder to see inside smoke particle systems.
+//		DrawSmokeFogOverlay();
+//
+//		// Overlay screen fade on entire screen
+//		PerformScreenOverlay( view.x, view.y, view.width, view.height );
+//
+//		// Prevent sound stutter if going slow
+//		engine->Sound_ExtraUpdate();	
+//
+//		if ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_NONE )
+//		{
+//			pRenderContext.GetFrom( materials );
+//			pRenderContext->SetToneMappingScaleLinear(Vector(1,1,1));
+//			pRenderContext.SafeRelease();
+//		}
+//
+//		if ( !building_cubemaps.GetBool() && view.m_bDoBloomAndToneMapping )
+//		{
+//			pRenderContext.GetFrom( materials );
+//			{
+//				static bool bAlreadyShowedLoadTime = false;
+//				
+//				if ( ! bAlreadyShowedLoadTime )
+//				{
+//					bAlreadyShowedLoadTime = true;
+//					if ( CommandLine()->CheckParm( "-timeload" ) )
+//					{
+//						Warning( "time to initial render = %f\n", Plat_FloatTime() );
+//					}
+//				}
+//
+//				PIXEVENT( pRenderContext, "DoEnginePostProcessing()" );
+//
+//				bool bFlashlightIsOn = false;
+//				C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
+//				if ( pLocal )
+//				{
+//					bFlashlightIsOn = pLocal->IsEffectActive( EF_DIMLIGHT );
+//				}
+//				DoEnginePostProcessing( view.x, view.y, view.width, view.height, bFlashlightIsOn );
+//			}
+//			pRenderContext.SafeRelease();
+//		}
+//
+//		// And here are the screen-space effects
+//
+//		if ( IsPC() )
+//		{
+//			// Grab the pre-color corrected frame for editing purposes
+//			engine->GrabPreColorCorrectedFrame( view.x, view.y, view.width, view.height );
+//		}
+//
+//		PerformScreenSpaceEffects( view.x, view.y, view.width, view.height );
+//
+//
+//		#if defined( _X360 )
+//		{
+//			CMatRenderContextPtr pRenderContext( materials );
+//			pRenderContext->PopVertexShaderGPRAllocation();
+//			pRenderContext.SafeRelease();
+//		}
+//		#endif
+//
+//		GetClientMode()->DoPostScreenSpaceEffects( &view );
+//
+//		CleanupMain3DView( view );
+//
+//		if ( m_FreezeParams[ slot ].m_bTakeFreezeFrame )
+//		{
+//			pRenderContext = materials->GetRenderContext();
+//			if ( IsX360() )
+//			{
+//				// 360 doesn't create the Fullscreen texture
+//				pRenderContext->CopyRenderTargetToTextureEx( GetFullFrameFrameBufferTexture( 1 ), 0, NULL, NULL );
+//			}
+//			else
+//			{
+//				pRenderContext->CopyRenderTargetToTextureEx( GetFullscreenTexture(), 0, NULL, NULL );
+//			}
+//			pRenderContext.SafeRelease();
+//			m_FreezeParams[ slot ].m_bTakeFreezeFrame = false;
+//		}
+//
+//		pRenderContext = materials->GetRenderContext();
+//		pRenderContext->SetRenderTarget( saveRenderTarget );
+//		pRenderContext.SafeRelease();
+//
+//		// Draw the overlay
+//		if ( m_bDrawOverlay )
+//		{	   
+//			// This allows us to be ok if there are nested overlay views
+//			CViewSetup currentView = m_CurrentView;
+//			CViewSetup tempView = m_OverlayViewSetup;
+//			tempView.fov = ScaleFOVByWidthRatio( tempView.fov, tempView.m_flAspectRatio / ( 4.0f / 3.0f ) );
+//			tempView.m_bDoBloomAndToneMapping = false;				// FIXME: Hack to get Mark up and running
+//			tempView.m_nMotionBlurMode = MOTION_BLUR_DISABLE;		// FIXME: Hack to get Mark up and running
+//			m_bDrawOverlay = false;
+//			RenderView( tempView, hudViewSetup, m_OverlayClearFlags, m_OverlayDrawFlags );
+//			m_CurrentView = currentView;
+//		}
+//	}
+//
+//	// Clear a row of pixels at the edge of the viewport if it isn't at the edge of the screen
+//	if ( VGui_IsSplitScreen() )
+//	{
+//		CMatRenderContextPtr pRenderContext( materials );
+//		pRenderContext->PushRenderTargetAndViewport();
+//
+//		int nScreenWidth, nScreenHeight;
+//		g_pMaterialSystem->GetBackBufferDimensions( nScreenWidth, nScreenHeight );
+//
+//		// NOTE: view.height is off by 1 on the PC in a release build, but debug is correct! I'm leaving this here to help track this down later.
+//		// engine->Con_NPrintf( 25 + hh, "view( %d, %d, %d, %d ) GetBackBufferDimensions( %d, %d )\n", view.x, view.y, view.width, view.height, nScreenWidth, nScreenHeight );
+//
+//		if ( view.x != 0 ) // if left of viewport isn't at 0
+//		{
+//			pRenderContext->Viewport( view.x, view.y, 1, view.height );
+//			pRenderContext->ClearColor3ub( 0, 0, 0 );
+//			pRenderContext->ClearBuffers( true, false );
+//		}
+//
+//		if ( ( view.x + view.width ) != nScreenWidth ) // if right of viewport isn't at edge of screen
+//		{
+//			pRenderContext->Viewport( view.x + view.width - 1, view.y, 1, view.height );
+//			pRenderContext->ClearColor3ub( 0, 0, 0 );
+//			pRenderContext->ClearBuffers( true, false );
+//		}
+//
+//		if ( view.y != 0 ) // if top of viewport isn't at 0
+//		{
+//			pRenderContext->Viewport( view.x, view.y, view.width, 1 );
+//			pRenderContext->ClearColor3ub( 0, 0, 0 );
+//			pRenderContext->ClearBuffers( true, false );
+//		}
+//
+//		if ( ( view.y + view.height ) != nScreenHeight ) // if bottom of viewport isn't at edge of screen
+//		{
+//			pRenderContext->Viewport( view.x, view.y + view.height - 1, view.width, 1 );
+//			pRenderContext->ClearColor3ub( 0, 0, 0 );
+//			pRenderContext->ClearBuffers( true, false );
+//		}
+//
+//		pRenderContext->PopRenderTargetAndViewport();
+//		pRenderContext->Release();
+//	}
+//
+//	// Draw the 2D graphics
+//	m_CurrentView = hudViewSetup;
+//	pRenderContext = materials->GetRenderContext();
+//	if ( true )
+//	{
+//		PIXEVENT( pRenderContext, "2D Client Rendering" );
+//
+//		render->Push2DView( hudViewSetup, 0, saveRenderTarget, GetFrustum() );
+//
+//		Render2DEffectsPreHUD( hudViewSetup );
+//
+//		if ( whatToDraw & RENDERVIEW_DRAWHUD )
+//		{
+//			VPROF_BUDGET( "VGui_DrawHud", VPROF_BUDGETGROUP_OTHER_VGUI );
+//			// paint the vgui screen
+//			VGui_PreRender();
+//
+//			CUtlVector< vgui::VPANEL > vecHudPanels;
+//
+//			vecHudPanels.AddToTail( VGui_GetClientDLLRootPanel() );
+//
+//			// This block is suspect - why are we resizing fullscreen panels to be the size of the hudViewSetup
+//			// which is potentially only half the screen
+//			if ( GET_ACTIVE_SPLITSCREEN_SLOT() == 0 )
+//			{
+//				vecHudPanels.AddToTail( VGui_GetFullscreenRootVPANEL() );
+//
+//#if defined( TOOLFRAMEWORK_VGUI_REFACTOR )
+//				vecHudPanels.AddToTail( enginevgui->GetPanel( PANEL_GAMEUIDLL ) );
+//#endif
+//				vecHudPanels.AddToTail( enginevgui->GetPanel( PANEL_CLIENTDLL_TOOLS ) );
+//			}
+//
+//			PositionHudPanels( vecHudPanels, hudViewSetup );
+//
+//			// The crosshair, etc. needs to get at the current setup stuff
+//			AllowCurrentViewAccess( true );
+//
+//			// Draw the in-game stuff based on the actual viewport being used
+//			render->VGui_Paint( PAINT_INGAMEPANELS );
+//
+//			AllowCurrentViewAccess( false );
+//
+//			VGui_PostRender();
+//
+//			GetClientMode()->PostRenderVGui();
+//			pRenderContext->Flush();
+//		}
+//
+//		CDebugViewRender::Draw2DDebuggingInfo( hudViewSetup );
+//
+//		Render2DEffectsPostHUD( hudViewSetup );
+//
+//		g_bRenderingView = false;
+//
+//		// We can no longer use the 'current view' stuff set up in ViewDrawScene
+//		AllowCurrentViewAccess( false );
+//
+//		if ( IsPC() )
+//		{
+//			CDebugViewRender::GenerateOverdrawForTesting();
+//		}
+//
+//		render->PopView( GetFrustum() );
+//	}
+//	pRenderContext.SafeRelease();
+//
+//	g_WorldListCache.Flush();
+//
+//	m_CurrentView = view;
+//
+//#ifdef PARTICLE_USAGE_DEMO
+//	ParticleUsageDemo();
+//#endif
+//
+//
+//}
 
 //-----------------------------------------------------------------------------
 // Purpose: Renders extra 2D effects in derived classes while the 2D view is on the stack

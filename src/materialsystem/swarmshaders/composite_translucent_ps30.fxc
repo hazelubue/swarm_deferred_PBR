@@ -5,13 +5,9 @@
 // STATIC:		"ENVMAP"			"0..1"
 // STATIC:		"ENVMAPMASK"		"0..1"
 // STATIC:		"ENVMAPFRESNEL"		"0..1"
-
-// STATIC:		"RIMLIGHT"						"0..1"
-// STATIC:		"RIMLIGHTMODULATELIGHT"			"0..1"
+// STATIC:		"ALPHATEST"			"0..1"
 
 // STATIC:		"BASETEXTURE2"		"0..1"
-// STATIC:		"BLENDMODULATE"		"0..1"
-// STATIC:		"MULTIBLEND"		"0..1"
 
 // STATIC:		"SELFILLUM"					"0..1"
 // STATIC:		"SELFILLUM_MASK"			"0..1"
@@ -47,8 +43,10 @@
 #include "common_deferred_fxc.h"
 #include "common_vertexlitgeneric_dx9.h"
 
-#include "common_glass_pbr.h"
-
+static const float RAY_START = 0.1;
+static const float RAY_STEP_DIV = 0.5;
+static const float DEPTH_TOLERANCE = 1.0;
+static const int MAX_STEPS = 16;
 
 sampler sAlbedo : register(s0);
 
@@ -58,8 +56,6 @@ const float g_flAlphaRef				: register( c0 );
 
 
 sampler sNormals : register(s1);
-
-const float g_flPhongScale : register(c4);
 
 #if ENVMAP
 sampler sEnvmap								: register( s3 );
@@ -81,11 +77,6 @@ sampler sBlendmodulate						: register( s6 );
 
 #if PHONGFRESNEL || ENVMAPFRESNEL
 const float3 g_flFresnelRanges				: register( c7 );
-#endif
-
-#if RIMLIGHT
-const float3 g_flRimLight_Tint						: register( c8 );
-const float2 g_flRimLight_Exponent_AlbedoScale		: register( c9 );
 #endif
 
 #if ENVMAPMASK && BASETEXTURE2
@@ -110,13 +101,46 @@ sampler sSelfIllumMask						: register( s4 ); // override envmap mask
 #endif
 #endif
 
+sampler ReflectSampler : register(s11);
+sampler depthsampler   : register(s12);
+
 const float4 g_GlobalLightDir				: register(c12); // xyz = direction, w = has shadow
 const float4 g_GlobalLightDiffuse		    : register(c13); // xyz = diffuse color
 const float4 g_GlobalLightAmbHigh			: register(c14); // xyz = ambient high color
 const float4 g_GlobalLightAmbLow			: register(c15); // xyz = ambient low color
 
+// These constants are used to rotate the world space water normals around the up axis to align the
+// normal with the camera and then give us a 2D offset vector to use for reflection and refraction uv's
+
+//const float3 g_vWorldToViewWater0 : register(c24);
+//const float3 g_vWorldToViewWater1 : register(c36);
+const float4 g_ReflectRefractScale = (float4) 0.25f; // xy - reflect scale, zw - refract scale
+
+//const float4x3 g_matOrtho[2]				: register(c16);
+//const float4 g_vecUVTransform[2]			: register(c22);
+//const float3 g_vecSlopeData[2]				: register(c24);
+//const float4 g_vecFilterConfig_A[2]			: register(c26); //= (float4[2]) 0;
+//const float4 g_vecFilterConfig_B[2]			: register(c8); //= (float4[2]) 0;
+
+const float4x4 g_ViewInv : register(c16);
+const float4x4 g_ProjInv : register(c20);
+const float4x4 g_View : register(c24);
+const float4x4 g_Proj : register(c31);
+const float2 g_zPlanes : register(c35);
+const float aspect : register(c36);
+const float fov : register(c37);
+
+#define FIELD_OF_VIEW fov.x
+#define ASPECT_RATIO aspect.x
+
+#define g_zNear g_zPlanes.x
+#define g_zFar g_zPlanes.y
+
 struct PS_INPUT
 {
+	
+    float4 vProjPos : TEXCOORD6;
+	
 #if BLENDMODULATE
 	float4 vTexCoord				: TEXCOORD0;
 #else
@@ -124,7 +148,7 @@ struct PS_INPUT
 #endif
 
     float3 vWorldNormal : TEXCOORD1;
-    float3 vWorldPos : TEXCOORD2;
+    float4 vWorldPos : TEXCOORD2;
 
 #if ENVMAP || RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye				: TEXCOORD3;
@@ -133,31 +157,40 @@ struct PS_INPUT
 #if BASETEXTURE2
 	float4 vColor_0					: COLOR0;
 #endif
-
-#if MULTIBLEND
-#if BLENDMODULATE
-	float4 vTexCoordBlendmod23			: TEXCOORD4;
-#endif
-	float3 vAlphaBlend					: TEXCOORD5;
-	float4 vColorBlend1					: COLOR0;
-	float4 vColorBlend2					: COLOR1;
-	float4 vColorBlend3					: TEXCOORD6;
-	float3 vColorBlend4					: TEXCOORD7;
-#endif
+	
+    float3 vPositionToCameraRayWs   : TEXCOORD4;
+    float4 vReflectXY_vRefractYX    : TEXCOORD5;
+	
+    float3 stabilizedOrigin			: TEXCOORD7;
 
 #if NOCULL
 	float vDir						: VFACE;
 #endif
 	
-    float2 vScreenPos : VPOS;
+    float2 vScreenPos				: VPOS;
+ 
 };
 
 
 struct PS_OUTPUT
 {
-    float4 vColor_0 : COLOR0;
+    float4 vColor_0					: COLOR0;
 };
 
+float4x4 GetViewProj()
+{
+    //return 0;
+    return mul(g_View, g_Proj);
+}
+
+float4x4 GetViewProjInv()
+{
+    //return 0;
+    return mul(g_ProjInv, g_ViewInv);
+}
+
+#include "common_glass_pbr.h"
+#include "common_ssr.h"
 
 PS_OUTPUT main(const PS_INPUT In)
 {
@@ -168,51 +201,25 @@ PS_OUTPUT main(const PS_INPUT In)
 #if BASETEXTURE2
 	float4 flAlbedoSample2 = tex2D( sAlbedo2, In.vTexCoord.xy );
 	float flBlendfactor = In.vColor_0.w;
-#if BLENDMODULATE
-	flBlendfactor = GetModulatedBlend( flBlendfactor, tex2D( sBlendmodulate, In.vTexCoord.zw ).rg );
-#endif
 	flAlbedoSample = lerp( flAlbedoSample, flAlbedoSample2, flBlendfactor );
-#endif
-
-#if MULTIBLEND
-	float remaining = 1;
-	float4 flBlendFactors;
-
-#if BLENDMODULATE
-	flBlendFactors.x = GetMultiBlendModulated( tex2D( sBlendmodulate, In.vTexCoord.zw ).rg, In.vColorBlend1.a, In.vAlphaBlend.x, remaining );
-	flBlendFactors.y = GetMultiBlendModulated( tex2D( sBlendmodulate2, In.vTexCoordBlendmod23.xy ).rg, In.vColorBlend2.a, In.vAlphaBlend.y, remaining );
-	flBlendFactors.z = GetMultiBlendModulated( tex2D( sBlendmodulate3, In.vTexCoordBlendmod23.zw ).rg, In.vColorBlend3.a, In.vAlphaBlend.z, remaining );
-#else
-	flBlendFactors.x = GetMultiBlend( In.vColorBlend1.a, remaining );
-	flBlendFactors.y = GetMultiBlend( In.vColorBlend2.a, remaining );
-	flBlendFactors.z = GetMultiBlend( In.vColorBlend3.a, remaining );
-#endif
-	flBlendFactors.w = remaining;
-
-	flAlbedoSample = flAlbedoSample * flBlendFactors.x
-		+ tex2D( sAlbedo2, In.vTexCoord.xy ) * flBlendFactors.y
-		+ tex2D( sAlbedo3, In.vTexCoord.xy ) * flBlendFactors.z
-		+ tex2D( sAlbedo4, In.vTexCoord.xy ) * flBlendFactors.w;
-
-	flAlbedoSample.rgb *= In.vColorBlend1.rgb * flBlendFactors.x
-		+ In.vColorBlend2.rgb * flBlendFactors.y
-		+ In.vColorBlend3.rgb * flBlendFactors.z
-		+ In.vColorBlend4.rgb * flBlendFactors.w;
 #endif
 
 #if ALPHATEST
 	clip( flAlbedoSample.a - g_flAlphaRef );
 #endif
 	
-    float3 worldNormal = (float3) 0;
+    float4 ssrWorldNormal = (float4) 0;
+    float4 worldNormal = (float4) 0;
 	
     float3 dPdx = ddx(In.vWorldPos);
     float3 dPdy = ddy(In.vWorldPos);
     float3 geometricNormal = cross(dPdy, dPdx);
     float len = length(geometricNormal);
-    worldNormal = len > 0.0001 ? geometricNormal / len : float3(0, 0, 1) * 0.5f + 0.5f;
+    worldNormal.xyz = len > 0.0001 ? geometricNormal / len : float3(0, 0, 1) * 0.5f + 0.5f;
 	
     worldNormal = normalize(worldNormal);
+	
+    ssrWorldNormal = tex2D(sNormals, In.vTexCoord) * 0.5f + 0.5f;
 
 #if RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye = normalize( In.worldToEye );
@@ -236,19 +243,19 @@ PS_OUTPUT main(const PS_INPUT In)
 #endif
 	
     float roughness = 0.0f;
-    float GenRoughness = customTex2D(GenerateRoughness(worldNormal, flAlbedoSample), In.vTexCoord.xy);
+    float GenRoughness = customTex2D(GenerateRoughness(worldNormal.xyz, flAlbedoSample), In.vTexCoord.xy);
     roughness = GenRoughness;
 
     float metallic = 0.0f;
-    float GenMetallic = customTex2D(GenerateMetallic(worldNormal, flAlbedoSample), In.vTexCoord.xy);
+    float GenMetallic = customTex2D(GenerateMetallic(worldNormal.xyz, flAlbedoSample), In.vTexCoord.xy);
     metallic = GenMetallic;
-
-    float3 V = normalize(g_vecOrigin.xyz - In.vWorldPos);
-    float3 N = worldNormal;
-    float NdotV = max(0.0f, dot(N, V));
 	
-    float3 worldPos = In.vWorldPos.xyz;
+    float4 worldPos = In.vWorldPos.xyzw;
 	
+    float3 V = normalize(g_vecOrigin.xyz - worldPos.xyz);
+    float4 N = worldNormal;
+    float NdotV = max(0.0f, dot(N.xyz, V));
+		
     float3 compositeLighting = (float3) 0;
      
     int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
@@ -267,7 +274,7 @@ PS_OUTPUT main(const PS_INPUT In)
         float lightType = lightColorIntensity.w;
         //float lightIntensity = max(lightColorIntensity.a, 0.001);
     
-        float3 toLight = lightPos - worldPos;
+        float3 toLight = lightPos - worldPos.xyz;
         float distance = length(toLight);
     
         // Skip lights outside radius
@@ -286,21 +293,46 @@ PS_OUTPUT main(const PS_INPUT In)
         float NdotH = max(0.0f, dot(N, H));
         float VdotH = max(0.0f, dot(V, H));
 	
-        float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, effectiveLightColor, attenuation, lightType, lightPos, lightRadius);
+        float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos.xyz, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, effectiveLightColor, attenuation, lightType, lightPos, lightRadius);
 	
 		compositeLighting += flLighting;
     }
 
     float3 L_global = normalize(g_GlobalLightDir.xyz);
-    float NdotL_global = max(0.0f, dot(N, L_global));
+    float NdotL_global = max(0.0f, dot(N.xyz, L_global));
 
     float3 H_global = normalize(L_global + V);
-    float NdotH_global = max(0.0f, dot(N, H_global));
+    float NdotH_global = max(0.0f, dot(N.xyz, H_global));
     float VdotH_global = max(0.0f, dot(V, H_global));
 
-    float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N, worldPos, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
+    //float shadow = (float) 0;
+    //shadow += PerformCascadedShadow(
+    //    sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
+    //    g_vecFilterConfig_A, g_vecFilterConfig_B, N, dot(g_GlobalLightDir.xyz, N));
+    
+    float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N.xyz, worldPos.xyz, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
+   
+	compositeLighting += globalLighting;
 	
-    compositeLighting += globalLighting;
+    float2 screenUV = (In.vScreenPos.xy + 0.5f) * g_vecFullScreenTexel;
+	
+	float4 vReflectColor = (float4) 0;
+	
+    float3 viewSpacePos = mul(float4(worldPos.xyz, 1.0), g_View).xyz;
+    //float3 V_viewspace = normalize(-viewSpacePos);
+    //float3 Vssr = normalize(mul(float4(V_viewspace, 0.0), g_ViewInv).xyz);
+	
+    //float depth = tex2D(depthsampler, In.vTexCoord.xy).a;
+	
+    //vReflectColor.rgb += ssrComposition(depth, roughness, screenUV, N.rgb, depthsampler, ReflectSampler, In.vWorldPos.xyzw);
+	
+    //float4 ProjPos = In.vProjPos;
+    //ProjPos.xyz * rcp(ProjPos.w);
+    float3 Vssr = normalize(g_vecOrigin.xyz - viewSpacePos.xyz);
+    vReflectColor.rgb += ssrComposition_simple(roughness, metallic, screenUV, N.rgb, ReflectSampler, depthsampler, In.vWorldPos.xyzw, V);
+
+    float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - NdotV, 5.0);
+    float ssrStrength = fresnel * (1.0 - roughness * roughness);
 
 #if ENVMAP
 	float flSpecularFactor;
@@ -377,6 +409,8 @@ PS_OUTPUT main(const PS_INPUT In)
 	float3 kS = F * A + B;
 	
 	flSpecularLighting += flCubemap * kS;
+#else
+    flSpecularLighting += vReflectColor.rgb * ssrStrength;
 #endif
 
 #if SELFILLUM

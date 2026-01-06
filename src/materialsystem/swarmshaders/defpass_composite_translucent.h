@@ -55,6 +55,8 @@ struct defParms_composite_translucent
 	int iSelfIllumFresnelModulate;
 	int iSelfIllumMask;
 
+	int ReflectTexture;
+
 	// blendmod
 	int iBlendmodulateTransform;
 	int iBlendmodulateTransform2;

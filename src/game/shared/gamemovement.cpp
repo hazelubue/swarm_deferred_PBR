@@ -1293,6 +1293,8 @@ void CGameMovement::ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove )
 {
 	m_nTraceCount = 0;
 
+	
+
 	Assert( pMove && pPlayer );
 
 	float flStoreFrametime = gpGlobals->frametime;
@@ -1316,6 +1318,8 @@ void CGameMovement::ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove )
 	mv->m_flMaxSpeed = sv_maxspeed.GetFloat();
 	m_bProcessingMovement = true;
 	m_bInStuckTest = false;
+	
+	mv->m_nJumpsRemaining = 2;
 
 	// CheckV( player->CurrentCommandNumber(), "StartPos", mv->GetAbsOrigin() );
 
@@ -1937,6 +1941,113 @@ void CGameMovement::AirAccelerate( Vector& wishdir, float wishspeed, float accel
 	}
 }
 
+void CGameMovement::PerformLurchChecks()
+{
+	DevMsg("Yo this shit activated!");
+
+	Vector wishdir;
+	Vector forward, right, up;
+
+	// Determines original angles.
+
+	AngleVectors(mv->m_vecViewAngles, &forward, &right, &up); // Determine movement angles
+
+	// Copy movement amounts
+	float fmove = mv->m_flForwardMove;
+	float smove = mv->m_flSideMove;
+
+	// Zero out z components of movement vectors
+	forward[2] = 0;
+	right[2] = 0;
+	VectorNormalize(forward); // Normalize remainder of vectors
+	VectorNormalize(right);   //
+	wishdir.Init();
+
+	for (int i = 0; i < 2; i++) // Determine x and y parts of velocity
+		wishdir[i] = forward[i] * fmove + right[i] * smove;
+	wishdir[2] = 0; // Zero out z part of velocity
+
+	int buttonsChanged = (mv->m_nOldButtons ^ mv->m_nButtons); // These buttons have changed this frame
+	int buttonsPressed = buttonsChanged & mv->m_nButtons;      // The changed ones still down are "pressed"
+
+	float timer = player->m_Local.m_lurchTimer;
+
+	if (buttonsPressed & IN_FORWARD || buttonsPressed & IN_BACK || buttonsPressed & IN_MOVELEFT ||
+		buttonsPressed & IN_MOVERIGHT)
+	{
+
+		if (buttonsPressed == IN_FORWARD)
+		{
+			DevMsg("Forward Lurch");
+		}
+		else
+		{
+			DevMsg("No Forward Lurch");
+		}
+
+		if (buttonsPressed == IN_BACK)
+		{
+			DevMsg("Back Lurch");
+		}
+		else
+		{
+			DevMsg("No Back Lurch");
+		}
+
+		if (buttonsPressed == IN_MOVELEFT)
+		{
+			DevMsg("Left Lurch");
+		}
+		else
+		{
+			DevMsg("No Left Lurch");
+		}
+
+		if (buttonsPressed == IN_FORWARD)
+		{
+			DevMsg("Right Lurch");
+		}
+		else
+		{
+			DevMsg("No Right Lurch");
+		}
+
+		if (timer > 0 && wishdir.Length() > 0.1f)
+		{
+			wishdir.z = 0;
+			VectorNormalizeFast(wishdir);
+			float maxTime = 0.5f;
+			float minTime = 0.2f;
+			float amt = MIN((player->m_Local.m_lurchTimer / 1000.0f) / (maxTime - minTime), 1.0f);
+			float strength = 0.7f;
+			// governs how much speed is kept.
+			// 300.0f is a placeholder value
+			float max = 300.0f * 0.7f * amt;
+
+			// modifies angle vectors received from enginge
+			Vector currentdirection = mv->m_vecVelocity;
+			currentdirection.z = 0;
+			VectorNormalizeFast(currentdirection);
+
+			Vector lurchdirection = VectorLerp(currentdirection, wishdir * 1.5f, strength) - currentdirection;
+			VectorNormalizeFast(lurchdirection);
+
+			float beforespeed = mv->m_vecVelocity.Length2D();
+			Vector lurchVector = currentdirection * beforespeed + lurchdirection * max;
+
+			if (lurchVector.Length2D() > beforespeed)
+			{
+				lurchVector.z = 0;
+				VectorNormalizeFast(lurchVector);
+				lurchVector *= beforespeed;
+			}
+
+			mv->m_vecVelocity.x = lurchVector.x;
+			mv->m_vecVelocity.y = lurchVector.y;
+		}
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1951,6 +2062,8 @@ void CGameMovement::AirMove( void )
 
 	AngleVectors (mv->m_vecViewAngles, &forward, &right, &up);  // Determine movement angles
 	
+	PerformLurchChecks();
+
 	// Copy movement amounts
 	fmove = mv->m_flForwardMove;
 	smove = mv->m_flSideMove;
@@ -2589,12 +2702,24 @@ bool CGameMovement::CheckJumpButton( void )
 	}
 
 	// No more effect
- 	if (player->GetGroundEntity() == NULL)
+	if (player->GetGroundEntity() == NULL)
 	{
-		mv->m_nOldButtons |= IN_JUMP;
-		return false;		// in air, so no effect
+		// In air - check if we have jumps remaining and button was just pressed
+		if (player->m_nAirJumpsRemaining > 0 && !(mv->m_nOldButtons & IN_JUMP))
+		{
+			// Allow the air jump - continue to the jump code below
+		}
+		else
+		{
+			mv->m_nOldButtons |= IN_JUMP;
+			return false;  // in air with no jumps left
+		}
 	}
-
+	else
+	{
+		// On ground - reset air jump count
+		player->m_nAirJumpsRemaining = 1;  // Reset to 1 air jump when landing
+	}
 	// Don't allow jumping when the player is in a stasis field.
 #ifndef HL2_EPISODIC
 	if ( player->m_Local.m_bSlowMovement )
@@ -2661,15 +2786,13 @@ bool CGameMovement::CheckJumpButton( void )
 		mv->m_vecVelocity[2] += flGroundFactor * flMul;  // 2 * gravity * height
 	}
 
-	// Add a little forward velocity based on your current forward velocity - if you are not sprinting.
-#if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
+
 
 	bool bAllowBunnyHopperSpeedBoost = ( gpGlobals->maxClients == 1 );
 
 
 	if ( bAllowBunnyHopperSpeedBoost )
 	{
-		CHLMoveData *pMoveData = ( CHLMoveData* )mv;
 		Vector vecForward;
 		AngleVectors( mv->m_vecViewAngles, &vecForward );
 		vecForward.z = 0;
@@ -2677,7 +2800,7 @@ bool CGameMovement::CheckJumpButton( void )
 		
 		// We give a certain percentage of the current forward movement as a bonus to the jump speed.  That bonus is clipped
 		// to not accumulate over time.
-		float flSpeedBoostPerc = ( !pMoveData->m_bIsSprinting && !player->m_Local.m_bDucked ) ? 0.5f : 0.1f;
+		float flSpeedBoostPerc = ( !player->m_Local.m_bDucked ) ? 0.5f : 0.1f;
 		float flSpeedAddition = fabs( mv->m_flForwardMove * flSpeedBoostPerc );
 		float flMaxSpeed = mv->m_flMaxSpeed + ( mv->m_flMaxSpeed * flSpeedBoostPerc );
 		float flNewSpeed = ( flSpeedAddition + mv->m_vecVelocity.Length2D() );
@@ -2694,7 +2817,7 @@ bool CGameMovement::CheckJumpButton( void )
 		// Add it on
 		VectorAdd( (vecForward*flSpeedAddition), mv->m_vecVelocity, mv->m_vecVelocity );
 	}
-#endif
+
 
 	FinishGravity();
 
@@ -2727,8 +2850,14 @@ bool CGameMovement::CheckJumpButton( void )
 
 #endif
 
-	// Flag that we jumped.
 	mv->m_nOldButtons |= IN_JUMP;	// don't jump again until released
+
+	// Decrement air jumps if we're in the air
+	if (player->GetGroundEntity() == NULL)
+	{
+		player->m_nAirJumpsRemaining--;
+	}
+
 	return true;
 }
 

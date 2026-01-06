@@ -229,6 +229,7 @@
     <None Include="..\..\vpc_scripts\source_dll_win32_debug.vpc" />
     <None Include="..\..\vpc_scripts\source_dll_win32_release.vpc" />
     <None Include="..\..\vpc_scripts\version.vpc" />
+    <None Include="cpp.hint" />
     <None Include="vscript_client.nut" />
   </ItemGroup>
   <ItemGroup>

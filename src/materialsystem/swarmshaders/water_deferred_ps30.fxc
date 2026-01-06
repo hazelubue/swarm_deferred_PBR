@@ -33,6 +33,8 @@
 	#define SHADER_SRGB_READ 1
 #endif
 
+#define WORLD_SCALE 15.0f
+
 #include "common_ps_fxc.h"
 #include "common_fog_ps_fxc.h"
 
@@ -64,6 +66,7 @@ sampler BaseTextureSampler		: register( s10 );
 
 	sampler sLightAccum				: register( s9 );
 	sampler sMRAO					: register( s11 );
+	//sampler sShadowDepth			: register( s12 );
 	
 const float4 g_vRefractTint : register(c1);
 const float4 g_vReflectTint : register(c4);
@@ -127,7 +130,20 @@ const float4 g_GlobalLightAmbHigh : register(c32); // xyz = ambient high color
 const float4 g_GlobalLightAmbLow : register(c33); // xyz = ambient low color
 const float3 g_vecOrigin : register(c36);
 
+//const float4x3 g_matOrtho[2] : register(c2);
+//const float4 g_vecUVTransform[2] : register(c8);
+//const float3 g_vecSlopeData[2] : register(c10);
+//const float4 g_vecFilterConfig_A[2] : register(c12);
+//const float4 g_vecFilterConfig_B[2] : register(c14);
 
+const float4x4 g_ViewInv : register(c37);
+const float4x4 g_ProjInv : register(c41);
+const float4x4 g_View : register(c45);
+const float4x4 g_Proj : register(c49);
+const float2 g_zPlanes : register(c53);
+
+#define g_zNear g_zPlanes.x
+#define g_zFar g_zPlanes.y
 
 struct PS_INPUT
 {
@@ -245,6 +261,20 @@ float3 LightMapSample(sampler LightmapSampler, float2 vTexCoord)
 	}
 #endif
 }
+
+float4x4 GetViewProj()
+{
+    //return 0;
+    return mul(g_View, g_Proj);
+}
+
+float4x4 GetViewProjInv()
+{
+    //return 0;
+    return mul(g_ProjInv, g_ViewInv);
+}
+
+#include "common_ssr.h"
 
 float4 main(PS_INPUT i) : COLOR
 {
@@ -399,10 +429,12 @@ float4 main(PS_INPUT i) : COLOR
     vReflectRefractScale *= waterFogDepthValue;
 #endif
 
-	// Compute coordinates for sampling Reflection
+    float4 ReflectXY_RefractYX = i.vReflectXY_vRefractYX;
+	
+	//// Compute coordinates for sampling Reflection
     float3 vPositionToCameraDirWs = normalize(i.vPositionToCameraRayWs.xyz);
 
-	// vectorize the dependent UV calculations (reflect = .xy, refract = .wz)
+	//// vectorize the dependent UV calculations (reflect = .xy, refract = .wz)
     float4 vN;
     vN.x = dot(g_vWorldToViewWater0.xyz, vNormalWs.xyz);
     vN.y = dot(g_vWorldToViewWater1.xyz, vNormalWs.xyz);
@@ -413,11 +445,14 @@ float4 main(PS_INPUT i) : COLOR
 
     float2 vReflectTexCoord = vDependentTexCoords.xy;
     float2 vRefractTexCoord = vDependentTexCoords.wz;
+	
+ //   //float2 ReflectedCoord = vReflectTexCoord * 0.5 + 0.5;
 
-    float4 vReflectColor = tex2Dsrgb(ReflectSampler, vReflectTexCoord);
-    vReflectColor *= g_vReflectTint;
+ //   //float4 vReflectColor = (float4) 0;
+ //   float4 vReflectColor = tex2Dsrgb(ReflectSampler, vReflectTexCoord );
+ //   vReflectColor *= g_vReflectTint;
 
-    float4 vRefractColor;
+	  float4 vRefractColor;
 #if REFRACT
 #if defined( _X360 )
 		{
@@ -457,6 +492,7 @@ float4 main(PS_INPUT i) : COLOR
     float3 worldPos = i.worldPos.xyz;
     float4 projPos = i.vProjPos.xyzw;
     float4 flashlightSpacePos = i.flashlightSpacePos;
+    float3 posToCameraRaysWs = i.vPositionToCameraRayWs.xyz;
 	
     float2 uvlightmapTexCoord = i.lightmapTexCoord;
     //float2 uvlightmapTexCoord3 = i.lightmapTexCoord3.xy;
@@ -552,16 +588,76 @@ float4 main(PS_INPUT i) : COLOR
     float NdotH_global = max(0.0f, dot(N, H_global));
     float VdotH_global = max(0.0f, dot(V, H_global));
 
+	//float shadowMult = 1.0f;
+    
+ //   if (flDepth < DEPTH_RECONSTRUCTION_LIMIT)
+ //   {
+ //       shadowMult = PerformCascadedShadow(
+ //           sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
+ //           g_vecFilterConfig_A, g_vecFilterConfig_B, N, dot(L_global, N)
+ //       );
+ //   }
+	
     float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N, worldPos, g_vecOrigin, roughness, metallic, baseSampleAlpha.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
 	
     compositeLighting += globalLighting;
 	
 #endif
 	
+  //  float4 ssr_composite = (float4) 0;
+
+  //  float3 eyeDir = normalize(worldPos - g_EyePos);
+ //   float3 reflection = reflect(eyeDir, N);
+
+ //   float2 reflectionOffset = N.xy * (1.0 - roughness) * 0.1;
+ //   float2 reflectionUV = screenPos + reflectionOffset;
+	
+ //   float3 rayCurPos = worldPos;
+	
+ //   float3 rayStep = 0.05f;
+	//[unroll(16)]
+	//while(1)
+ //   {
+ //       rayCurPos += reflection * rayStep;
+		
+ //       float3 rayWorldPos = GetWorldPos(WorldToUV(worldPos.xyz));
+ //       rayStep = length(rayCurPos - rayWorldPos) * 1.0f;
+ //   }
+	
+ //   reflectionUV = WorldToUV(rayCurPos);  
+
+    //float3 ssrColor = tex2D(ReflectSampler, vReflectTexCoord).rgb;
+
+   // float fresnelMask = dot(-eyeDir, N);
+   // fresnelMask = saturate(fresnelMask);
+   // fresnelMask = 1.0f - fresnelMask;
+   // fresnelMask = lerp(fresnelMask, pow(fresnelMask, 5.0f), 1.0f - metallic);
+
+   // ssr_composite = float4(ssrColor * (1.0f - roughness) * fresnelMask, 1.0f);
+	
+   // finalColor += ssr_composite;
+	
+    float4 ssrComposite = (float4) 0;
+    float4 vReflectColor = (float4) 0;
+	
+	//float2 projPosRe = (projPos.xy + 0.5f) * g_vecFullScreenTexel;
+ //   float2 reflectionUV = screenPos + N.xy * float2(10.0, -10.0) * (1.0 - roughness);
+
+ //   reflectionUV = saturate(reflectionUV);
+ //   vReflectColor = tex2Dsrgb(ReflectSampler, reflectionUV);
+ //   vReflectColor *= g_vReflectTint;
+    
+ //   float4 softReflection = vReflectColor * 0.425f;
+	
+    float depth = tex2D(ReflectSampler, bumpTexCoord).a;
+    vReflectColor.rgb += ssrComposition_simple(depth, roughness, metallic, screenPos, N.rgb, ReflectSampler, worldPos, V);
+	
+    //finalColor += ssrComposite;
     finalColor += compositeLighting;
 	
     float4 vLightmappedWaterFogColor = g_WaterFogColor;
-
+    
+	
 	#if LIGHTMAPWATERFOG
 		float3 lightmapSample = LightMapSample( LightmapSampler, uvlightmapTexCoord );
 		float3 vLightmapColor = lightmapSample * LIGHT_MAP_SCALE * LINEAR_LIGHT_SCALE;
@@ -659,38 +755,6 @@ float4 main(PS_INPUT i) : COLOR
 		}
 		#endif
 	}
-	#elif ( REFLECT )
-	{
-		#if ( BASETEXTURE && FLOWMAP )
-		{
-			float3 vLight = float3( 1.0f, 1.0f, 1.0f );
-			#if ( LIGHTMAPWATERFOG )
-			{
-				vLight.rgb = vLightmapColor.rgb;
-			}
-			#endif
-
-			// The alpha of flow color represents translucency from 0.0-0.5. The range 0.5-1.0 allows pixels to float above the water
-			float3 vSludge = vFlowColor.rgb * vLight.rgb;
-			float3 vUnderWater = lerp( vLightmappedWaterFogColor.rgb, vSludge.rgb, saturate( vFlowColor.a * 2.0f ) );
-			float flSludgeAboveWater = smoothstep( 0.5f, 0.7f, vFlowColor.a );
-			vResult.rgb = lerp( vUnderWater.rgb, vReflectColor.rgb, saturate( fFresnel * ( 1.0f - flSludgeAboveWater ) ) );
-
-		}
-		#elif ( BASETEXTURE )
-		{
-			vResult = float4( finalColor, 1.0f ) + vReflectColor * fFresnel * baseSample.a;
-		}
-		#else
-		{
-			vResult = lerp( vLightmappedWaterFogColor, vReflectColor, fFresnel );
-		}
-		#endif
-	}
-	#elif ( REFRACT )
-	{
-		vResult = vRefractColor;
-	}
 	#else
 	{
         vResult = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -723,6 +787,9 @@ float4 main(PS_INPUT i) : COLOR
         flFogFactor = 0;
     }
 #endif
+	
+    vResult += ssrComposite;
+	
     vResult += float4(finalColor.rgb, 0.0);
     return FinalOutput(float4(vResult.rgb, 1.0f), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE, true, projPos.w);
 }

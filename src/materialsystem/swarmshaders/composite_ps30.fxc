@@ -117,11 +117,18 @@ sampler sSelfIllumMask						: register( s4 ); // override envmap mask
 #endif
 
 sampler sMRAO : register(s11);
-sampler sLightmap : register(s12);
+sampler ReflectSampler : register(s12);
+sampler depthsampler : register(s13);
 
 float4 g_vShaderControls : register(c12);
-float4x4 viewInv : register(c13);
-float g_iblintensity : register(c24);
+
+const bool bUseSSR : register(c13);
+
+const float4x4 g_ViewInv : register(c16);
+const float4x4 g_ProjInv : register(c24);
+const float4x4 g_View : register(c34);
+const float4x4 g_Proj : register(c38);
+
 
 #define g_fWriteDepthToAlpha g_vShaderControls.y
 
@@ -134,7 +141,7 @@ struct PS_INPUT
 #endif
 
 	//float3 vProjPosXYW				: TEXCOORD1;
-    float3 vWorldPos : TEXCOORD2;
+    float4 vWorldPos : TEXCOORD2;
 
 #if ENVMAP || RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye				: TEXCOORD3;
@@ -169,34 +176,19 @@ struct PS_OUTPUT
     float4 vColor_0 : COLOR0;
 };
 
-float3 IBLAmbientRadiance(float3 N, float3 V, float roughness, float metallic, float3 albedo, float3 F0, float3 EnvPrefilterMap, float3 EnvIrrMap)
+float4x4 GetViewProj()
 {
-    float3 worldN = mul(viewInv, float4(N, 0)).xyz; // World normal
-    float3 worldV = mul(viewInv, float4(V, 0)).xyz; // World view
-    float Nworld = worldV.xyz;
-	
-    float3 irradiance = pow(float4(EnvIrrMap, Nworld).xyz, (float3) GAMMA);
-
-    // cos(angle) between surface normal and eye
-    float NdV = max(0.001, dot(worldN, worldV));
-    float3 kS = fresnelSchlickRoughness(NdV, F0, roughness);
-    float3 kD = 1.0 - kS;
-
-    float3 diffuseBrdf = albedo * (1.0 - metallic); // Lambert diffuse
-    float3 diffuse = kD * diffuseBrdf * irradiance;
-
-    const float MAX_REFLECTION_LOD = 6.0;
-    float3 R = reflect(-worldV, worldN);
- 
-    float mipLevel = roughness * MAX_REFLECTION_LOD;
-	
-    float rMip = float4(R, mipLevel);
-	
-    float4 prefilteredColor = float4(EnvPrefilterMap, rMip);
-    float3 specular = prefilteredColor.xyz * (kS);
-
-    return (diffuse + specular);
+    //return 0;
+    return mul(g_View, g_Proj);
 }
+
+float4x4 GetViewProjInv()
+{
+    //return 0;
+    return mul(g_ProjInv, g_ViewInv);
+}
+
+#include "common_ssr.h"
 
 PS_OUTPUT main(const PS_INPUT In)
 {
@@ -259,11 +251,7 @@ PS_OUTPUT main(const PS_INPUT In)
     float2 screenPos = (In.vScreenPos + 0.5f) * g_vecFullScreenTexel;
 	
     float4 flLighting = (float4) 0;
-    float4 flLightmap = (float4) 0;
-    flLightmap = tex2D(sLightmap, screenPos);
     flLighting = ReadLighting(tex2D(sLightAccum, screenPos));
-	
-    flLighting += flLightmap;
 
 #if READNORMAL
 	float3 worldNormal = tex2D( sNormals, screenPos ).xyz * 2.0f - 1.0f;
@@ -310,9 +298,22 @@ PS_OUTPUT main(const PS_INPUT In)
     float roughness = MRAO.g;
     float metallic = MRAO.r;
 
-    float3 V = normalize(g_vecOrigin.xyz - In.vWorldPos);
+    float3 V = normalize(g_vecOrigin.xyz - In.vWorldPos.xyz);
     float3 N = normalize(worldNormal);
     float NdotV = max(0.0f, dot(N, V));
+	
+    float4 vReflectColor = (float4) 0;
+	
+    float depth = tex2D(depthsampler, screenPos).r;
+    
+    //vReflectColor = tex2Dsrgb(ReflectSampler, vDependentTexCoords);
+	if(bUseSSR)
+    {
+        vReflectColor.rgb += ssrComposition_simple(depth, roughness, metallic, In.vTexCoord.xy, N.rgb, ReflectSampler, In.vWorldPos.xyz, V);
+    }
+    
+    float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - NdotV, 5.0);
+    float ssrStrength = fresnel * (1.0 - roughness * roughness);
 
 #if ENVMAP
 	float flSpecularFactor;
@@ -394,12 +395,8 @@ PS_OUTPUT main(const PS_INPUT In)
 	float3 kD = (1.0 - kS) * (1.0 - metallic);
 	
 	flSpecularLighting += flCubemap * kS;
-	
-	float3 AmbientIBL = (float3) 0;
-	AmbientIBL = IBLAmbientRadiance(N, V, roughness, metallic, flAlbedoSample.xyz, F0, flSpecularLighting, flCubemap) * g_iblintensity;
-	
-	flSpecularLighting += AmbientIBL;
-
+#else
+    flSpecularLighting += vReflectColor.rgb;
 #endif
 
 #if SELFILLUM

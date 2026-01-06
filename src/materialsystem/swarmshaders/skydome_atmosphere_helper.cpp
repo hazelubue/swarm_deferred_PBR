@@ -13,8 +13,18 @@
 
 #include "include/skydome_vs30.inc"
 #include "include/skydome_ps30.inc"
+#include "lighting_helper.h"
 
 ConVar cl_sky_turbidity("cl_sky_turbidity", "1.9");
+ConVar cl_sky_stars_render("cl_sky_stars_render", "1");
+ConVar r_sky_coverage("r_sky_coverage", "0.5, 0.3, 0.1, 0.666");
+ConVar r_sky_coverage2("r_sky_coverage2", "0.8, 0.1, 0.5, 0.666");
+ConVar r_sky_cloud_quality("r_sky_cloud_quality", "1.0");
+ConVar r_sky_cloud_coverage("r_sky_cloud_coverage", "0.8");
+
+
+//ConVar r_sky_coverage3("r_sky_coverage3", "0.1");
+//ConVar r_sky_coverage4("r_sky_coverage4", "0.777");
 static ConVar r_csm_time("r_csm_time", "-1", 0, "-1 = use entity angles, everything else = force"); // HACKHACK: need a better way to get this variable
 
 // HDTV rec. 709 matrix.
@@ -161,6 +171,26 @@ void InitParamsSkydome(CBaseVSShader* pShader, IMaterialVar** params, const char
 	//	params[FLASHLIGHTTEXTURE]->SetStringValue("effects/flashlight001");
 	//}
 
+	if (params[info.m_nCloudNoise]->IsDefined())
+	{
+		params[info.m_nCloudNoise]->SetStringValue("shaders/noise2");
+	}
+
+	/*if (params[info.m_nCloudNoise]->IsDefined())
+	{
+		params[info.m_nCloudNoise]->SetStringValue("shaders/doki");
+	}*/
+
+	if (params[info.m_nWorleyBubbly]->IsDefined())
+	{
+		params[info.m_nWorleyBubbly]->SetStringValue("shaders/worley");
+	}
+
+	if (params[info.m_nWorleySwirley]->IsDefined())
+	{
+		params[info.m_nWorleySwirley]->SetStringValue("shaders/worley");
+	}
+
 	// This shader can be used with hw skinning
 	SET_FLAGS2(MATERIAL_VAR2_SUPPORTS_HW_SKINNING);
 	SET_FLAGS2(MATERIAL_VAR2_LIGHTING_VERTEX_LIT);
@@ -178,6 +208,22 @@ void InitSkydome(CBaseVSShader* pShader, IMaterialVar** params, Skydome_Vars_t& 
 	{
 		pShader->LoadTexture(info.m_nLUTTexture);
 	}
+	if (params[info.m_nCloudNoise]->IsDefined())
+	{
+		pShader->LoadTexture(info.m_nCloudNoise);
+	}
+	if (params[info.m_nWorleyBubbly]->IsDefined())
+	{
+		pShader->LoadTexture(info.m_nWorleyBubbly);
+	}
+	if (params[info.m_nWorleySwirley]->IsDefined())
+	{
+		pShader->LoadTexture(info.m_nWorleySwirley);
+	}
+	/*if (params[info.m_nDokiTexture]->IsDefined())
+	{
+		pShader->LoadTexture(info.m_nDokiTexture);
+	}*/
 }
 
 class CSkydome_Context : public CBasePerMaterialContextData
@@ -205,6 +251,10 @@ void DrawSkydome_Internal(CBaseVSShader* pShader, IMaterialVar** params, IShader
 
 	if (pShader->IsSnapshotting())
 	{
+		pShaderShadow->EnableTexture(SHADER_SAMPLER1, true);
+		pShaderShadow->EnableTexture(SHADER_SAMPLER2, true);
+		pShaderShadow->EnableTexture(SHADER_SAMPLER3, true);
+
 		pShaderShadow->EnableSRGBWrite(true);
 		unsigned int flags = VERTEX_POSITION | VERTEX_NORMAL | VERTEX_FORMAT_COMPRESSED;
 		pShaderShadow->VertexShaderVertexFormat(flags, 1, 0, 0);
@@ -226,9 +276,16 @@ void DrawSkydome_Internal(CBaseVSShader* pShader, IMaterialVar** params, IShader
 		SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (int)vertexCompression);
 		SET_DYNAMIC_VERTEX_SHADER(skydome_vs30);
 
+		const bool bUseStars = cl_sky_stars_render.GetBool();
+
 		DECLARE_DYNAMIC_PIXEL_SHADER(skydome_ps30);
 		SET_DYNAMIC_PIXEL_SHADER_COMBO(RENDER_SKY, 1);
+		SET_DYNAMIC_PIXEL_SHADER_COMBO(STARFIELD_ENABLED, bUseStars);
 		SET_DYNAMIC_PIXEL_SHADER(skydome_ps30);
+
+		pShader->BindTexture(SHADER_SAMPLER1, info.m_nCloudNoise);
+		pShader->BindTexture(SHADER_SAMPLER2, info.m_nWorleyBubbly);
+		pShader->BindTexture(SHADER_SAMPLER3, info.m_nWorleySwirley);
 
 		/*float flthickness[4];
 		flthickness[0] = cl_sky_thickness.GetFloat();
@@ -248,6 +305,10 @@ void DrawSkydome_Internal(CBaseVSShader* pShader, IMaterialVar** params, IShader
 		UTIL_StringToFloatArray(flwindspeed, 4, cl_sky_windspeed.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_07, flwindspeed);
 		*/
+
+		float vEyepos[3] = { 0,0,0 };
+		pShaderAPI->GetWorldSpaceCameraPosition(vEyepos);
+		pShaderAPI->SetPixelShaderConstant(10, vEyepos);
 
 		float time = float(1.0);/*GetDeferredExt()->GetCurrentTime();*/
 		//float time = pShaderAPI->CurrentTime();
@@ -275,7 +336,32 @@ void DrawSkydome_Internal(CBaseVSShader* pShader, IMaterialVar** params, IShader
 		float flTime[4];
 		flTime[0] = pShaderAPI->CurrentTime();
 		flTime[1] = flTime[2] = flTime[3] = flTime[0];
-		pShaderAPI->SetPixelShaderConstant(8, flTime);
+		pShaderAPI->SetPixelShaderConstant(9, flTime);
+
+		float coverage1[4];
+		const char* coverageStr = r_sky_coverage.GetString();
+		sscanf(coverageStr, "%f, %f, %f, %f", &coverage1[0], &coverage1[1], &coverage1[2], &coverage1[3]);
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_20, coverage1);
+
+		float coverage2[4];
+		const char* coverageStr2 = r_sky_coverage2.GetString();
+		sscanf(coverageStr2, "%f, %f, %f, %f", &coverage2[0], &coverage2[1], &coverage2[2], &coverage2[3]);
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_24, coverage2);
+
+		float cloudParams[4];
+		cloudParams[0] = coverage1[0];  // l0_coverage.x
+		cloudParams[1] = coverage1[1];  // l0_coverage.y
+		cloudParams[2] = coverage1[2];  // l0_cumulus_stratus_blend
+		cloudParams[3] = coverage1[3];  // l0_altitude_scale
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_26, cloudParams);
+
+		float cloudCoverage[4];
+		cloudCoverage[0] = r_sky_cloud_coverage.GetFloat();
+		cloudCoverage[1] = 0.0f;
+		cloudCoverage[2] = 0.0f;
+		cloudCoverage[3] = 0.0f;
+		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_28, cloudCoverage);
+
 	}
 
 	pShader->Draw();

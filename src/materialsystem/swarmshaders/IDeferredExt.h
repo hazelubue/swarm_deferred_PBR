@@ -48,6 +48,8 @@ struct lightData_Global_t
 struct Matrix_Data_t
 {
 	Vector4D vecOrigin;
+	float aspect;
+	float fov;
 	float flZDists[2];
 	VMatrix matView;
 	VMatrix matProj;
@@ -124,7 +126,7 @@ public:
 
 	virtual void CommitClock(const float& curTime) = 0;
 
-	virtual void CommitMatrixData(float* data, const Vector& origin, const float& zNear, const float& zFar,
+	virtual void CommitMatrixData(float* data, const float& aspect, const float& fov, const Vector& origin, const float& zNear, const float& zFar,
 		VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
 		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv) = 0;
 
@@ -158,6 +160,7 @@ public:
 	virtual int GetNumActiveForwardLights() = 0;
 
 	virtual void FillDataForFramebuffer() = 0;
+	virtual int GetLightBufferSize() = 0;
 	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height) = 0;
 
 
@@ -204,7 +207,7 @@ public:
 
 	virtual void CommitClock(const float& curTime);
 
-	virtual void CommitMatrixData(float* data, const Vector& origin, const float& zNear, const float& zFar,
+	virtual void CommitMatrixData(float* data, const float &aspect, const float &fov, const Vector& origin, const float& zNear, const float& zFar,
 		VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
 		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv);
 
@@ -279,9 +282,11 @@ public:
 	virtual int GetForwardSpotLights_NumRows();
 	virtual int GetNumActiveForwardLights();
 	virtual void FillDataForFramebuffer();
+	virtual int GetLightBufferSize();
 	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height);
 
 private:
+	bool m_bRegeneratorSet;
 
 	float m_curTime;
 

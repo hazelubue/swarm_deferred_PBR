@@ -52,6 +52,7 @@ BEGIN_RECV_TABLE_NOBASE( C_SDK_Player, DT_SDKLocalPlayerExclusive )
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 
 	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
+	RecvPropFloat (RECVINFO(m_lurchTimer)),
 //	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
 END_RECV_TABLE()
 
@@ -60,6 +61,7 @@ BEGIN_RECV_TABLE_NOBASE( C_SDK_Player, DT_SDKNonLocalPlayerExclusive )
 
 	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
+	RecvPropFloat( RECVINFO(m_lurchTimer)),
 END_RECV_TABLE()
 
 BEGIN_NETWORK_TABLE( C_SDK_Player, DT_SDK_Player )

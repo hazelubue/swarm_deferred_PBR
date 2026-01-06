@@ -207,8 +207,10 @@ float3 LightMapSample( sampler LightmapSampler, float2 vTexCoord )
 
 struct VS_OUTPUT
 {
+	float4 projPos : POSITION;
 #ifndef PIXELSHADER
-	float4 projPos					: POSITION;	
+	
+	//float4 projPos					: POSITION;	
 #	if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	float  fog						: FOG;
 #	endif
@@ -245,9 +247,9 @@ struct VS_OUTPUT
 #endif
 
 	float4 worldPos_projPosZ		: TEXCOORD4;
+	
 	float3x3 tangentSpaceTranspose	: TEXCOORD5;
-	// tangentSpaceTranspose		: TEXCOORD6
-	// tangentSpaceTranspose		: TEXCOORD7
+	
 	float4 vertexColor				: COLOR0;
 	float  vertexBlendX				: COLOR1;
 

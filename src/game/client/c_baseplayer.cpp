@@ -142,6 +142,7 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropBool	(RECVINFO(m_bPoisoned)),
 	RecvPropFloat	(RECVINFO(m_flStepSize)),
 	RecvPropInt		(RECVINFO(m_bAllowAutoMovement)),
+	RecvPropFloat(RECVINFO(m_lurchTimer)),
 
 	// 3d skybox data
 	RecvPropInt(RECVINFO(m_skybox3d.scale)),
@@ -338,6 +339,7 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 
 	DEFINE_FIELD( m_nButtons, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flWaterJumpTime, FIELD_FLOAT ),
+	DEFINE_FIELD(m_nAirJumpsRemaining, FIELD_FLOAT),
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_FLOAT ),

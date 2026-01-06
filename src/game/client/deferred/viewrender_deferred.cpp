@@ -145,6 +145,8 @@ extern Vector g_vecCurrentVForward, g_vecCurrentVRight, g_vecCurrentVUp;
 extern VMatrix g_matCurrentCamInverse;
 extern bool s_bCanAccessCurrentView;
 
+bool g_bOriginalViewSetupValid = false;
+
 //-----------------------------------------------------------------------------
 // Describes a pruned set of leaves to be rendered this view. Reference counted
 // because potentially shared by a number of views
@@ -231,11 +233,11 @@ private:
 	bool m_bDrewSkybox;
 };
 
-class CGBufferViewWater : public CBaseWorldViewDeferred
+class CGBufferViewTranslucent : public CBaseWorldViewDeferred
 {
-	DECLARE_CLASS(CGBufferViewWater, CBaseWorldViewDeferred);
+	DECLARE_CLASS(CGBufferViewTranslucent, CBaseWorldViewDeferred);
 public:
-	CGBufferViewWater(CViewRender* pMainView) : CBaseWorldViewDeferred(pMainView)
+	CGBufferViewTranslucent(CViewRender* pMainView) : CBaseWorldViewDeferred(pMainView)
 	{
 	}
 
@@ -245,8 +247,8 @@ public:
 	virtual void	PushView(float waterHeight);
 	virtual void	PopView();
 
-	static void PushGBufferWater(bool bInitial, float zScale = 1.0f, bool bClearDepth = true);
-	static void PopGBufferWater();
+	static void PushGBufferTranslucent(bool bInitial, float zScale = 1.0f, bool bClearDepth = true);
+	static void PopGBufferTranslucent();
 
 private:
 	VisibleFogVolumeInfo_t m_fogInfo;
@@ -254,31 +256,6 @@ private:
 };
 
 bool			m_bHasTranslucentRenderables;
-
-//class CGBufferViewTranslucent : public CBaseWorldViewDeferred
-//{
-//	DECLARE_CLASS(CGBufferViewTranslucent, CBaseWorldViewDeferred);
-//public:
-//	CGBufferViewTranslucent(CViewRender* pMainView) : CBaseWorldViewDeferred(pMainView)
-//	{
-//	}
-//
-//	void			Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRenderInfo_t& waterInfo);
-//	void			Draw();
-//
-//	virtual void	PushView(float waterHeight);
-//	virtual void	PopView();
-//
-//	static void		PushGBufferTranslucent(bool bInitial, float zScale = 1.0f, bool bClearDepth = true);
-//	static void		PopGBufferTranslucent();
-//
-//	
-//
-//private:
-//	VisibleFogVolumeInfo_t m_fogInfo;
-//	bool m_bDrewSkybox;
-//};
-
 
 class CSkyboxViewDeferred : public CGBufferView
 {
@@ -622,6 +599,11 @@ static inline unsigned long BuildEngineDrawWorldListFlags(unsigned nDrawFlags)
 		nEngineFlags |= DRAWWORLDLISTS_DRAW_REFLECTION;
 	}
 
+	if (nDrawFlags & DF_SKIP_NODRAW)
+	{
+		nEngineFlags |= DRAWWORLDLISTS_DRAW_SKIP_NODRAW;
+	}
+
 	return nEngineFlags;
 }
 
@@ -781,9 +763,13 @@ void CDeferredViewRender::ViewDrawSceneDeferred(const CViewSetup& view, int nCle
 
 	ViewDrawGBuffer(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
 
+	CMatRenderContextPtr pRenderContext(materials);
+	/*pRenderContext->CopyRenderTargetToTextureEx(GetFullFrameDepthTexture(), 0, NULL, NULL);
+	pRenderContext.SafeRelease();*/
+
 	if (waterInfo.m_bDrawWaterSurface)
 	{
-		ViewDrawGBufferWater(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
+		ViewDrawGBufferTranslucent(view, bDrew3dSkybox, nSkyboxVisible, bDrawViewModel);
 	}
 
 	/*if (m_bHasTranslucentRenderables)
@@ -871,7 +857,6 @@ void CDeferredViewRender::ViewDrawSceneDeferred(const CViewSetup& view, int nCle
 	FinishCurrentView();
 
 	// Set int rendering parameters back to defaults
-	CMatRenderContextPtr pRenderContext(materials);
 	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_ENABLE_FIXED_LIGHTING, 0);
 
 	if (view.m_bCullFrontFaces)
@@ -910,7 +895,7 @@ void CDeferredViewRender::ViewDrawGBuffer(const CViewSetup& view, bool& bDrew3dS
 
 	/*if (waterInfo.m_bDrawWaterSurface)
 	{
-		CGBufferViewWater* pWaterView = new CGBufferViewWater(this);
+		CGBufferViewTranslucent* pWaterView = new CGBufferViewTranslucent(this);
 		pWaterView->Setup(view, bDrew3dSkybox, waterInfo);
 		AddViewToScene(pWaterView);
 	}*/
@@ -920,7 +905,7 @@ void CDeferredViewRender::ViewDrawGBuffer(const CViewSetup& view, bool& bDrew3dS
 	g_CurrentViewID = oldViewID;
 }
 
-void CDeferredViewRender::ViewDrawGBufferWater(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
+void CDeferredViewRender::ViewDrawGBufferTranslucent(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
 	bool bDrawViewModel)
 {
 	MDLCACHE_CRITICAL_SECTION();
@@ -945,7 +930,7 @@ void CDeferredViewRender::ViewDrawGBufferWater(const CViewSetup& view, bool& bDr
 	SetupVis(view, visFlags, NULL);
 
 
-	CGBufferViewWater* pWaterView = new CGBufferViewWater(this);
+	CGBufferViewTranslucent* pWaterView = new CGBufferViewTranslucent(this);
 	pWaterView->Setup(view, bDrew3dSkybox, waterInfo);
 	AddViewToScene(pWaterView);
 
@@ -956,43 +941,6 @@ void CDeferredViewRender::ViewDrawGBufferWater(const CViewSetup& view, bool& bDr
 
 	g_CurrentViewID = oldViewID;
 }
-
-//void CDeferredViewRender::ViewDrawGBufferTranslucent(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
-//	bool bDrawViewModel)
-//{
-//	MDLCACHE_CRITICAL_SECTION();
-//
-//	int oldViewID = g_CurrentViewID;
-//	g_CurrentViewID = VIEW_DEFERRED_GBUFFER;
-//
-//	VisibleFogVolumeInfo_t fogInfo;
-//	render->GetVisibleFogVolume(view.origin, &fogInfo);
-//
-//	WaterRenderInfo_t waterInfo;
-//	DetermineWaterRenderInfo(fogInfo, waterInfo);
-//
-//	CSkyboxViewDeferred* pSkyView = new CSkyboxViewDeferred(this);
-//	if ((bDrew3dSkybox = pSkyView->Setup(view, false, true, &nSkyboxVisible)) != false)
-//		AddViewToScene(pSkyView);
-//
-//	SafeRelease(pSkyView);
-//
-//	// Start view
-//	unsigned int visFlags;
-//	SetupVis(view, visFlags, NULL);
-//
-//
-//	CGBufferViewTranslucent* pWaterView = new CGBufferViewTranslucent(this);
-//	pWaterView->Setup(view, bDrew3dSkybox, waterInfo);
-//	AddViewToScene(pWaterView);
-//
-//
-//
-//
-//	DrawViewModels(view, bDrawViewModel, true);
-//
-//	g_CurrentViewID = oldViewID;
-//}
 
 void CDeferredViewRender::ViewDrawComposite(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
 	int nClearFlags, view_id_t viewID, bool bDrawViewModel)
@@ -1042,10 +990,6 @@ void CDeferredViewRender::ViewDrawComposite(const CViewSetup& view, bool& bDrew3
 	}
 
 	ParticleMgr()->IncrementFrameCode();
-
-	/*CRefPtr<CCompositeView> pCompositeView = new CCompositeView(this);
-	pCompositeView->Setup(view, nClearFlags, drawSkybox, bDrew3dSkybox, viewID);
-	AddViewToScene(pCompositeView);*/
 
 	DrawWorldComposite(view, nClearFlags, drawSkybox);
 
@@ -1477,7 +1421,7 @@ void CDeferredViewRender::DrawViewModels(const CViewSetup& view, bool drawViewmo
 	if (bGBuffer)
 	{
 		CGBufferView::PopGBuffer();
-		CGBufferViewWater::PopGBufferWater();
+		CGBufferViewTranslucent::PopGBufferTranslucent();
 		//CGBufferViewTranslucent::PopGBufferTranslucent();
 	}
 
@@ -1555,13 +1499,14 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 
 		ProcessDeferredGlobals(worldView);
 
-		IViewRender* pViewRender = GetViewRenderInstance();
-		if (pViewRender)
-		{
-			//CViewSetup originalView = pViewRender->SetOriginalViewSetup();
-			ProcessGlobalMatrixData(*m_OriginalViewSetup);
-		}
+		//CViewSetup oldView = GetOriginalViewSetup(&g_OriginalViewSetup);
+
+		/*IViewRender* pViewRender = GetViewRenderInstance();*/
+		//const CViewSetup* pViewSetup = GetDeferredViewSetup(&oldView);
 		
+		ProcessGlobalMatrixData(worldView);
+		
+
 		GetLightingManager()->LightSetup(worldView);
 
 		PreViewDrawScene(worldView);
@@ -1609,7 +1554,7 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 		}
 #endif
 
-		
+
 		if (IsDepthOfFieldEnabled())
 		{
 			pRenderContext.GetFrom(materials);
@@ -1629,7 +1574,7 @@ void CDeferredViewRender::RenderView(const CViewSetup& view, const CViewSetup& h
 			}
 			pRenderContext.SafeRelease();
 		}
-		
+
 
 #if defined( _X360 )
 		{
@@ -2039,7 +1984,6 @@ VMatrix CDeferredViewRender::GetViewProjMatrix(const CViewSetup& viewSetup)
 	return mProj;
 }
 
-
 void CDeferredViewRender::ProcessGlobalMatrixData(const CViewSetup& view)
 {
 	VMatrix matView, matProj, matViewProj, matViewProjInv;
@@ -2050,16 +1994,19 @@ void CDeferredViewRender::ProcessGlobalMatrixData(const CViewSetup& view)
 	MatrixInverseGeneral(matProj, matProjInv);
 
 	IDeferredExtension* pDef = GetDeferredExt();
+
 	pDef->CommitMatrixData(
-		NULL,        
+		NULL,
+		view.m_flAspectRatio,
+		view.fov,
 		view.origin,
 		view.zNear,
 		view.zFar,
-		matView,          
-		matProj,         
-		matViewInv,      
-		matProjInv,       
-		matViewProjInv     
+		matView,
+		matProj,
+		matViewInv,
+		matProjInv,
+		matViewProjInv
 	);
 }
 //-----------------------------------------------------------------------------
@@ -2746,6 +2693,16 @@ sky3dparams_t* CSkyboxViewDeferred::PreRender3dSkyboxWorld(SkyboxVisibility_t nS
 	return &local->m_skybox3d;
 }
 
+static bool ShouldDrawSurface(IClientEntity* pBaseEntity, const model_t* pModel, int nSurfFlags, int nDrawFlags)
+{
+	// Skip nodraw surfaces when flag is set
+	if ((nDrawFlags & DF_SKIP_NODRAW) && (nSurfFlags & SURF_NODRAW))
+	{
+		return false;
+	}
+
+	return true;
+}
 
 //-----------------------------------------------------------------------------
 // 
@@ -2811,7 +2768,7 @@ void CSkyboxViewDeferred::DrawInternal(view_id_t iSkyBoxViewID, bool bInvokePreA
 	if (m_bGBufferPass)
 	{
 		PushGBuffer(true, skyScale);
-		CGBufferViewWater::PushGBufferWater(true, skyScale);
+		CGBufferViewTranslucent::PushGBufferTranslucent(true, skyScale);
 	}
 	/*else if (m_bGbufferPassTranslucent)
 	{
@@ -2979,14 +2936,14 @@ void CGBufferView::Draw()
 #endif
 }
 
-void CGBufferViewWater::PushView(float waterHeight)
+void CGBufferViewTranslucent::PushView(float waterHeight)
 {
-	PushGBufferWater(!m_bDrewSkybox);
+	PushGBufferTranslucent(!m_bDrewSkybox);
 }
 
-void CGBufferViewWater::PopView()
+void CGBufferViewTranslucent::PopView()
 {
-	PopGBufferWater();
+	PopGBufferTranslucent();
 }
 
 void CGBufferView::PushView(float waterHeight)
@@ -3001,7 +2958,7 @@ void CGBufferView::PopView()
 	//PopGBufferWater();
 }
 
-void CGBufferViewWater::Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRenderInfo_t& waterInfo)
+void CGBufferViewTranslucent::Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRenderInfo_t& waterInfo)
 {
 	m_fogInfo.m_bEyeInFogVolume = false;
 	m_bDrewSkybox = bDrewSkybox;
@@ -3022,7 +2979,7 @@ void CGBufferViewWater::Setup(const CViewSetup& view, bool bDrewSkybox, const Wa
 	m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
 }
 
-void CGBufferViewWater::Draw()
+void CGBufferViewTranslucent::Draw()
 {
 	VPROF("CViewRender::ViewDrawScene_NoWater");
 
@@ -3051,72 +3008,6 @@ void CGBufferViewWater::Draw()
 	pRenderContext->PopVertexShaderGPRAllocation();
 #endif
 }
-
-//void CGBufferViewTranslucent::Setup(const CViewSetup& view, bool bDrewSkybox, const WaterRenderInfo_t& waterInfo)
-//{
-//	m_fogInfo.m_bEyeInFogVolume = false;
-//	m_bDrewSkybox = bDrewSkybox;
-//
-//	BaseClass::Setup(view);
-//	m_bDrawWorldNormal = false;
-//
-//	m_ClearFlags = 0;
-//	m_DrawFlags = DF_DRAW_ENTITITES;
-//
-//	m_DrawFlags |= DF_RENDER_WATER;
-//
-//	if (waterInfo.m_bDrawWaterSurface)
-//	{
-//		m_DrawFlags |= DF_RENDER_WATER;
-//	}
-//
-//	m_DrawFlags |= DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
-//}
-
-//void CGBufferViewTranslucent::Draw()
-//{
-//	VPROF("CViewRender::ViewDrawScene_NoWater");
-//
-//	CMatRenderContextPtr pRenderContext(materials);
-//	PIXEVENT(pRenderContext, "CSimpleWorldViewDeferred::Draw");
-//
-//#if defined( _X360 )
-//	pRenderContext->PushVertexShaderGPRAllocation(32); //lean toward pixel shader threads
-//#endif
-//
-//	SetupCurrentView(origin, angles, VIEW_DEFERRED_GBUFFER);
-//
-//	pRenderContext.SafeRelease();
-//
-//	DrawSetup(m_fogInfo.m_flWaterHeight, m_DrawFlags, 0);
-//
-//	pRenderContext.SafeRelease();
-//
-//
-//	DrawExecute(m_fogInfo.m_flWaterHeight, CurrentViewID(), 0, true);
-//
-//	pRenderContext.GetFrom(materials);
-//	pRenderContext->ClearColor4ub(0, 0, 0, 255);
-//
-//	m_bHasTranslucentRenderables = HasTranslucentRenderables();
-//
-//#if defined( _X360 )
-//	pRenderContext->PopVertexShaderGPRAllocation();
-//#endif
-//}
-
-
-
-//void CGBufferViewTranslucent::PushView(float waterHeight)
-//{
-//	PushGBufferTranslucent(!m_bDrewSkybox);
-//}
-//
-//void CGBufferViewTranslucent::PopView()
-//{
-//	PopGBufferTranslucent();
-//}
-
 
 void CGBufferView::PushGBuffer(bool bInitial, float zScale, bool bClearDepth)
 {
@@ -3174,118 +3065,52 @@ void CGBufferView::PushGBuffer(bool bInitial, float zScale, bool bClearDepth)
 	data.zScale = zScale;
 	QUEUE_FIRE(defData_setZScale, Fire, data);
 }
-
-void CGBufferViewWater::PushGBufferWater(bool bInitial, float zScale, bool bClearDepth)
+void CGBufferViewTranslucent::PushGBufferTranslucent(bool bInitial, float zScale, bool bClearDepth)
 {
-	static ITexture* pNormals = GetDefRT_Normals();
-	//ITexture* pMRAO = GetDefRT_Specular();
-	//ITexture* pSpecRough = GetDefRT_SpecRough();
-	//ITexture* pCubemap = GetDefRT_SSRX();
-
-	static ITexture* pDepth = GetDefRT_Depth();
-
-	//placeholder for glass modifications.
-	//static ITexture* pDepth = GetDefRT_Depth(0);
-
-	CMatRenderContextPtr pRenderContext(materials);
-
-	pRenderContext->ClearColor4ub(0, 0, 0, 0);
-
-	if (bInitial)
-	{
-		pRenderContext->PushRenderTargetAndViewport(pDepth);
-		pRenderContext->ClearBuffers(true, false);
-		pRenderContext->PopRenderTargetAndViewport();
-	}
-
-	pRenderContext->PushRenderTargetAndViewport(pNormals);
-
-	if (bClearDepth)
-		pRenderContext->ClearBuffers(false, true);
-
-	pRenderContext->ClearColor4ub(0, 0, 0, 0);
-
-	pRenderContext->SetRenderTargetEx(1, pDepth);
-	//pRenderContext->SetRenderTargetEx(3, GetDefRT_Specular());
-	pRenderContext->SetRenderTargetEx(3, GetDefRT_LightCtrl());
-	//pRenderContext->SetRenderTargetEx(2, GetDefRT_Alpha());
-
-	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-		DEFERRED_RENDER_STAGE_GBUFFER);
-
-	/*pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-		DEFERRED_RENDER_STAGE_GBUFFER_WATER);*/
-
-	struct defData_setZScale
-	{
-	public:
-		float zScale;
-
-		static void Fire(defData_setZScale d)
-		{
-			GetDeferredExt()->CommitZScale(d.zScale);
-		};
-	};
-
-	defData_setZScale data;
-	data.zScale = zScale;
-	QUEUE_FIRE(defData_setZScale, Fire, data);
+    static ITexture* pNormals = GetDefRT_Normals();
+    static ITexture* pDepth = GetDefRT_Depth();
+    static ITexture* pLightCtrl = GetDefRT_LightCtrl();
+    
+    CMatRenderContextPtr pRenderContext(materials);
+    
+    if (bInitial || bClearDepth)
+    {
+        pRenderContext->PushRenderTargetAndViewport(pDepth);
+        pRenderContext->ClearColor4ub(0, 0, 0, 255);
+        pRenderContext->ClearBuffers(true, true, false);
+        pRenderContext->PopRenderTargetAndViewport();
+    }
+    
+    pRenderContext->PushRenderTargetAndViewport(pNormals);
+    pRenderContext->ClearColor4ub(0, 0, 0, 125);
+    pRenderContext->ClearBuffers(true, false, false);
+    pRenderContext->PopRenderTargetAndViewport();
+    
+    pRenderContext->PushRenderTargetAndViewport(pLightCtrl);
+    pRenderContext->ClearColor4ub(0, 0, 0, 125);
+    pRenderContext->ClearBuffers(true, false, false);
+    pRenderContext->PopRenderTargetAndViewport();
+    
+    pRenderContext->PushRenderTargetAndViewport(pNormals);
+    pRenderContext->SetRenderTargetEx(1, pDepth);
+    pRenderContext->SetRenderTargetEx(3, pLightCtrl);
+    
+    pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
+        DEFERRED_RENDER_STAGE_GBUFFER);
+    
+    struct defData_setZScale
+    {
+    public:
+        float zScale;
+        static void Fire(defData_setZScale d)
+        {
+            GetDeferredExt()->CommitZScale(d.zScale);
+        };
+    };
+    defData_setZScale data;
+    data.zScale = zScale;
+    QUEUE_FIRE(defData_setZScale, Fire, data);
 }
-
-//void CGBufferViewTranslucent::PushGBufferTranslucent(bool bInitial, float zScale, bool bClearDepth)
-//{
-//	static ITexture* pNormals = GetDefRT_Normals();
-//	//ITexture* pMRAO = GetDefRT_Specular();
-//	//ITexture* pSpecRough = GetDefRT_SpecRough();
-//	//ITexture* pCubemap = GetDefRT_SSRX();
-//
-//	static ITexture* pDepth = GetDefRT_Depth();
-//
-//	//placeholder for glass modifications.
-//	//static ITexture* pDepth = GetDefRT_Depth(0);
-//
-//	CMatRenderContextPtr pRenderContext(materials);
-//
-//	pRenderContext->ClearColor4ub(0, 0, 0, 0);
-//
-//	if (bInitial)
-//	{
-//		pRenderContext->PushRenderTargetAndViewport(pDepth);
-//		pRenderContext->ClearBuffers(true, false);
-//		pRenderContext->PopRenderTargetAndViewport();
-//	}
-//
-//	pRenderContext->PushRenderTargetAndViewport(pNormals);
-//
-//	if (bClearDepth)
-//		pRenderContext->ClearBuffers(false, true);
-//
-//	pRenderContext->ClearColor4ub(0, 0, 0, 0);
-//
-//	pRenderContext->SetRenderTargetEx(1, pDepth);
-//	//pRenderContext->SetRenderTargetEx(3, GetDefRT_Specular());
-//	pRenderContext->SetRenderTargetEx(3, GetDefRT_LightCtrl());
-//	//pRenderContext->SetRenderTargetEx(2, GetDefRT_Alpha());
-//
-//	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-//		DEFERRED_RENDER_STAGE_GBUFFER_TRANSLUCENT);
-//
-//	struct defData_setZScale
-//	{
-//	public:
-//		float zScale;
-//
-//		static void Fire(defData_setZScale d)
-//		{
-//			GetDeferredExt()->CommitZScale(d.zScale);
-//		};
-//	};
-//
-//	defData_setZScale data;
-//	data.zScale = zScale;
-//	QUEUE_FIRE(defData_setZScale, Fire, data);
-//}
-
 void CGBufferView::PopGBuffer()
 {
 	CMatRenderContextPtr pRenderContext(materials);
@@ -3295,7 +3120,7 @@ void CGBufferView::PopGBuffer()
 	pRenderContext->PopRenderTargetAndViewport();
 }
 
-void CGBufferViewWater::PopGBufferWater()
+void CGBufferViewTranslucent::PopGBufferTranslucent()
 {
 	CMatRenderContextPtr pRenderContext(materials);
 	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
@@ -3303,15 +3128,6 @@ void CGBufferViewWater::PopGBufferWater()
 
 	pRenderContext->PopRenderTargetAndViewport();
 }
-
-//void CGBufferViewTranslucent::PopGBufferTranslucent()
-//{
-//	CMatRenderContextPtr pRenderContext(materials);
-//	pRenderContext->SetIntRenderingParameter(INT_RENDERPARM_DEFERRED_RENDER_STAGE,
-//		DEFERRED_RENDER_STAGE_INVALID);
-//
-//	pRenderContext->PopRenderTargetAndViewport();
-//}
 
 //-----------------------------------------------------------------------------
 // Pops a water render target
@@ -3388,7 +3204,7 @@ void CBaseWorldViewDeferred::PushView(float waterHeight)
 
 		pRenderContext->PushRenderTargetAndViewport(pTexture);
 		//create transparent refract.
-		pRenderContext->ClearColor4ub(0, 0, 0, 128); 
+		pRenderContext->ClearColor4ub(0, 0, 0, 128);
 		pRenderContext->ClearBuffers(true, false, false);
 
 		pRenderContext->PopRenderTargetAndViewport();
@@ -3527,6 +3343,13 @@ void CBaseWorldViewDeferred::DrawExecute(float waterHeight, view_id_t viewID, fl
 	PushView(waterHeight);
 
 	CMatRenderContextPtr pRenderContext(materials);
+
+	if (m_DrawFlags & DF_SKIP_NODRAW)
+	{
+		// This is a hack: nodraw surfaces won't render because they'll be overridden with nothing
+		// The engine will still process them but they won't draw
+		// This is not ideal but works without engine access
+	}
 
 #if defined( _X360 )
 	pRenderContext->PushVertexShaderGPRAllocation(32);
@@ -3708,7 +3531,7 @@ void CBaseShadowView::Setup(const CViewSetup& view, ITexture* pDepthTexture, ITe
 
 	m_bDrawWorldNormal = true;
 
-	m_DrawFlags = DF_DRAW_ENTITITES | DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER;
+	m_DrawFlags = DF_DRAW_ENTITITES | DF_RENDER_UNDERWATER | DF_RENDER_ABOVEWATER | DF_SKIP_NODRAW;
 	m_ClearFlags = 0;
 
 	CalcShadowView();
@@ -4130,14 +3953,10 @@ void CAboveWaterDeferredView::Draw()
 		m_DrawFlags |= DF_CLIP_Z | DF_CLIP_BELOW;
 	}
 
-	// render the world
-	CGBufferView::PushGBuffer;
-
 	PushComposite();
 	DrawSetup(m_waterHeight, m_DrawFlags, m_waterZAdjust);
 	EnableWorldFog();
 	DrawExecute(m_waterHeight, CurrentViewID(), m_waterZAdjust);
-	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	if (m_waterInfo.m_bRefract)
@@ -4210,14 +4029,12 @@ void CAboveWaterDeferredView::CReflectionView::Draw()
 	bool bVisOcclusion = r_visocclusion.GetBool();
 	r_visocclusion.SetValue(0);
 
-	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(waterHeight, m_DrawFlags, 0.0f, pOuter->m_fogInfo.m_nVisibleFogVolumeLeaf);
 	EnableWorldFog();
 	DrawExecute(waterHeight, VIEW_REFLECTION, 0.0f);
 
-	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	r_visocclusion.SetValue(bVisOcclusion);
@@ -4254,7 +4071,6 @@ void CAboveWaterDeferredView::CRefractionView::Draw()
 	int nSaveViewID = CurrentViewID();
 	SetupCurrentView(origin, angles, VIEW_REFRACTION);
 
-	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust);
@@ -4263,7 +4079,6 @@ void CAboveWaterDeferredView::CRefractionView::Draw()
 	SetClearColorToFogColor();
 	DrawExecute(GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust);
 
-	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	// finish off the view.  restore the previous view.
@@ -4291,7 +4106,6 @@ void CAboveWaterDeferredView::CIntersectionView::Setup()
 //-----------------------------------------------------------------------------
 void CAboveWaterDeferredView::CIntersectionView::Draw()
 {
-	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(GetOuter()->m_fogInfo.m_flWaterHeight, m_DrawFlags, 0);
@@ -4302,7 +4116,6 @@ void CAboveWaterDeferredView::CIntersectionView::Draw()
 	CMatRenderContextPtr pRenderContext(materials);
 	pRenderContext->ClearColor4ub(0, 0, 0, 255);
 
-	CGBufferView::PopGBuffer;
 	PopComposite();
 }
 
@@ -4385,7 +4198,6 @@ void CUnderWaterDeferredView::Draw()
 		pRenderContext->ClearColor4ub(ucFogColor[0], ucFogColor[1], ucFogColor[2], 255);
 	}
 
-	CGBufferView::PushGBuffer;
 	PushComposite();
 
 	DrawSetup(m_waterHeight, m_DrawFlags, m_waterZAdjust);
@@ -4393,7 +4205,6 @@ void CUnderWaterDeferredView::Draw()
 	DrawExecute(m_waterHeight, CurrentViewID(), m_waterZAdjust);
 	m_ClearFlags = 0;
 
-	CGBufferView::PopGBuffer;
 	PopComposite();
 
 	if (m_waterZAdjust != 0.0f && m_bSoftwareUserClipPlane && m_waterInfo.m_bRefract)
@@ -4450,12 +4261,10 @@ void CUnderWaterDeferredView::CRefractionView::Draw()
 
 	pRenderContext->PopRenderTargetAndViewport();
 
-	CGBufferView::PushGBuffer;
 	PushComposite();
 	DrawSetup(GetOuter()->m_waterHeight, m_DrawFlags, GetOuter()->m_waterZAdjust);
 	EnableWorldFog();
 	DrawExecute(GetOuter()->m_waterHeight, VIEW_REFRACTION, GetOuter()->m_waterZAdjust);
-	CGBufferView::PopGBuffer;
 	PopComposite();
 
 

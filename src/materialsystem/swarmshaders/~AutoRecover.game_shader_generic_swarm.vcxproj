@@ -217,6 +217,7 @@
     <ClCompile Include="defpass_composite.cpp" />
     <ClCompile Include="defpass_composite_translucent.cpp" />
     <ClCompile Include="defpass_gbuffer.cpp" />
+    <ClCompile Include="defpass_gbuffer_translucent.cpp" />
     <ClCompile Include="defpass_shadow.cpp" />
     <ClCompile Include="IDeferredExt.cpp" />
     <ClCompile Include="lighting_global.cpp" />
@@ -224,6 +225,10 @@
     <ClCompile Include="lighting_pass_volum.cpp" />
     <ClCompile Include="lighting_world.cpp" />
     <ClCompile Include="lighting_volume.cpp" />
+    <ClCompile Include="lightmappedgeneric_dx9.cpp" />
+    <ClCompile Include="lightmappedgeneric_dx9_helper.cpp" />
+    <ClCompile Include="refract.cpp" />
+    <ClCompile Include="refract_dx9_helper.cpp" />
     <ClCompile Include="skydome_atmosphere.cpp" />
     <ClCompile Include="skydome_atmosphere_helper.cpp" />
     <ClCompile Include="volume_blend.cpp" />
@@ -234,6 +239,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h" />
+    <ClInclude Include="cloudCoord.h" />
+    <ClInclude Include="clouds\reimaginedClouds_old.h" />
     <ClInclude Include="commandbuilder.h" />
     <ClInclude Include="common_deferred_fxc.h" />
     <ClInclude Include="common_fxc.h" />
@@ -243,6 +250,7 @@
     <ClInclude Include="common_pragmas.h" />
     <ClInclude Include="common_ps_fxc.h" />
     <ClInclude Include="common_shadowmapping_fxc.h" />
+    <ClInclude Include="common_ssr.h" />
     <ClInclude Include="common_vertexlitgeneric_dx9.h" />
     <ClInclude Include="common_vs_fxc.h" />
     <ClInclude Include="common_water_pbr.h" />
@@ -255,11 +263,15 @@
     <ClInclude Include="defpass_composite.h" />
     <ClInclude Include="defpass_composite_translucent.h" />
     <ClInclude Include="defpass_gbuffer.h" />
+    <ClInclude Include="defpass_gbuffer_translucent.h" />
     <ClInclude Include="defpass_shadow.h" />
     <ClInclude Include="IDeferredExt.h" />
     <ClInclude Include="lighting_helper.h" />
     <ClInclude Include="lighting_pass_basic.h" />
     <ClInclude Include="lighting_pass_volum.h" />
+    <ClInclude Include="lightmappedgeneric_dx9_helper.h" />
+    <ClInclude Include="refract_dx9_helper.h" />
+    <ClInclude Include="reimaginedClouds.h" />
     <ClInclude Include="skydome_atmosphere_helper.h" />
     <ClInclude Include="utilstring_array.h" />
   </ItemGroup>
@@ -294,6 +306,7 @@
     <None Include="..\..\devtools\bin\vsh_prep.pl" />
     <None Include="composite_ps30.fxc" />
     <None Include="composite_translucent_ps30.fxc" />
+    <None Include="composite_translucent_vs30.fxc" />
     <None Include="composite_vs30.fxc" />
     <None Include="debug_lighting_ctrl_ps30.fxc" />
     <None Include="debug_shadow_ortho_ps30.fxc" />

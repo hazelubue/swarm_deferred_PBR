@@ -56,6 +56,7 @@ public:
 	int						m_nDuckJumpTimeMsecs;
 	int						m_nJumpTimeMsecs;
 
+	float					m_lurchTimer;
 	float					m_flFallVelocity;
 	float					m_flStepSize;
 

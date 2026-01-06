@@ -35,6 +35,8 @@ CDeferredExtension::CDeferredExtension()
 	m_iNumCommon_Shadowed = 0;
 	m_iNumCommon_Cookied = 0;
 	m_iNumCommon_Simple = 0;
+
+    m_bRegeneratorSet = false;
 }
 
 CDeferredExtension::~CDeferredExtension()
@@ -105,7 +107,7 @@ void CDeferredExtension::CommitClock(const float& curTime)
     m_curTime = curTime;
 }
 
-void CDeferredExtension::CommitMatrixData(float* data, const Vector& origin, const float& zNear, const float& zFar,
+void CDeferredExtension::CommitMatrixData(float* data, const float& aspect, const float& fov, const Vector& origin, const float& zNear, const float& zFar,
     VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
     VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv)
 {
@@ -115,6 +117,8 @@ void CDeferredExtension::CommitMatrixData(float* data, const Vector& origin, con
     }
     else
     {
+        m_commonData.aspect = aspect;
+        m_commonData.fov = fov;
         m_commonData.vecOrigin = Vector4D(origin.x, origin.y, origin.z, 1.0f);
         m_commonData.flZDists[0] = zNear;
         m_commonData.flZDists[1] = zFar;
@@ -205,29 +209,25 @@ void CDeferredExtension::AddForwardLight(const Vector& pos, float radius,
     ForwardLightData light;
     ForwardSpotLightData SpotLight;
 
-    // Position + radius
     light.position[0] = pos.x;
     light.position[1] = pos.y;
     light.position[2] = pos.z;
     light.position[3] = radius;
 
-    // Color + light type (0=point, 1=spot)
     light.color[0] = color.x * intensity;
     light.color[1] = color.y * intensity;
     light.color[2] = color.z * intensity;
-    light.color[3] = (float)type;  // Store type here
+    light.color[3] = (float)type; 
 
-    // Direction + inner cone
     SpotLight.direction[0] = dir.x;
     SpotLight.direction[1] = dir.y;
     SpotLight.direction[2] = dir.z;
-    SpotLight.direction[3] = constantAtt;  // Can be used for inner cone cosine
+    SpotLight.direction[3] = constantAtt; 
 
-    // Attenuation + outer cone
     SpotLight.attenuation[0] = linearAtt;
     SpotLight.attenuation[1] = quadraticAtt;
-    SpotLight.attenuation[2] = 0.0f;  // Unused
-    SpotLight.attenuation[3] = spotCutoff;  // Outer cone cosine
+    SpotLight.attenuation[2] = 0.0f;
+    SpotLight.attenuation[3] = spotCutoff; 
 
     m_vecForwardLights.AddToTail(light);
     m_bForwardLightsDirty = true;
@@ -356,14 +356,54 @@ int CDeferredExtension::GetNumActiveForwardLights()
     return m_vecForwardLights.Count();
 }
 
+int CDeferredExtension::GetLightBufferSize()
+{
+    return m_vecForwardLightBuffer.Count();
+}
+
+class CLightDataRegenerator : public ITextureRegenerator
+{
+public:
+    CLightDataRegenerator(CDeferredExtension* pExtension) : m_pExtension(pExtension) {}
+
+    virtual void RegenerateTextureBits(ITexture* pTexture, IVTFTexture* pVTFTexture, Rect_t* pRect)
+    {
+        float* plightData = m_pExtension->GetForwardLightData();
+        if (!plightData)
+            return;
+
+        unsigned char* pImageData = pVTFTexture->ImageData();
+
+        // Get the actual buffer size from the vector
+        // This includes light count (4 floats) + all light data
+        int totalBytes = m_pExtension->GetLightBufferSize() * sizeof(float);
+
+        memcpy(pImageData, plightData, totalBytes);
+    }
+
+    virtual void Release()
+    {
+        delete this;
+    }
+
+private:
+    CDeferredExtension* m_pExtension;
+};
+
 void CDeferredExtension::FillDataForFramebuffer()
 {
-    //// Get light data
-    //GetForwardLightData();
-    //GetForwardSpotlightData();
+    float* plightData = GetForwardLightData();
+    if (!plightData || !m_pForwardData)
+        return;
 
-    //pRenderContext->PopRenderTargetAndViewport();
+    if (m_pForwardData->IsProcedural())
+    {
+        if (!m_bRegeneratorSet)
+        {
+            m_pForwardData->SetTextureRegenerator(new CLightDataRegenerator(this));
+            m_bRegeneratorSet = true;
+        }
 
-    //pRenderContext->CopyRenderTargetToTextureEx(m_pForwardData, 0, NULL, NULL);
-
+        m_pForwardData->Download();
+    }
 }

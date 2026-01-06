@@ -223,21 +223,6 @@ float4 GenerateSpecular(in float3 normal, in float3 albedo, in float2 texCoord)
     return float4(metallic, roughness, 0.0, 1.0);
 }
 
-//float3 GenerateMetallic(in float2 input, in float3 metallic)
-//{
-//    metallic = BlueNoise(input * 0.1);
-//    metallic = step(0.6, metallic);
-
-//    return metallic;
-//}
-//float3 GenerateRoughness(in float2 input, in float3 roughness)
-//{
-//    float distFromOrigin = length(input);
-//    roughness = frac(distFromOrigin * 0.5);
-//    roughness = smoothstep(0.2, 0.8, roughness);
-
-//    return roughness;
-//}
 #if PARALLAXOCCLUSION
 #if !WVT
 float2 ParallaxCorrect(float2 texCoord, float3 viewRelativeDir, sampler depthSampler, float parallaxDepth, float parallaxCenter, float2 pixelPos)
@@ -621,41 +606,15 @@ PS_OUTPUT main(const PS_INPUT In)
     float metallic = 0.0f;
     float GenMetallic = customTex2D(GenerateMetallic(worldNormal, flAlbedoSample), correctedTexCoord);
     metallic = GenMetallic;
-
-    //float3 GenMRAO = GenerateSpecular(worldNormal, flAlbedoSample, correctedTexCoord);
-    
-    //float metallic = GenMRAO.r;
-    //float roughness = GenMRAO.g;
     
     float3 CompositeGenerated = float3(metallic, roughness, 0.0f);
     
     float alpha = flAlbedoSample.a;
-    
-//#if SPECULAR
-//        float3 specular = tex2D(sSpecular, correctedTexCoord).rgb;
-//#else
-//    float3 specular = lerp(0.0, flAlbedoSample.rgb, mrao.x);
-//#endif
 
-    Out.vColor_Normal = float4(worldNormal, 1.0f);
-    Out.vColor_Cubemap = float4(flAlbedoSample.rgba);
-    //Out.vColor_Alpha = float4(0, 0, 0, alpha);
-    Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, 1);
-#if DEDICATEDMRAO
-    Out.vColor_LightCtrl = float4(mrao.rgb, 1.0f); 
-#else
-    Out.vColor_LightCtrl = float4(CompositeGenerated.rgb, 0.0f);
-#endif
-    
-//#if TRANSLUCENT
-//    clip(alpha - g_flAlphaRef);
-//       if(alpha >= 0.99)
-//            discard;
-//    Out.vColor_Normal = float4(worldNormal, alpha);
-//    Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, alpha);
-//    //Out.vColor_LightCtrl = float4(mrao.rgb, alpha);
-    
-//#endif
+    Out.vColor_Normal = float4(1.0, 1.0, 1.0, alpha);
+    Out.vColor_Cubemap = float4(1.0, 1.0, 1.0, alpha);
+    Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, alpha);
+    Out.vColor_LightCtrl = float4(1.0, 1.0, 1.0, alpha);
 
 #endif
 

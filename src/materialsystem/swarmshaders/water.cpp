@@ -34,6 +34,11 @@ void InitParamsWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, const ch
 			Warning("***need to set $LIGHTMAPWATERFOG for material %s\n", pMaterialName);
 			params[info.LIGHTMAPWATERFOG]->SetIntValue(1);
 		}
+
+		/*if (!params[info.BASETEXTURE]->IsDefined())
+		{
+			params[info.BASETEXTURE]->SetStringValue("nature/water_lake_color");
+		}*/
 		
 		SET_FLAGS2( MATERIAL_VAR2_NEEDS_TANGENT_SPACES );
 		if( !params[info.CHEAPWATERSTARTDISTANCE]->IsDefined() )
@@ -65,8 +70,6 @@ void InitParamsWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, const ch
 		{
 			params[info.REFLECTBLENDFACTOR]->SetFloatValue( 1.0f );
 		}
-
-		SET_FLAGS(MATERIAL_VAR_TRANSLUCENT);
 
 		InitFloatParam(info.FLOW_WORLDUVSCALE, params, 1.0f );
 		InitFloatParam(info.FLOW_NORMALUVSCALE, params, 1.0f );
@@ -156,18 +159,12 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 
 		bool bForceFresnel = ( params[info.FORCEFRESNEL]->GetFloatValue() != -1.0f );
 
-		const bool bIsTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
-		bool bForwardRendered = bIsTranslucent;
+		//const bool bIsTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
+		bool bForwardRendered = true;
 
 		if ( bHasFlowmap )
 		{
 			bHasMultiTexture = false;
-		}
-
-		if ( bHasBaseTexture || bHasMultiTexture )
-		{
-			//hasFlashlight = false;
-			//bLightmapWaterFog = false;
 		}
 
 		// LIGHTMAP - needed either with basetexture or lightmapwaterfog.  Not sure where the bReflection restriction comes in.
@@ -175,8 +172,6 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 
 		SHADOW_STATE
 		{
-		    pShaderShadow->EnableCulling(false);
-			//pShaderShadow->EnableDepthWrites(true);
 			pShader->SetInitialShadowState( );
 			if ( bRefraction )
 			{
@@ -285,7 +280,8 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 			}
 			if( bReflection )
 			{
-				pShader->BindTexture( SHADER_SAMPLER1, info.REFLECTTEXTURE, -1 );
+				ITexture* pReflection = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
+				pShader->BindTexture( SHADER_SAMPLER1, pReflection, -1 );
 			}
 			pShader->BindTexture( SHADER_SAMPLER2, info.NORMALMAP, info.BUMPFRAME );
 
@@ -480,7 +476,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 			float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
 			DynamicCmdsOut.SetPixelShaderConstant(11, forwardLightCount);
 
-			if (pShaderAPI != NULL && numForwardLights > 0 && numForwardLights < 14)
+			if (pShaderAPI != NULL && numForwardLights > 0 && numForwardLights < 7)
 			{
 				float* pLightData = pExt->GetForwardLightData();
 				if (pLightData)
@@ -494,7 +490,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 			float* pSpotlightData = pExt->GetForwardSpotlightData();
 			if (pSpotlightData)
 			{
-				DynamicCmdsOut.SetPixelShaderConstant(37,
+				DynamicCmdsOut.SetPixelShaderConstant(54,
 					pSpotlightData,
 					pExt->GetForwardSpotLights_NumRows());
 			}
@@ -515,6 +511,14 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 				pShaderAPI->SetPixelShaderConstant(32, globalLight.ambh.Base(), 1);
 				pShaderAPI->SetPixelShaderConstant(33, globalLight.ambl.Base(), 1);
 			}
+
+			const Matrix_Data_t& data = GetDeferredExt()->GetCommonData();
+
+			pShaderAPI->SetPixelShaderConstant(37, data.matViewInv.Base(), 4);
+			pShaderAPI->SetPixelShaderConstant(41, data.matProjInv.Base(), 4);
+			pShaderAPI->SetPixelShaderConstant(45, data.matView.Base(), 4);
+			pShaderAPI->SetPixelShaderConstant(49, data.matProj.Base(), 4);
+			pShaderAPI->SetPixelShaderConstant(53, data.flZDists, 2);
 
 			pShader->BindTexture(SHADER_SAMPLER9, GetDeferredExt()->GetTexture_LightAccum(), 0);
 

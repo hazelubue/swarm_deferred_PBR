@@ -111,6 +111,7 @@
     <None Include="vscript_client.nut">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="achievement_notification_panel.cpp">

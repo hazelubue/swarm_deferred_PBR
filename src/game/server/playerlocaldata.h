@@ -42,6 +42,7 @@ public:
 
 	CNetworkVar( int,	m_iHideHUD );		// bitfields containing sections of the HUD to hide
 	CNetworkVar( float, m_flFOVRate );		// rate at which the FOV changes (defaults to 0)
+	CNetworkVar(float, m_lurchTimer);
 		
 	Vector				m_vecOverViewpoint;			// Viewpoint overriding the real player's viewpoint
 	

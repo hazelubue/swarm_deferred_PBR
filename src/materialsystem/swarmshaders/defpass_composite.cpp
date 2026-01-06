@@ -11,6 +11,8 @@ static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 ConVar building_cubemaps("building_cubemaps", "1");
 ConVar mat_ibl_intensity("mat_ibl_intensity", "1");
 
+ConVar r_ssr_opaque_pass("r_ssr_opaque_pass", "0");
+
 void InitParmsComposite(const defParms_composite& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
 	if (PARM_NO_DEFAULT(info.iAlphatestRef) ||
@@ -264,7 +266,12 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 	}
 		DYNAMIC_STATE
 	{
-		Assert(pDeferredContext != NULL);
+
+		if (!pDeferredContext)
+		{
+			Warning("Deferred context is NULL!\n");
+			return;
+		}
 
 		if (pDeferredContext->m_bMaterialVarsChanged || !pDeferredContext->HasCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE)
 			|| building_cubemaps.GetBool())
@@ -379,13 +386,25 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy());
 		}
 
-		//setup matrix data.
+		ITexture* pSource = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
+
+		pShader->BindTexture(SHADER_SAMPLER12, pSource);
+		//pShader->BindTexture(SHADER_SAMPLER13, GetDeferredExt()->GetTexture_Depth());
+
+		////setup matrix data.
 		const Matrix_Data_t& data = GetDeferredExt()->GetCommonData();
 
-		pShaderAPI->SetPixelShaderConstant(13, data.matViewInv.Base(), 4);
-		//pShaderAPI->SetPixelShaderConstant(12, data.matProjInv.Base(), 4);
-		//pShaderAPI->SetPixelShaderConstant(16, data.matView.Base(), 4);
-		//pShaderAPI->SetPixelShaderConstant(20, data.matProj.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(16, data.matViewInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(24, data.matProjInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(34, data.matView.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(38, data.matProj.Base(), 4);
+
+		const bool bUseSSR = r_ssr_opaque_pass.GetBool();
+
+		float fUseSSR = bUseSSR ? 1.0f : 0.0f;
+
+		pShaderAPI->SetPixelShaderConstant(13, &fUseSSR, 1);
+
 
 		/*MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
 
@@ -443,9 +462,6 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		}
 
 		CommitBaseDeferredConstants_Origin(pShaderAPI, 3);
-
-		float flIblIntensity[4] = { mat_ibl_intensity.GetFloat(), 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(24, flIblIntensity);
 
 		if (bWorldEyeVec)
 		{

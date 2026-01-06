@@ -3,9 +3,9 @@ float g_SpecularBoost = 0.5f;
 float g_DiffuseScale = 111.0f;
 float g_SheenStrength = 0.5f;
 
-static const int MAX_FORWARD_LIGHTS = 16;
+static const int MAX_FORWARD_LIGHTS = 7;
 float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c69);
-float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c37);
+float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c54);
 float4 g_ForwardLightCount : register(c11);
 
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
@@ -404,3 +404,4 @@ float GenerateRoughness(in float3 normal, in float4 albedo)
 
     return clamp(roughness, 0.15, 0.85);
 }
+

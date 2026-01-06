@@ -379,11 +379,12 @@ public:
 
 	// Render functions
 	virtual	void	Render( vrect_t *rect );
-	virtual void	RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw );
+	//virtual void	RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw );
 	virtual void	RenderPlayerSprites();
 	virtual void	Render2DEffectsPreHUD( const CViewSetup &view );
 	virtual void	Render2DEffectsPostHUD( const CViewSetup &view );
 
+	void			GetOriginalViewSetup(const CViewSetup& setup);
 
 	void			DisableFog( void );
 
@@ -397,6 +398,7 @@ public:
 	bool			ShouldDrawBrushModels( void );
 
 	const CViewSetup *GetViewSetup( ) const;
+	const CViewSetup* GetDeferredViewSetup(CViewSetup* setup) const;
 	
 	void			DisableVis( void );
 
@@ -495,7 +497,7 @@ protected:
 
 	// This stores the current view
  	CViewSetup		m_CurrentView;
-	CViewSetup*		m_OriginalViewSetup;
+	//CViewSetup*		m_OriginalViewSetup;
 
 	// VIS Overrides
 	// Set to true to turn off client side vis ( !!!! rendering will be slow since everything will draw )

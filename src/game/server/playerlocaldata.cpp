@@ -30,6 +30,7 @@ BEGIN_SEND_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	SendPropInt		(SENDINFO(m_bDucked),	1, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_bDucking),	1, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_bInDuckJump),	1, SPROP_UNSIGNED ),
+	SendPropFloat	(SENDINFO(m_lurchTimer), 0, SPROP_UNSIGNED),
 
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 	SendPropInt		(SENDINFO(m_nDuckTimeMsecs), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),

@@ -60,6 +60,7 @@ public:
 
 public:
 	QAngle	m_angEyeAngles;
+	float m_lurchTimer;
 	CInterpolatedVar< QAngle >	m_iv_angEyeAngles;
 
 private:

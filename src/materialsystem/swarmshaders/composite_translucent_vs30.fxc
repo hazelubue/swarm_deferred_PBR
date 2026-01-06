@@ -1,0 +1,227 @@
+// STATIC:		"MODEL"					"0..1"
+// STATIC:		"DECAL"					"0..1"
+// STATIC:		"MORPHING_VTEX"			"0..1"
+// STATIC:		"EYEVEC"				"0..1"
+// STATIC:		"BASETEXTURE2"			"0..1"
+// STATIC:		"BLENDMODULATE"			"0..1"
+// STATIC:		"MULTIBLEND"			"0..1"
+
+// DYNAMIC:		"COMPRESSED_VERTS"		"0..1"
+// DYNAMIC:		"SKINNING"				"0..1"
+// DYNAMIC:		"MORPHING"				"0..1"
+
+// SKIP:		!$MODEL && $DECAL
+// SKIP:		!$BASETEXTURE2 && !$MULTIBLEND && $BLENDMODULATE
+// SKIP:		$MODEL && $BASETEXTURE2
+// SKIP:		$MODEL && $MULTIBLEND
+// SKIP:		$BASETEXTURE2 && $MULTIBLEND
+// SKIP:		$LIGHTMAPPED && $MULTIBLEND
+
+#include "common_vs_fxc.h"
+#include "common_deferred_fxc.h"
+
+static const bool g_bSkinning = SKINNING ? true : false;
+
+#if MODEL
+
+const float3 cMorphTargetTextureDim			: register( SHADER_SPECIFIC_CONST_10 );
+const float4 cMorphSubrect					: register( SHADER_SPECIFIC_CONST_11 );
+sampler2D morphSampler						: register( s0 );
+
+#endif
+
+#if EYEVEC
+
+const float3 flEyepos						: register( SHADER_SPECIFIC_CONST_0 );
+
+#endif
+
+#if BLENDMODULATE
+const float4 flBlendModTransform[2]			: register( SHADER_SPECIFIC_CONST_1 ); // up to 2
+#if MULTIBLEND
+const float4 flBlendModTransform2[2]			: register( SHADER_SPECIFIC_CONST_3 ); // up to 4
+const float4 flBlendModTransform3[2]			: register( SHADER_SPECIFIC_CONST_5 ); // up to 6
+#endif
+#endif
+
+#if LIGHTMAPPED
+const float4 cBaseTexCoordTransform[2]			: register(SHADER_SPECIFIC_CONST_7);
+#endif
+
+struct VS_INPUT
+{
+
+	
+#if MODEL
+	float4 vPos : POSITION;
+	float4 vNormal					: NORMAL;
+#else
+    float4 vPos : POSITION;
+
+#endif
+
+    float2 vTexCoord_0 : TEXCOORD0;
+
+#if MODEL
+
+	float4 vBoneWeights				: BLENDWEIGHT;
+	float4 vBoneIndices				: BLENDINDICES;
+	float4 vUserData				: TANGENT;
+
+	float4 vTexCoord2				: TEXCOORD2;
+	float4 vPosFlex					: POSITION1;
+	float4 vNormalFlex				: NORMAL1;
+	float vVertexID					: POSITION2;
+
+#endif
+	
+    float3 vTangentS : TANGENT;
+    float3 vTangentT : BINORMAL;
+	
+#if BASETEXTURE2
+	float4 vColor_0					: COLOR0;
+#endif
+	
+};
+
+struct VS_OUTPUT
+{
+    float4 vProjPos : TEXCOORD6;
+    float4 vProjPos_POSITION : POSITION;
+
+    float2 vTexCoord : TEXCOORD0;
+
+	//float3 vProjPosXYW				: TEXCOORD1;
+    float4 worldPos : TEXCOORD2;
+
+#if EYEVEC
+	float3 worldToEye				: TEXCOORD3;
+#endif
+
+#if BASETEXTURE2
+	float4 vColor_0					: COLOR0;
+#endif
+
+    float3 vPositionToCameraRayWs : TEXCOORD4;
+    float4 vReflectXY_vRefractYX : TEXCOORD5;
+	
+    float3 stabilizedOrigin : TEXCOORD7; // ADD THIS
+
+};
+
+VS_OUTPUT main(const VS_INPUT In)
+{
+    VS_OUTPUT Out;
+
+    float3 vTangentS = In.vTangentS;
+    float3 vTangentT = In.vTangentT;
+	
+    float4 worldPos;
+    float3 worldNormal;
+
+	// unpack stuff (model) &&
+	// morph (model) &&
+	// skin (model) ||
+	// xform to world (not model)
+	
+#if MODEL
+	float4 vPos = In.vPos;
+	float3 vNormal = 0;
+
+	DecompressVertex_Normal( In.vNormal, vNormal );
+
+#if MORPHING
+#if !MORPHING_VTEX
+	ApplyMorph( In.vPosFlex, In.vNormalFlex, vPos.xyz, vNormal );
+#else
+	ApplyMorph( morphSampler, cMorphTargetTextureDim, cMorphSubrect,
+		In.vVertexID, In.vTexCoord2, vPos.xyz, vNormal );
+#endif
+#endif
+
+#if DECAL
+	SkinPositionAndNormal( g_bSkinning, vPos, vNormal,
+		In.vBoneWeights, In.vBoneIndices,
+		worldPos.xyz, worldNormal );
+#else
+	SkinPosition( g_bSkinning, vPos,
+		In.vBoneWeights, In.vBoneIndices,
+		worldPos.xyz );
+#endif
+
+	worldPos.xyz = mul4x3(In.vPos, cModel[0]);
+	worldPos.w = 1.0f;
+
+#if DECAL
+	worldNormal = normalize( worldNormal );
+	worldPos.xyz += worldNormal * 0.05f * In.vTexCoord2.z;
+#endif
+	
+#else // MODEL
+
+    worldPos.xyz = mul4x3(In.vPos, cModel[0]);
+    worldPos.w = 1.0f;
+	
+
+#if BASETEXTURE2
+	Out.vColor_0 = In.vColor_0;
+#endif
+
+#endif // NOT MODEL
+
+		// Eye vector
+    float3 vPositionToCameraRayWs = cEyePos.xyz - worldPos.xyz;
+
+	// Transform to the tangent space
+	//o.vTangentEyeVect.x = dot( vPositionToCameraRayWs, v.vTangentS );
+	//o.vTangentEyeVect.y = dot( vPositionToCameraRayWs, v.vTangentT );
+	//o.vTangentEyeVect.z = dot( vPositionToCameraRayWs, vObjNormal );
+
+    Out.vPositionToCameraRayWs.xyz = vPositionToCameraRayWs.xyz;
+	
+	// Projected position
+    float4 vProjPos = mul(worldPos, cViewProj);
+    
+    // Set both to the SAME value
+    Out.vProjPos = vProjPos;
+    Out.vProjPos_POSITION = vProjPos;
+    	
+	// Project tangent basis
+    float2 vProjTangentS = mul(vTangentS, cViewProj);
+    float2 vProjTangentT = mul(vTangentT, cViewProj);
+
+	// Map projected position to the reflection texture
+    float2 vReflectPos;
+    vReflectPos = (vProjPos.xy + vProjPos.w) * 0.5f;
+	//vReflectPos.y = 1.0 - vReflectPos.y;
+
+	// Map projected position to the refraction texture
+    float2 vRefractPos;
+    vRefractPos.x = vProjPos.x;
+    vRefractPos.y = -vProjPos.y; // invert Y
+    vRefractPos = (vRefractPos + vProjPos.w) * 0.5f;
+
+	// Reflection transform
+    Out.vReflectXY_vRefractYX = float4(vReflectPos.x, vReflectPos.y, vRefractPos.y, vRefractPos.x);
+	
+    Out.vTexCoord.xy = In.vTexCoord_0;
+    //Out.worldPos_ProjPosZ = float4(worldPos, Out.vProjPos.z);
+	//Out.vProjPosXYW = Out.vProjPos.xyw;
+
+    Out.worldPos = worldPos;
+	
+    float3 objectTranslation;
+
+    objectTranslation.x = cModel[0][3];
+    objectTranslation.y = cModel[1][3];
+    objectTranslation.z = cModel[2][3];
+    
+    // Stabilize origin relative to object
+    Out.stabilizedOrigin = cEyePos.xyz - objectTranslation;
+
+#if EYEVEC
+	Out.worldToEye = flEyepos - worldPos.xyz;
+#endif
+
+    return Out;
+}

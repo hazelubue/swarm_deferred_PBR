@@ -56,6 +56,8 @@ public:
 	float			m_flMaxSpeed;
 	float			m_flClientMaxSpeed;
 
+	int				m_nJumpsRemaining;
+
 	// Variables from the player edict (sv_player) or entvars on the client.
 	// These are copied in here before calling and copied out after calling.
 	Vector			m_vecVelocity;		// edict::velocity		// Current movement direction.

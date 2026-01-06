@@ -40,7 +40,7 @@ enum MotionBlurMode_t
 //-----------------------------------------------------------------------------
 // Purpose: Renderer setup data.  
 //-----------------------------------------------------------------------------
-class CViewSetup
+abstract_class CViewSetup
 {
 public:
 	CViewSetup()
@@ -158,7 +158,5 @@ public:
 
 	bool		m_bRenderFlashlightDepthTranslucents:1;
 };
-
-
 
 #endif // VIEW_SHARED_H

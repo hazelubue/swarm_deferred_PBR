@@ -219,7 +219,6 @@ public:
 		return false;
 	}
 
-
 	// Makes sure s_pLocalPlayer is properly initialized
 	void						CheckForLocalPlayer( int nSplitScreenSlot );
 
@@ -473,12 +472,15 @@ public:
 	float					m_flFOVTime;		// starting time of the FOV zoom
 private:
 	float					m_flWaterJumpTime;  // used to be called teleport_time
+	int						m_nAirJumpsRemaining;  // Track remaining air jumps
+
 	float					m_flSwimSoundTime;
 protected:
 	float					m_flStepSoundTime;
 	float					m_surfaceFriction;
 private:
 	CNetworkVector( m_vecLadderNormal );
+	
 
 // FTYPEDESC_INSENDTABLE STUFF (end)
 public:
@@ -528,6 +530,8 @@ public:
 	float			m_flConstraintWidth;
 	float			m_flConstraintSpeedFactor;
 	bool			m_bConstraintPastRadius;
+
+
 
 protected:
 
@@ -699,6 +703,8 @@ public:
 	void SetOldPlayerZ( float flOld ) { m_flOldPlayerZ = flOld;	}
 	
 	const fogplayerparams_t& GetPlayerFog() const { return m_PlayerFog; }
+
+
 
 private:
 	friend class CMoveHelperClient;

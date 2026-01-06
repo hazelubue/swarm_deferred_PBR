@@ -397,9 +397,12 @@ PS_OUTPUT main(const PS_INPUT In)
     
     float3 ambient = lerp(g_light_ambient_low_half, g_light_ambient_high, viewFwdDot);
     float3 finalColor = directLighting;
-    
+
     float3 ambientLight = lerp(ambient, radiance * litDot, lightAmount);
-    float3 combinedLighting = (finalColor + ambientLight) * shadowMult;
+
+    float ambientShadow = lerp(1.0f, shadowMult, 0.3f); // 30% shadow influence on ambient
+    float3 combinedLighting = (finalColor * shadowMult) + (ambientLight * ambientShadow);
+
     Out.vColor_0 = float4(combinedLighting, 1.0f);
     
     return Out;

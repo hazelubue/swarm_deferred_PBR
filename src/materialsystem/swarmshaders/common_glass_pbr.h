@@ -1,4 +1,5 @@
 
+
 float g_SpecularBoost = 0.5f;
 float g_DiffuseScale = 111.0f;
 float g_SheenStrength = 0.5f;
@@ -6,10 +7,11 @@ float g_SheenStrength = 0.5f;
 const float2 g_vecFullScreenTexel : register(c1);
 const float4 g_vecFogParams : register(c2);
 const float3 g_vecOrigin : register(c3);
+const float3 g_vecDirection : register(c4);
 
-static const int MAX_FORWARD_LIGHTS = 16;
+static const int MAX_FORWARD_LIGHTS = 12;
 float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c63);
-float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c31);
+float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c38);
 float4 g_ForwardLightCount : register(c11);
 
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
