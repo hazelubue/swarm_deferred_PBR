@@ -3,7 +3,7 @@ WeaponData
 	// Weapon characteristics:
 	"Damage"			"26"		// damage per bullet
 	"Bullets"			"1"		// bullets per shoot
-	"CycleTime"			"0.075"		// time between shoots
+	"CycleTime"			"0.025"		// time between shoots
 
 	"BuiltRightHanded"		"0"
 	
@@ -16,14 +16,14 @@ WeaponData
 	"bucket"			"0"
 	"bucket_position"		"0"
 
-	"clip_size"			"30"
+	"clip_size"			"44"
 	"NumClips"			"3"
 
 	
 	"primary_ammo"			"mp5"
 	"secondary_ammo"		"None"
 
-	"weight"			"25"
+	"weight"			"11"
 	"item_flags"			"0"
 
 	// Sounds for the weapon. There is a max of 16 sounds per category (i.e. max 16 "single_shot" sounds)
