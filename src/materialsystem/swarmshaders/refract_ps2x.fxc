@@ -29,17 +29,20 @@
 #include "common_ps_fxc.h"
 #include "shader_constant_register_map.h"
 
-sampler NormalSampler2				: register( s1 );
-sampler RefractSampler				: register( s2 );
-sampler NormalSampler				: register( s3 );
+sampler NormalSampler2						: register( s1 );
+sampler RefractSampler						: register( s2 );
+sampler NormalSampler						: register( s3 );
 #if CUBEMAP
-sampler EnvmapSampler				: register( s4 );
+sampler EnvmapSampler						: register( s4 );
 #endif
 #if REFRACTTINTTEXTURE
-sampler RefractTintSampler			: register( s5 );
+sampler RefractTintSampler					: register( s5 );
 #endif
 
-sampler BaseColor					: register( s6 );
+sampler BaseColor							: register( s6 );
+
+sampler ReflectSampler						: register( s7 );
+sampler depthsampler						: register( s8 );
 
 const float3 g_EnvmapTint					: register( c0 );
 const float3 g_RefractTint					: register( c1 );
@@ -63,6 +66,22 @@ static const float g_HalfBlurFraction = 0.5 * g_BlurFraction;
 static const float4 g_BlurFractionVec = float4( g_BlurFraction, g_HalfBlurFraction, 
                                                -g_BlurFraction,-g_HalfBlurFraction );
 
+const float2 g_vecFullScreenTexel : register(c15);
+
+const float4x4 g_ViewInv : register(c16);
+const float4x4 g_ProjInv : register(c20);
+const float4x4 g_View : register(c24);
+const float4x4 g_Proj : register(c31);
+const float2 g_zPlanes : register(c35);
+const float aspect : register(c36);
+const float fov : register(c37);
+
+#define FIELD_OF_VIEW fov.x
+#define ASPECT_RATIO aspect.x
+
+#define g_zNear g_zPlanes.x
+#define g_zFar g_zPlanes.y
+
 struct PS_INPUT
 {
 	float4 vBumpTexCoord			: TEXCOORD0;			// NormalMap1 in xy, NormalMap2 in wz
@@ -76,6 +95,20 @@ struct PS_INPUT
     float4 ColorModulate			: COLOR0;
 	float4 worldPos_projPosZ		: TEXCOORD7;		// Necessary for pixel fog	
 };
+
+float4x4 GetViewProj()
+{
+    //return 0;
+    return mul(g_View, g_Proj);
+}
+
+float4x4 GetViewProjInv()
+{
+    //return 0;
+    return mul(g_ProjInv, g_ViewInv);
+}
+
+#include "common_ssr.h"
 
 float4 main( PS_INPUT i ) : COLOR
 {
@@ -249,13 +282,14 @@ float4 main( PS_INPUT i ) : COLOR
 		result += specularLighting;
 	#endif
 	
+    float2 bumpTexCoord = i.vBumpTexCoord.xy;
 		
     float roughness = 0.0f;
-    float GenRoughness = customTex2D(GenerateRoughness(vNormal.xyz, albedo), i.vBumpTexCoord.xy);
+    float GenRoughness = customTex2D(GenerateRoughness(vNormal.xyz, albedo), bumpTexCoord);
     roughness = GenRoughness;
 
     float metallic = 0.0f;
-    float GenMetallic = customTex2D(GenerateMetallic(vNormal.xyz, albedo), i.vBumpTexCoord.xy);
+    float GenMetallic = customTex2D(GenerateMetallic(vNormal.xyz, albedo), bumpTexCoord);
     metallic = GenMetallic;
 
     float3 V = normalize(g_vecOrigin.xyz - i.worldPos_projPosZ.xyz);
@@ -320,9 +354,13 @@ float4 main( PS_INPUT i ) : COLOR
 	
     //compositeLighting += globalLighting /*+ shadow*/;
 	
+    float3 vReflectColor = (float3) 0;
+    vReflectColor.rgb += ssrComposition_simple(roughness, metallic, bumpTexCoord, N.rgb, ReflectSampler, depthsampler, worldPos, V);
+	
 	float resultAlpha = vNormal.a;
 	
     result += compositeLighting;
+    result += vReflectColor;
 
 	return FinalOutput( float4( result, resultAlpha ), pixelFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE, (WRITE_DEPTH_TO_DESTALPHA != 0), worldPos.w );
 }

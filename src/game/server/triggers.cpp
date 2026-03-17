@@ -2916,6 +2916,12 @@ BEGIN_DATADESC( CTriggerCamera )
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetTarget", InputSetTarget),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetTargetAttachment", InputSetTargetAttachment ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "ReturnToEyes", InputReturnToEyes ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "TeleportToView", InputTeleportToView ),
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetTrackSpeed", InputSetTrackSpeed ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetPath", InputSetPath ),
 
 	// Function Pointers
 	DEFINE_FUNCTION( FollowTarget ),
@@ -2998,6 +3004,10 @@ bool CTriggerCamera::KeyValue( const char *szKeyName, const char *szValue )
 	{
 		m_deceleration = atof( szValue );
 	}
+	else if (FStrEq(szKeyName, "trackspeed"))
+	{
+		m_targetSpeed = atof(szValue);
+	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
 
@@ -3020,6 +3030,82 @@ void CTriggerCamera::InputEnable( inputdata_t &inputdata )
 void CTriggerCamera::InputDisable( inputdata_t &inputdata )
 { 
 	Disable();
+}
+
+//------------------------------------------------------------------------------
+// Purpose: Set a new target for the camera to point at.
+//------------------------------------------------------------------------------
+void CTriggerCamera::InputSetTarget(inputdata_t &inputdata)
+{
+	m_target = inputdata.value.StringID();
+	m_hTarget = gEntList.FindEntityGeneric(NULL, STRING(m_target), this, inputdata.pActivator);
+}
+
+//------------------------------------------------------------------------------
+// Purpose: Set a new attachment on the target for the camera to point at.
+//------------------------------------------------------------------------------
+void CTriggerCamera::InputSetTargetAttachment(inputdata_t &inputdata)
+{
+	m_iszTargetAttachment = MAKE_STRING(inputdata.value.String());
+}
+
+//------------------------------------------------------------------------------
+// Purpose: Return the camera view to the player's eyes.
+//------------------------------------------------------------------------------
+void CTriggerCamera::InputReturnToEyes(inputdata_t &inputdata)
+{
+	if (m_hPlayer)
+	{
+		CBasePlayer *pPlayer = (CBasePlayer*)m_hPlayer.Get();
+		if (pPlayer)
+		{
+			SetAbsOrigin(m_hPlayer->EyePosition());
+			SetAbsAngles(m_hPlayer->EyeAngles());
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// Purpose: Teleport the player to the current position of the camera.
+//------------------------------------------------------------------------------
+void CTriggerCamera::InputTeleportToView(inputdata_t &inputdata)
+{
+	if (m_hPlayer)
+	{
+		CBasePlayer *pPlayer = (CBasePlayer*)m_hPlayer.Get();
+		CBaseEntity *pViewControl = pPlayer->GetViewEntity();
+
+		if (pViewControl && pViewControl != pPlayer)
+		{
+			CTriggerCamera *pOtherCamera = dynamic_cast<CTriggerCamera *>(pViewControl);
+			if (pOtherCamera)
+			{
+				static Vector AbsOrigin = pOtherCamera->GetAbsOrigin();
+				if (AbsOrigin != vec3_invalid)
+				{
+					pPlayer->SetAbsOrigin(AbsOrigin);
+				}
+			}
+		}
+	}
+	Disable();
+}
+
+//------------------------------------------------------------------------------
+// Purpose: Set the speed that the camera will try to track it's target.
+//------------------------------------------------------------------------------
+void CTriggerCamera::InputSetTrackSpeed(inputdata_t &inputdata)
+{
+	m_targetSpeed = inputdata.value.Float();
+}
+
+//------------------------------------------------------------------------------
+// Purpose: Have the camera start following a new path.
+//------------------------------------------------------------------------------
+void CTriggerCamera::InputSetPath(inputdata_t &inputdata)
+{
+	m_sPath = inputdata.value.StringID();
+	m_pPath = gEntList.FindEntityGeneric(NULL, STRING(m_sPath), this, inputdata.pActivator);
 }
 
 //-----------------------------------------------------------------------------

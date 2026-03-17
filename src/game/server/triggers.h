@@ -271,6 +271,13 @@ public:
 	// Input handlers
 	void InputEnable( inputdata_t &inputdata );
 	void InputDisable( inputdata_t &inputdata );
+	void InputSetTarget( inputdata_t &inputdata );
+	void InputSetTargetAttachment( inputdata_t &inputdata );
+	void InputReturnToEyes( inputdata_t &inputdata );
+	void InputTeleportToView( inputdata_t &inputdata );
+	void InputSetTrackSpeed( inputdata_t &inputdata );
+	void InputSetPath( inputdata_t &inputdata );
+
 
 private:
 	EHANDLE m_hPlayer;

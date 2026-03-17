@@ -18,8 +18,8 @@
 #include "deferred_utility.h"
 #include "deferred_context.h"
 
-#include "defpass_gbuffer.h"
-#include "defpass_gbuffer_water.h"
+//#include "defpass_gbuffer.h"
+//#include "defpass_gbuffer_water.h"
 #include "defpass_gbuffer_translucent.h"
 
 #include "defpass_shadow.h"

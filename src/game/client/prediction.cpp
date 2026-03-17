@@ -948,7 +948,7 @@ void CPrediction::CheckMovingGround( C_BasePlayer *player, double frametime )
 //			*player - 
 //			*u - 
 //-----------------------------------------------------------------------------
-void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper *moveHelper )
+void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper *moveHelper, CGameMovement* pMovement )
 {
 #if !defined( NO_ENTITY_PREDICTION )
 	VPROF( "CPrediction::RunCommand" );
@@ -1030,7 +1030,7 @@ void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	if ( !pVehicle )
 	{
 		Assert( g_pGameMovement );
-		g_pGameMovement->ProcessMovement( player, g_pMoveData );
+		g_pGameMovement->ProcessMovement( player, g_pMoveData, pMovement );
 	}
 	else
 	{

@@ -292,6 +292,20 @@ float Visibility_SmithGGX(half vdotN, half ldotN, float alpha)
     return (1.0 / max(V1 * V2, 0.15));
 }
 
+float3 EvaluateFastSSS(float3 normal, float3 viewDir, float3 lightDir, float3 lightColor, float3 sssColor, float thickness,
+    float distortion, float power, float scale, float ambient, float attenuation)
+{
+    float3 H = normalize(lightDir + normal * distortion);
+    float VdotH = saturate(dot(viewDir, -H));
+    float back = pow(VdotH, power) * scale;
+    float intensity = attenuation * (back + ambient) * thickness;
+    //float shadowFactor = lerp(shadow, 1.0f, ignoreShadows);
+    float ndotl = saturate(dot(normal, lightDir));
+    float shadowApplied = lerp(1.0f, 0.0, ndotl);
+    //shadowFactor = lerp(shadowApplied, 0.0, backfaceShadow);
+    return lightColor * sssColor * intensity;
+}
+
 void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, float3 normal, float3 fresnelReflectance, int index, float3 vWorldPos, float3 vEye, float roughness, float metalness, float lightDirectionAngle, float3 albedo, out float3 Diffuse, out float3 Specular)
 {
     float3 L = normalize(lightIn);
@@ -384,6 +398,12 @@ void calculateLight(float3 lightIn, float3 lightIntensity, float3 lightOut, floa
 
 void DoSpotLightPBR(const int index, float3 normal, float3 lightPos, float3 lightColor, float lightToWorldDist, float3 worldPos, float metalScalar, float roughness, float3 albedo, out float3 Diffuse, out float3 Specular, const bool bDoSpotAttn)
 {
+    float g_Distortion = ScatteringVars.x;
+    float g_Power = ScatteringVars.y;
+    float g_Scale = ScatteringVars.z;
+
+    float3 subsurfaceScattering = (float3)0;
+
     float3 L = normalize(lightPos - worldPos);
     float3 V = normalize(g_vecViewOrigin.xyz - worldPos);
     float NdotL = max(0.0f, dot(normal, L));
@@ -415,6 +435,9 @@ void DoSpotLightPBR(const int index, float3 normal, float3 lightPos, float3 ligh
     Diffuse *= attenuation * fade;
     Specular *= attenuation * fade;
 
+    subsurfaceScattering = EvaluateFastSSS(normal, V, L, lightColor, Diffuse, g_flthickness, g_Distortion, g_Power, g_Scale, 0.0, attenuation);
+
+    Diffuse += subsurfaceScattering;
    /* return directLighting * attenuation * fade;*/
 }
 

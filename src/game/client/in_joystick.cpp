@@ -29,6 +29,7 @@
 #include "tier1/convar_serverbounded.h"
 #include "c_baseplayer.h"
 #include "inputsystem/iinputstacksystem.h"
+#include "cam_thirdperson.h"
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #else
@@ -864,17 +865,18 @@ void CInput::JoyStickThirdPersonPlatformer( CUserCmd *cmd, float &forward, float
 	engine->GetViewAngles( viewangles );
 
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-	PerUserInput_t &user = GetPerUser( nSlot );
+	// We are not used, still keeping this here incase we need to be again ~reep
+//	PerUserInput_t &user = GetPerUser( nSlot ); 
 
 	if ( forward || side )
 	{
 		// apply turn control [ YAW ]
 		// factor in the camera offset, so that the move direction is relative to the thirdperson camera
-		viewangles[ YAW ] = RAD2DEG(atan2(-side, -forward)) + user.m_vecCameraOffset[ YAW ];
-		engine->SetViewAngles( viewangles );
+		viewangles[YAW] = RAD2DEG(atan2(-side, -forward)) + g_ThirdPersonManager.GetCameraOffsetAngles()[YAW];
+		engine->SetViewAngles(viewangles);
 
 		// apply movement
-		Vector2D moveDir( forward, side );
+		Vector2D moveDir(forward, side);
 		cmd->forwardmove += moveDir.Length() * cl_forwardspeed.GetFloat();
 	}
 
@@ -883,16 +885,22 @@ void CInput::JoyStickThirdPersonPlatformer( CUserCmd *cmd, float &forward, float
 		static SplitScreenConVarRef s_joy_yawsensitivity( "joy_yawsensitivity" );
 		static SplitScreenConVarRef s_joy_pitchsensitivity( "joy_pitchsensitivity" );
 
+		Vector vTempOffset = g_ThirdPersonManager.GetCameraOffsetAngles();
+
 		// look around with the camera
-		user.m_vecCameraOffset[ PITCH ] += pitch * s_joy_pitchsensitivity.GetFloat( nSlot );
-		user.m_vecCameraOffset[ YAW ]   += yaw * s_joy_yawsensitivity.GetFloat( nSlot );
+		vTempOffset[PITCH] += pitch * s_joy_pitchsensitivity.GetFloat(nSlot);
+		vTempOffset[YAW] += yaw * s_joy_yawsensitivity.GetFloat(nSlot);
+
+		g_ThirdPersonManager.SetCameraOffsetAngles(vTempOffset);
 	}
 
 	if ( forward || side || pitch || yaw )
 	{
+		Vector vTempOffset = g_ThirdPersonManager.GetCameraOffsetAngles();
+
 		// update the ideal pitch and yaw
-		cam_idealpitch.SetValue( user.m_vecCameraOffset[ PITCH ] - viewangles[ PITCH ] );
-		cam_idealyaw.SetValue( user.m_vecCameraOffset[ YAW ] - viewangles[ YAW ] );
+		cam_idealpitch.SetValue(vTempOffset[PITCH] - viewangles[PITCH]);
+		cam_idealyaw.SetValue(vTempOffset[YAW] - viewangles[YAW]);
 	}
 }
 

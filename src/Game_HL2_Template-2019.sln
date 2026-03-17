@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36915.13 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Client (HL2)", "game\client\client_hl2_template.vcxproj", "{6A6DC08D-DFEC-BC1A-3A8B-0C00988BBCF3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Server (HL2)", "game\server\server_hl2_template.vcxproj", "{528CEFAE-70E4-C597-7C34-D98D1974F25D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShaderLib", "materialsystem\shaderlib\shaderlib.vcxproj", "{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "game_shader_generic_deferred", "materialsystem\swarmshaders\game_shader_generic_swarm.vcxproj", "{C8D2DC83-E117-7576-7B43-10C844264C51}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6A6DC08D-DFEC-BC1A-3A8B-0C00988BBCF3}.Debug|x86.ActiveCfg = Debug|Win32
+		{6A6DC08D-DFEC-BC1A-3A8B-0C00988BBCF3}.Debug|x86.Build.0 = Debug|Win32
+		{6A6DC08D-DFEC-BC1A-3A8B-0C00988BBCF3}.Release|x86.ActiveCfg = Release|Win32
+		{6A6DC08D-DFEC-BC1A-3A8B-0C00988BBCF3}.Release|x86.Build.0 = Release|Win32
+		{528CEFAE-70E4-C597-7C34-D98D1974F25D}.Debug|x86.ActiveCfg = Debug|Win32
+		{528CEFAE-70E4-C597-7C34-D98D1974F25D}.Debug|x86.Build.0 = Debug|Win32
+		{528CEFAE-70E4-C597-7C34-D98D1974F25D}.Release|x86.ActiveCfg = Release|Win32
+		{528CEFAE-70E4-C597-7C34-D98D1974F25D}.Release|x86.Build.0 = Release|Win32
+		{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}.Debug|x86.ActiveCfg = Debug|Win32
+		{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}.Debug|x86.Build.0 = Debug|Win32
+		{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}.Release|x86.ActiveCfg = Release|Win32
+		{1A1149D9-CB1B-BF85-19CA-C9C2996BFDE8}.Release|x86.Build.0 = Release|Win32
+		{C8D2DC83-E117-7576-7B43-10C844264C51}.Debug|x86.ActiveCfg = Debug|Win32
+		{C8D2DC83-E117-7576-7B43-10C844264C51}.Debug|x86.Build.0 = Debug|Win32
+		{C8D2DC83-E117-7576-7B43-10C844264C51}.Release|x86.ActiveCfg = Release|Win32
+		{C8D2DC83-E117-7576-7B43-10C844264C51}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

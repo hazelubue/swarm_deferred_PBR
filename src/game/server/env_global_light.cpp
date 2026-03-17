@@ -62,7 +62,7 @@ private:
 LINK_ENTITY_TO_CLASS(env_global_light, CGlobalLight);
 
 BEGIN_DATADESC( CGlobalLight )
-
+	DEFINE_FIELD(m_shadowDirection, FIELD_VECTOR),	//DM- vec update pos for save files
 	DEFINE_KEYFIELD( m_bEnabled,		FIELD_BOOLEAN, "enabled" ),
 	DEFINE_KEYFIELD( m_bStartDisabled,	FIELD_BOOLEAN, "StartDisabled" ),
 	DEFINE_AUTO_ARRAY_KEYFIELD( m_TextureName, FIELD_CHARACTER, "texturename" ),

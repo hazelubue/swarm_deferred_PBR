@@ -555,7 +555,7 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	if ( numNodes > MAX_NODES || numNodes < 0 )
 	{
 		Error( "AI node graph %s is corrupt\n", szNrpFilename );
-		DevMsg( (const char *)buf.Base() );
+		DevMsg( "%s", (const char *)buf.Base() );
 		DevMsg( "\n" );
 		Assert( 0 );
 		return;
@@ -1123,8 +1123,8 @@ void CAI_NetworkManager::ThreadedInit( void )
 			// kick off a threaded map build. first, temporarily reset the global ai network
 			// pointer as a hack so all ais think it doesn't exist yet
 			m_ThreadedBuild.pBuildingNetwork = GetNetwork();
-#pragma message("Warning: find some way to prevent AI from using network before it's ready, but allowing the TestHull to still instantiate.")
-			// g_pBigAINet = m_pNetwork = NULL;
+//#pragma message("Warning: find some way to prevent AI from using network before it's ready, but allowing the TestHull to still instantiate.")
+			g_pBigAINet = m_pNetwork = NULL;
 			// // fire off a thread to build the map
 			m_ThreadedBuild.nBuildStage = ThreadedGraphBuildData::BUILD_UNDERWAY;
 			m_ThreadedBuild.job = CreateSimpleThread( ThreadedBuildJob, &m_ThreadedBuild );
@@ -1179,7 +1179,7 @@ void CAI_NetworkManager::ThreadedInit( void )
 
 			break;
 		default:
-			AssertMsg1( false, "Invalid threaded node graph build stage %d!\n", m_ThreadedBuild.nBuildStage );
+			AssertMsg1( false, "Invalid threaded node graph build stage %d!\n", static_cast<int>(m_ThreadedBuild.nBuildStage) );
 		}
 	}
 

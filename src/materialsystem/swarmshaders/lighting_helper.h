@@ -17,6 +17,35 @@ FORCEINLINE void CommitBaseDeferredConstants_Origin( IShaderDynamicAPI* pShaderA
 	pShaderAPI->SetPixelShaderConstant( iPixelShaderOriginRegister, GetDeferredExt()->GetOriginBase() );
 }
 
+//FORCEINLINE void CommitFrustum_ViewMatrix(IShaderDynamicAPI* pShaderAPI,
+//	const int iPixelShaderOriginRegister)
+//{
+//
+//	const int translationX = dot(g_eyePos, g_vecFrustumRight);
+//	const int translationY = dot(g_eyePos, g_vecFrustumUp);
+//	const int translationZ = dot(g_eyePos, g_vecFrustumCenter);
+//	return float4x4(
+//		g_vecFrustumRight.x,
+//		g_vecFrustumUp.x,
+//		g_vecFrustumCenter.x,
+//		0,
+//		g_vecFrustumRight.y,
+//		g_vecFrustumUp.y,
+//		g_vecFrustumCenter.y,
+//		0,
+//		g_vecFrustumRight.z,
+//		g_vecFrustumUp.z,
+//		g_vecFrustumCenter.z,
+//		0,
+//		-translationX,
+//		-translationY,
+//		-translationZ,
+//		1
+//	);
+//
+//	pShaderAPI->SetPixelShaderConstant(iPixelShaderOriginRegister, GetDeferredExt()->GetOriginBase());
+//}
+
 
 FORCEINLINE void CommitShadowcastingConstants_Ortho( IShaderDynamicAPI *pShaderAPI, const int index,
 	int iForwardRegister, int iSlopeRegister, int iOriginRegister )

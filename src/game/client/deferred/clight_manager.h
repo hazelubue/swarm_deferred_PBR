@@ -72,11 +72,19 @@ public:
 	void CollectSpotlightData();
 	void CommitForwardLightsToExtension();
 	void CommitForwardSpotLightsToExtension();
+
+	void CommitLightDataTexture();
+
 	int GetNumActiveForwardLights() const { return m_vecForwardLights.Count(); }
 	const ForwardLightData* GetForwardLightData(int index) const;
 	const ForwardSpotLightData* GetForwardSpotLightData(int index) const;
 
 	const CUtlVector<def_light_t*>& GetRenderLights() const { return m_hRenderLights; }
+
+	uint8	LightType();
+	void	IndexTextureData();
+
+
 private:
 
 	CUtlVector<ForwardLightData> m_vecForwardLights;

@@ -28,6 +28,7 @@ BEGIN_DATADESC( CPathTrack )
 //	DEFINE_FIELD( m_nIterVal,		FIELD_INTEGER ),
 	
 	DEFINE_INPUTFUNC( FIELD_VOID, "InPass", InputPass ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "InTeleport", InputTeleport ),
 	
 	DEFINE_INPUTFUNC( FIELD_VOID, "EnableAlternatePath", InputEnableAlternatePath ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "DisableAlternatePath", InputDisableAlternatePath ),
@@ -39,6 +40,7 @@ BEGIN_DATADESC( CPathTrack )
 
 	// Outputs
 	DEFINE_OUTPUT(m_OnPass, "OnPass"),
+	DEFINE_OUTPUT(m_OnTeleport, "OnTeleport"),
 
 END_DATADESC()
 
@@ -558,4 +560,12 @@ CPathTrack *CPathTrack::Instance( edict_t *pent )
 void CPathTrack::InputPass( inputdata_t &inputdata )
 {
 	m_OnPass.FireOutput( inputdata.pActivator, this );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPathTrack::InputTeleport(inputdata_t &inputdata)
+{
+	m_OnTeleport.FireOutput(inputdata.pActivator, this);
 }

@@ -44,6 +44,7 @@
 #include "voice_status.h"
 #include "fx.h"
 #include "cellcoord.h"
+#include "cam_thirdperson.h"
 
 #include "debugoverlay_shared.h"
 
@@ -134,6 +135,7 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngleVel.m_Value[2], m_vecPunchAngleVel[2] )),
 #else
 	RecvPropVector	(RECVINFO(m_vecPunchAngle)),
+	RecvPropVector(RECVINFO(m_vecTargetPunchAngle)),
 	RecvPropVector	(RECVINFO(m_vecPunchAngleVel)),
 #endif
 
@@ -142,7 +144,6 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropBool	(RECVINFO(m_bPoisoned)),
 	RecvPropFloat	(RECVINFO(m_flStepSize)),
 	RecvPropInt		(RECVINFO(m_bAllowAutoMovement)),
-	RecvPropFloat(RECVINFO(m_lurchTimer)),
 
 	// 3d skybox data
 	RecvPropInt(RECVINFO(m_skybox3d.scale)),
@@ -216,6 +217,8 @@ END_RECV_TABLE()
 		RecvPropFloat		( RECVINFO( m_flLaggedMovementValue )),
 
 		RecvPropEHandle		( RECVINFO( m_hTonemapController ) ),
+		RecvPropFloat		(RECVINFO(m_flFragCookStartTime)),
+		RecvPropInt			(RECVINFO(m_nMeleeState)),
 
 	END_RECV_TABLE()
 
@@ -339,7 +342,6 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 
 	DEFINE_FIELD( m_nButtons, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flWaterJumpTime, FIELD_FLOAT ),
-	DEFINE_FIELD(m_nAirJumpsRemaining, FIELD_FLOAT),
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_FLOAT ),
@@ -390,7 +392,7 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; i++ )
 	{
-		m_bFlashlightEnabled[ i ] = false;
+		m_bFlashlightEnabled = false;
 	}
 
 	m_pCurrentVguiScreen = NULL;
@@ -415,6 +417,18 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_bIsLocalPlayer = false;
 	m_afButtonForced = 0;
 
+	m_bIndependentViewportEnabled = false;
+	m_vecIndependentEyeOrigin.Init();
+	m_angIndependentEyeAngles.Init();
+	m_vecIndependentSSREyeOrigin.Init();
+	m_angIndependentSSREyeAngles.Init();
+	m_flIndependentZNear = 0.0f;
+	m_flIndependentZFar = 0.0f;
+	m_flIndependentFOV = 90.0f;
+
+	ConVarRef scissor("r_flashlightscissor");
+	scissor.SetValue("0");
+
 }
 
 //-----------------------------------------------------------------------------
@@ -434,10 +448,10 @@ C_BasePlayer::~C_BasePlayer()
 			s_pLocalPlayer[ i ]->RemoveSplitScreenPlayer( this );
 		}
 
-		if ( m_bFlashlightEnabled[ i ] )
+		if ( m_bFlashlightEnabled )
 		{
 			FlashlightEffectManager( i ).TurnOffFlashlight( true );
-			m_bFlashlightEnabled[ i ] = false;
+			m_bFlashlightEnabled = false;
 		}
 	}
 }
@@ -456,7 +470,8 @@ void C_BasePlayer::Spawn( void )
 
 	m_iFOV	= 0;	// init field of view.
 
-    SetModel( "models/player.mdl" );
+   // SetModel( "models/player.mdl" );
+	SetModel("models/player/chell/player.mdl");
 
 	Precache();
 
@@ -882,7 +897,7 @@ void C_BasePlayer::OnRestore()
 	if ( IsLocalPlayer( this ) )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( this );
-
+		//DebounceAttackKeys();
 		// debounce the attack key, for if it was used for restore
 		input->ClearInputButton( IN_ATTACK | IN_ATTACK2 );
 		// GetButtonBits() has to be called for the above to take effect
@@ -955,6 +970,12 @@ void C_BasePlayer::OnDataChanged( DataUpdateType_t updateType )
 		if ( m_hOldFogController != m_PlayerFog.m_hCtrl )
 		{
 			FogControllerChanged( updateType == DATA_UPDATE_CREATED );
+		}
+		// Make sure we're not holding down an input key if dead
+		if (IsPlayerDead())
+		{
+//			IN_ClearSpeedToggle();
+//			IN_ClearDuckToggle();
 		}
 	}
 }
@@ -1182,7 +1203,7 @@ void C_BasePlayer::UpdateFlashlight()
 	{
 		// Make sure we're using the proper flashlight texture
 		const char *pszTextureName = pFlashlightPlayer->GetFlashlightTextureName();
-		if ( !m_bFlashlightEnabled[ iSsPlayer ] )
+		if ( !m_bFlashlightEnabled )
 		{
 			// Turned on the headlight; create it.
 			if ( pszTextureName )
@@ -1194,17 +1215,17 @@ void C_BasePlayer::UpdateFlashlight()
 			{
 				FlashlightEffectManager().TurnOnFlashlight( pFlashlightPlayer->index );
 			}
-			m_bFlashlightEnabled[ iSsPlayer ] = true;
+			m_bFlashlightEnabled = true;
 		}
 	}
-	else if ( m_bFlashlightEnabled[ iSsPlayer ] )
+	else if ( m_bFlashlightEnabled )
 	{
 		// Turned off the flashlight; delete it.
 		FlashlightEffectManager().TurnOffFlashlight();
-		m_bFlashlightEnabled[ iSsPlayer ] = false;
+		m_bFlashlightEnabled = false;
 	}
 
-	if ( pFlashlightPlayer && m_bFlashlightEnabled[ iSsPlayer ] )
+	if ( pFlashlightPlayer && m_bFlashlightEnabled )
 	{
 		Vector vecForward, vecRight, vecUp;
 		Vector vecPos;
@@ -1222,40 +1243,59 @@ void C_BasePlayer::UpdateFlashlight()
 			vecPos = GetRenderOrigin() + m_vecViewOffset;
 		}
 
-		if ( IsLocalPlayer() )
+		//DM - mimics l4d flashlight offset.
+		//flashlight origin is the player pos if a weapon isn't detected.
+		Vector vec_origin = EyePosition();
+		QAngle ang_FlashlightAngle = EyeAngles();
+		int dist = FLASHLIGHT_DISTANCE;
+
+		if (GetActiveWeapon())
 		{
-			C_BaseAnimating *pParentEntity = NULL;
-			Vector vecBaseOffset( vec3_origin );
-
-			const char *pszAttachmentName = "muzzle";
-			if ( input->CAM_IsThirdPerson() )
-			{
-				pParentEntity = this;
-				pszAttachmentName = "anim_attachment_RH";
-				vecBaseOffset.x = 15;
+			C_BaseCombatWeapon *pWeap = GetActiveWeapon();
+			int iAttachment = pWeap->LookupAttachment("muzzle_flash");
+			if (iAttachment > 0)
+				pWeap->GetAttachment(iAttachment, vec_origin, ang_FlashlightAngle);
+			else{
+				Vector aimFwd;
+				AngleVectors(ang_FlashlightAngle, &aimFwd);
+				vec_origin += aimFwd * (VEC_HULL_MAX).Length2D();
 			}
-			else
-			{
-				pParentEntity = GetViewModel();
+			dist = 0;
+		}else{ //lookup our camera attachment
+			C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
+			int iAttachment = player->LookupAttachment("camera");
+			if (iAttachment > 0)
+				player->GetAttachment(iAttachment, vec_origin, ang_FlashlightAngle);
+			else{
+				Vector aimFwd;
+				AngleVectors(ang_FlashlightAngle, &aimFwd);
+				vec_origin += aimFwd * (VEC_HULL_MAX).Length2D();
 			}
-
-			int iAttachment = pParentEntity ? pParentEntity->LookupAttachment( pszAttachmentName ) : -1;
-			if ( iAttachment != -1 )
-			{
-				QAngle angles;
-				pParentEntity->GetAttachment( iAttachment, vecPos, angles );
-				AngleVectors( angles, &vecForward, &vecRight, &vecUp );
-
-				vecPos += vecBaseOffset.x * vecForward
-					+ vecBaseOffset.y * vecRight
-					+ vecBaseOffset.z * vecUp;
-			}
+			dist = 0;
 		}
 
-		// Update the light with the new position and direction.		
-		FlashlightEffectManager().UpdateFlashlight( vecPos, vecForward, vecRight, vecUp, pFlashlightPlayer->GetFlashlightFOV(), 
-			pFlashlightPlayer->CastsFlashlightShadows(), pFlashlightPlayer->GetFlashlightFarZ(), pFlashlightPlayer->GetFlashlightLinearAtten(),
-			pFlashlightPlayer->GetFlashlightTextureName() );
+		AngleVectors(ang_FlashlightAngle, &vecForward, &vecRight, &vecUp);
+		C_BaseViewModel* vm = GetViewModel();
+		if (!vm)
+		{
+			// Update the light with the new position and direction.		
+			FlashlightEffectManager().UpdateFlashlight(vec_origin, vecForward, vecRight, vecUp, pFlashlightPlayer->GetFlashlightFOV(),
+				pFlashlightPlayer->CastsFlashlightShadows(), pFlashlightPlayer->GetFlashlightFarZ(), pFlashlightPlayer->GetFlashlightLinearAtten(),
+				pFlashlightPlayer->GetFlashlightTextureName());
+		}
+		else
+		{
+			Vector vecOrigin;
+			QAngle angles;
+			int attatchment = vm->LookupAttachment("muzzle");
+			vm->GetAttachment(attatchment, vecOrigin, angles);
+			AngleVectors(angles, &vecForward, &vecRight, &vecUp);
+			FlashlightEffectManager().UpdateFlashlight(vecOrigin, vecForward, vecRight, vecUp, pFlashlightPlayer->GetFlashlightFOV(),
+				pFlashlightPlayer->CastsFlashlightShadows(), pFlashlightPlayer->GetFlashlightFarZ(), pFlashlightPlayer->GetFlashlightLinearAtten(),
+				pFlashlightPlayer->GetFlashlightTextureName());
+		}
+
+		
 	}
 }
 
@@ -1277,10 +1317,10 @@ void C_BasePlayer::TurnOffFlashlight( void )
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
-	if ( m_bFlashlightEnabled[ nSlot ] )
+	if ( m_bFlashlightEnabled )
 	{
 		FlashlightEffectManager().TurnOffFlashlight();
-		m_bFlashlightEnabled[ nSlot ] = false;
+		m_bFlashlightEnabled = false;
 	}
 }
 
@@ -1401,6 +1441,7 @@ bool C_BasePlayer::ShouldDraw()
 
 int C_BasePlayer::DrawModel( int flags, const RenderableInstance_t &instance )
 {
+#ifndef PORTAL
 	// if local player is spectating this player in first person mode, don't draw it
 	C_BasePlayer * player = C_BasePlayer::GetLocalPlayer();
 
@@ -1411,6 +1452,7 @@ int C_BasePlayer::DrawModel( int flags, const RenderableInstance_t &instance )
 			 !input->CAM_IsThirdPerson() )
 			return 0;
 	}
+#endif
 
 	return BaseClass::DrawModel( flags, instance );
 }
@@ -1860,11 +1902,11 @@ void C_BasePlayer::ThirdPersonSwitch( bool bThirdperson )
 //-----------------------------------------------------------------------------
 bool C_BasePlayer::ShouldDrawLocalPlayer()
 {
-	//int nSlot = GetSplitScreenPlayerSlot();
+	int nSlot = GetSplitScreenPlayerSlot();
 
 
 
-	//ACTIVE_SPLITSCREEN_PLAYER_GUARD( nSlot );
+	ACTIVE_SPLITSCREEN_PLAYER_GUARD( nSlot );
 	return input->CAM_IsThirdPerson() || ( ToolsEnabled() && ToolFramework_IsThirdPersonCamera() );
 }
 
@@ -2027,7 +2069,7 @@ void C_BasePlayer::GetToolRecordingState( KeyValues *msg )
 
 	float flZNear = view->GetZNear();
 	float flZFar = view->GetZFar();
-	CalcView( state.m_vecEyePosition, state.m_vecEyeAngles, flZNear, flZFar, state.m_flFOV );
+	CalcViewDeferred( state.m_vecEyePosition, state.m_vecEyeAngles, state.m_vecEyePosition, state.m_vecEyeAngles, flZNear, flZFar, state.m_flFOV );
 	state.m_bThirdPerson = !engine->IsPaused() && ::input->CAM_IsThirdPerson();
 
 	// this is a straight copy from ClientModeShared::OverrideView,
@@ -2035,8 +2077,7 @@ void C_BasePlayer::GetToolRecordingState( KeyValues *msg )
 	// then this code can (should!) be removed
 	if ( state.m_bThirdPerson )
 	{
-		Vector cam_ofs;
-		::input->CAM_GetCameraOffset( cam_ofs );
+		Vector cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
 
 		QAngle camAngles;
 		camAngles[ PITCH ] = cam_ofs[ PITCH ];
@@ -2105,7 +2146,7 @@ C_BaseViewModel *C_BasePlayer::GetViewModel( int index /*= 0*/ )
 		C_BasePlayer *target =  ToBasePlayer( GetObserverTarget() );
 
 		// get the targets viewmodel unless the target is an observer itself
-		if ( target && target != this && !target->IsObserver() )
+		if ( target && target != this && target->IsObserver() )
 		{
 			vm = target->GetViewModel( index );
 		}
@@ -2281,7 +2322,7 @@ void C_BasePlayer::PhysicsSimulate( void )
 	prediction->RunCommand( 
 		this, 
 		&ctx->cmd, 
-		MoveHelper() );
+		MoveHelper(), NULL );
 	MoveHelper()->SetHost( NULL );
 #endif
 }

@@ -1565,6 +1565,9 @@ void CBaseHudChatLine::Colorize( int alpha )
 		pChat->GetChatHistory()->InsertString( "\n" );
 	}
 
+	const int UnicodeSize = 4096;
+	const int UTF8Size = UnicodeSize * 2;
+
 	wchar_t wText[4096];
 	Color color;
 	for ( int i=0; i<m_textRanges.Count(); ++i )
@@ -1580,8 +1583,9 @@ void CBaseHudChatLine::Colorize( int alpha )
 			InsertColorChange( color );
 			InsertString( wText );
 
-			// TERROR: color console echo
-			ConColorMsg( color, "%ls", wText );
+			char msg[UTF8Size];
+			V_UnicodeToUTF8(wText, msg, UTF8Size);
+			ConColorMsg( color, "%s", msg );
 
 			CBaseHudChat *pChat = dynamic_cast<CBaseHudChat*>(GetParent() );
 

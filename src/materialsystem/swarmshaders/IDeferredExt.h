@@ -8,6 +8,10 @@
 #include "../public/tier1/interface.h"
 #include "deferred_global_common.h"
 #endif
+#include "../public/deferred/def_light_t.h"
+#include <array>
+
+class CDeferredLightDataRegenerator; 
 
 struct ForwardLightData
 {
@@ -56,7 +60,11 @@ struct Matrix_Data_t
 	VMatrix matViewInv;
 	VMatrix matProjInv;
 	VMatrix matViewProj;
-	VMatrix matLockedViewProjInv;
+	VMatrix matStaticView;
+	VMatrix matStaticViewInv;
+	QAngle angles;
+	float viewportOffsetX;
+	float viewportOffsetY;
 };
 
 struct shadowData_ortho_t
@@ -127,8 +135,9 @@ public:
 	virtual void CommitClock(const float& curTime) = 0;
 
 	virtual void CommitMatrixData(float* data, const float& aspect, const float& fov, const Vector& origin, const float& zNear, const float& zFar,
-		VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
-		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv) = 0;
+		const QAngle& angles, VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
+		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv, VMatrix& matStaticView,
+		VMatrix& matStaticViewInv, float viewportOffsetX, float viewportOffsetY) = 0;
 
 	virtual void CommitTexture_General(ITexture* pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
 		ITexture* pTexDepth,
@@ -159,12 +168,20 @@ public:
 	virtual int GetForwardSpotLights_NumRows() = 0;
 	virtual int GetNumActiveForwardLights() = 0;
 
-	virtual void FillDataForFramebuffer() = 0;
 	virtual int GetLightBufferSize() = 0;
 	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height) = 0;
 
+	virtual uint8 LightType(uint8 type) = 0;
+	virtual ITexture* IndexTexture() = 0;
+	virtual std::array<float, 8> IndexTextureData(def_light_t* l) = 0;
+
+	virtual ITexture* GetTexture_WaterNormals() = 0;
+
+	virtual void InitIndexTexture() = 0;
+	virtual void UpdateIndexTexture(def_light_t* l) = 0;
 
 private:
+
 
 
 	CUtlVector<ForwardLightData> m_vecForwardLights;
@@ -208,8 +225,9 @@ public:
 	virtual void CommitClock(const float& curTime);
 
 	virtual void CommitMatrixData(float* data, const float &aspect, const float &fov, const Vector& origin, const float& zNear, const float& zFar,
-		VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
-		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv);
+		const QAngle& angles, VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
+		VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv, VMatrix& matStaticView,
+		VMatrix& matStaticViewInv, float viewportOffsetX, float viewportOffsetY);
 
 	virtual void CommitTexture_General(ITexture* pTexNormals, ITexture* pTexWaterNormals, ITexture* pTexReflection, ITexture* pTexRefraction,
 		ITexture* pTexDepth,
@@ -252,7 +270,6 @@ public:
 	inline const lightData_Global_t& GetLightData_Global();
 
 	inline ITexture* GetTexture_Normals();
-	inline ITexture* GetTexture_WaterNormals();
 	inline ITexture* GetTexture_Depth();
 	inline ITexture* GetTexture_LightAccum();
 
@@ -266,6 +283,8 @@ public:
 	inline ITexture* GetTexture_ShadowDepth_Proj(const int& index);
 	inline ITexture* GetTexture_Cookie(const int& index);
 	inline ITexture* GetTexture_VolumePrePass();
+
+	inline const bool IsGlobalLight_Enabled();
 
 	virtual void ClearForwardLights();
 	virtual void AddForwardLight(const Vector& pos, float radius, const Vector& color,
@@ -281,12 +300,31 @@ public:
 	virtual int GetForwardLights_NumRows();
 	virtual int GetForwardSpotLights_NumRows();
 	virtual int GetNumActiveForwardLights();
-	virtual void FillDataForFramebuffer();
 	virtual int GetLightBufferSize();
 	//virtual void UpdateTextureWithLightData(const float* pData, int width, int height);
 
+	virtual uint8 LightType(uint8 type);
+	ITexture* IndexTexture();
+	std::array<float, 8> IndexTextureData(def_light_t* l);
+
+	ITexture* GetTexture_WaterNormals();
+
+	virtual void InitIndexTexture();
+	virtual void UpdateIndexTexture(def_light_t* l);
+
+	float* m_pflCommonLightData;
+	int m_iCommon_NumRows;
+
+	int m_iNumCommon_ShadowedCookied;
+	int m_iNumCommon_Shadowed;
+	int m_iNumCommon_Cookied;
+	int m_iNumCommon_Simple;
+
+	ITexture* m_pIndexTexture;
+
 private:
 	bool m_bRegeneratorSet;
+	CDeferredLightDataRegenerator* m_pRegen;
 
 	float m_curTime;
 
@@ -312,12 +350,6 @@ private:
 	Matrix_Data_t m_commonData;
 
 	lightData_Global_t m_globalLight;
-	float* m_pflCommonLightData;
-	int m_iCommon_NumRows;
-	int m_iNumCommon_ShadowedCookied;
-	int m_iNumCommon_Shadowed;
-	int m_iNumCommon_Cookied;
-	int m_iNumCommon_Simple;
 
 	ITexture* m_pTexNormals;
 	ITexture* m_pTexWaterNormals;
@@ -334,6 +366,7 @@ private:
 	ITexture* m_pTexCookie[NUM_COOKIE_SLOTS];
 	ITexture* m_pTexVolumePrePass;
 };
+
 
 const Matrix_Data_t& CDeferredExtension::GetCommonData()
 {
@@ -384,6 +417,17 @@ const lightData_Global_t& CDeferredExtension::GetLightData_Global()
 	return m_globalLight;
 }
 
+
+const bool CDeferredExtension::IsGlobalLight_Enabled()
+{
+
+	lightData_Global_t state;
+
+	const bool IsEnabled = state.bEnabled;
+
+	return IsEnabled;
+}
+
 const volumeData_t& CDeferredExtension::GetVolumeData()
 {
 	return m_dataVolume;
@@ -416,11 +460,6 @@ int CDeferredExtension::GetActiveLights_NumRows()
 ITexture* CDeferredExtension::GetTexture_Normals()
 {
 	return m_pTexNormals;
-}
-
-ITexture* CDeferredExtension::GetTexture_WaterNormals()
-{
-	return m_pTexWaterNormals;
 }
 
 ITexture* CDeferredExtension::GetTexture_Depth()
@@ -476,6 +515,8 @@ ITexture* CDeferredExtension::GetTexture_VolumePrePass()
 {
 	return m_pTexVolumePrePass;
 }
+
+
 #endif
 
 #ifdef CLIENT_DLL

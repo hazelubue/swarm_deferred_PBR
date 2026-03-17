@@ -252,6 +252,9 @@ public:
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
+		if (!pEntity)
+			return false;
+
 		// special check for !player as GetEntityName for player won't return "!player" as a name
 		if (FStrEq(STRING(m_iFilterName), "!player"))
 		{

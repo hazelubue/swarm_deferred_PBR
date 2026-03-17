@@ -53,9 +53,9 @@ static ConVar	net_graphproportionalfont( "net_graphproportionalfont", "1", FCVAR
 
 #define NUM_LATENCY_SAMPLES 8
 
-#define GRAPH_RED	(0.9 * 255)
-#define GRAPH_GREEN (0.9 * 255)
-#define GRAPH_BLUE	(0.7 * 255)
+#define GRAPH_RED	int(0.9 * 255)
+#define GRAPH_GREEN int(0.9 * 255)
+#define GRAPH_BLUE	int(0.7 * 255)
 
 #define LERP_HEIGHT 24
 

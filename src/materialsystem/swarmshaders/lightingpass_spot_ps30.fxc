@@ -9,7 +9,7 @@
 #include "common_ps_fxc.h"
 #include "common_deferred_fxc.h"
 #include "common_pbr.h"
-#include "common_spot_light.h"
+
 
 sampler sNormals : register(s0);
 sampler sDepth : register(s1);
@@ -21,6 +21,18 @@ const float3 g_vecFrustumRight  : register(c4);
 const float3 g_vecFrustumUp     : register(c5);
 const float2 g_vecHalfScreenTexel : register(c6);
 #endif
+
+const float g_flthickness : register(c7);
+
+const float3 blurVars : register(c8);
+
+#define g_blurSize 2.0
+#define g_blurArea 0.05
+#define g_blurAngle 0.9
+
+const float3 ScatteringVars : register(c9);
+
+#include "common_spot_light.h"
 
 struct PS_INPUT
 {

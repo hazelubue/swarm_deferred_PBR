@@ -145,6 +145,11 @@ DECLARE_TIER2_INTERFACE( IResourceSystem, g_pResourceSystem );
 DECLARE_TIER2_INTERFACE( IMaterialSystem, materials );
 DECLARE_TIER2_INTERFACE( IMaterialSystem, g_pMaterialSystem );
 
+//#define RESOURCESYSTEM_INTERFACE_VERSION		"IMatRenderContext001"
+//DECLARE_TIER2_INTERFACE(IMatRenderContext, g_pIMatRenderContext);
+
+
+
 #define MATERIAL_SYSTEM2_INTERFACE_VERSION		"VMaterialSystem2_001"
 DECLARE_TIER2_INTERFACE( IMaterialSystem2, g_pMaterialSystem2 );
 

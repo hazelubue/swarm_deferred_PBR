@@ -60,12 +60,12 @@ C_ColorCorrection::C_ColorCorrection()
 
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; i++ )
 	{
-		m_bEnabledOnClient[i] = false;
-		m_flCurWeightOnClient[i] = 0.0f;
-		m_bFadingIn[i] = false;
-		m_flFadeStartWeight[i] = 0.0f;
-		m_flFadeStartTime[i] = 0.0f;
-		m_flFadeDuration[i] = 0.0f;
+		m_bEnabledOnClient = false;
+		m_flCurWeightOnClient = 0.0f;
+		m_bFadingIn = false;
+		m_flFadeStartWeight = 0.0f;
+		m_flFadeStartTime = 0.0f;
+		m_flFadeDuration = 0.0f;
 	}
 }
 
@@ -123,15 +123,15 @@ void C_ColorCorrection::Update( C_BasePlayer *pPlayer, float ccScale )
 	}
 
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-	bool bEnabled = IsClientSide() ? m_bEnabledOnClient[nSlot] : m_bEnabled;
+	bool bEnabled = IsClientSide() ? m_bEnabledOnClient : m_bEnabled;
 
 	// fade weight on client
 	if ( IsClientSide() )
 	{
-		m_flCurWeightOnClient[nSlot] = Lerp( GetFadeRatio( nSlot ), m_flFadeStartWeight[nSlot], m_bFadingIn[nSlot] ? m_flMaxWeight : 0.0f );
+		m_flCurWeightOnClient = Lerp( GetFadeRatio( nSlot ), m_flFadeStartWeight, m_bFadingIn ? m_flMaxWeight : 0.0f );
 	}
 
-	float flCurWeight = IsClientSide() ? m_flCurWeightOnClient[nSlot] : m_flCurWeight;
+	float flCurWeight = IsClientSide() ? m_flCurWeightOnClient : m_flCurWeight;
 
 	if( !bEnabled && flCurWeight == 0.0f )
 	{
@@ -162,23 +162,23 @@ void C_ColorCorrection::EnableOnClient( bool bEnable, bool bSkipFade )
 
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
-	if( m_bEnabledOnClient[nSlot] == bEnable )
+	if( m_bEnabledOnClient == bEnable )
 	{
 		return;
 	}
 
-	m_bFadingIn[nSlot] = bEnable;
-	m_bEnabledOnClient[nSlot] = bEnable;
+	m_bFadingIn = bEnable;
+	m_bEnabledOnClient = bEnable;
 
 	// initialize countdown timer
-	m_flFadeStartWeight[nSlot] = m_flCurWeightOnClient[nSlot];
+	m_flFadeStartWeight = m_flCurWeightOnClient;
 	float flFadeTimeScale = 1.0f;
 	if ( m_flMaxWeight != 0.0f )
 	{
-		flFadeTimeScale = m_flCurWeightOnClient[nSlot] / m_flMaxWeight;
+		flFadeTimeScale = m_flCurWeightOnClient / m_flMaxWeight;
 	}
 
-	if ( m_bFadingIn[nSlot] )
+	if ( m_bFadingIn )
 	{
 		flFadeTimeScale = 1.0f - flFadeTimeScale;
 	}
@@ -188,10 +188,10 @@ void C_ColorCorrection::EnableOnClient( bool bEnable, bool bSkipFade )
 		flFadeTimeScale = 0.0f;
 	}
 
-	StartFade( nSlot, flFadeTimeScale * ( m_bFadingIn[nSlot] ? m_flFadeInDuration : m_flFadeOutDuration ) );
+	StartFade( nSlot, flFadeTimeScale * ( m_bFadingIn ? m_flFadeInDuration : m_flFadeOutDuration ) );
 
 	// update the clientside weight once here, in case the fade duration is 0
-	m_flCurWeightOnClient[nSlot] = Lerp( GetFadeRatio( nSlot ), m_flFadeStartWeight[nSlot], m_bFadingIn[nSlot] ? m_flMaxWeight : 0.0f );
+	m_flCurWeightOnClient = Lerp( GetFadeRatio( nSlot ), m_flFadeStartWeight, m_bFadingIn ? m_flMaxWeight : 0.0f );
 }
 
 Vector C_ColorCorrection::GetOrigin()
@@ -216,17 +216,17 @@ void C_ColorCorrection::SetWeight( float fWeight )
 
 void C_ColorCorrection::StartFade( int nSplitScreenSlot, float flDuration )
 {
-	m_flFadeStartTime[nSplitScreenSlot] = gpGlobals->curtime;
-	m_flFadeDuration[nSplitScreenSlot] = MAX( flDuration, 0.0f );
+	m_flFadeStartTime = gpGlobals->curtime;
+	m_flFadeDuration = MAX( flDuration, 0.0f );
 }
 
 float C_ColorCorrection::GetFadeRatio( int nSplitScreenSlot ) const
 {
 	float flRatio = 1.0f;
 	
-	if ( m_flFadeDuration[nSplitScreenSlot] != 0.0f )
+	if ( m_flFadeDuration != 0.0f )
 	{
-		flRatio = ( gpGlobals->curtime - m_flFadeStartTime[nSplitScreenSlot] ) / m_flFadeDuration[nSplitScreenSlot];
+		flRatio = ( gpGlobals->curtime - m_flFadeStartTime ) / m_flFadeDuration;
 		flRatio = clamp( flRatio, 0.0f, 1.0f );
 	}
 	return flRatio;
@@ -234,8 +234,8 @@ float C_ColorCorrection::GetFadeRatio( int nSplitScreenSlot ) const
 
 bool C_ColorCorrection::IsFadeTimeElapsed( int nSplitScreenSlot ) const
 {
-	return	( ( gpGlobals->curtime - m_flFadeStartTime[nSplitScreenSlot] ) > m_flFadeDuration[nSplitScreenSlot] ) ||
-			( ( gpGlobals->curtime - m_flFadeStartTime[nSplitScreenSlot] ) < 0.0f );
+	return	( ( gpGlobals->curtime - m_flFadeStartTime ) > m_flFadeDuration ) ||
+			( ( gpGlobals->curtime - m_flFadeStartTime ) < 0.0f );
 }
 
 void UpdateColorCorrectionEntities( C_BasePlayer *pPlayer, float ccScale, C_ColorCorrection **pList, int listCount )

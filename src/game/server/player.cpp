@@ -77,10 +77,10 @@
 
 
 
-
 #ifdef HL2_DLL
 #include "combine_mine.h"
 #include "weapon_physcannon.h"
+#include "predicted_viewmodel.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -362,7 +362,6 @@ BEGIN_DATADESC( CBasePlayer )
 	
 	DEFINE_FIELD( m_flMaxspeed, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flWaterJumpTime, FIELD_TIME ),
-	DEFINE_FIELD( m_nAirJumpsRemaining, FIELD_TIME),
 	DEFINE_FIELD( m_vecWaterJumpVel, FIELD_VECTOR ),
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_TIME ),
@@ -434,6 +433,11 @@ BEGIN_DATADESC( CBasePlayer )
 
 	DEFINE_FIELD( m_nNumCrateHudHints, FIELD_INTEGER ),
 
+	DEFINE_FIELD(m_bLessClip, FIELD_BOOLEAN),
+	DEFINE_FIELD(m_bIsPowerSliding, FIELD_BOOLEAN),
+	DEFINE_FIELD(m_nWallRunState, FIELD_INTEGER),
+	DEFINE_FIELD(m_vecWallNorm, FIELD_POSITION_VECTOR),
+
 	DEFINE_FIELD( m_hPostProcessCtrl, FIELD_EHANDLE ),
 	DEFINE_FIELD( m_hColorCorrectionCtrl, FIELD_EHANDLE ),
 	DEFINE_EMBEDDED( m_PlayerFog ),
@@ -483,6 +487,27 @@ CBaseViewModel *CBasePlayer::GetViewModel( int index /*= 0*/ )
 //-----------------------------------------------------------------------------
 void CBasePlayer::CreateViewModel( int index /*=0*/ )
 {
+
+#ifdef HL2_DLL //use CpredictedViewModel.	
+	Assert(index >= 0 && index < MAX_VIEWMODELS);
+
+	if (GetViewModel(index))
+		return;
+
+	CPredictedViewModel *vm = (CPredictedViewModel *)CreateEntityByName("predicted_viewmodel");
+
+	if (vm) {
+		vm->SetAbsOrigin(GetAbsOrigin());
+		vm->SetOwner(this);
+		vm->SetIndex(index);
+
+		DispatchSpawn(vm);
+		vm->FollowEntity(this, false);
+		vm->AddEffects(EF_NODRAW);
+
+		m_hViewModel.Set(index, vm);
+	}
+#else
 	Assert( index >= 0 && index < MAX_VIEWMODELS );
 
 	if ( GetViewModel( index ) )
@@ -498,6 +523,7 @@ void CBasePlayer::CreateViewModel( int index /*=0*/ )
 		vm->FollowEntity( this );
 		m_hViewModel.Set( index, vm );
 	}
+#endif //HL2_DLL
 }
 
 //-----------------------------------------------------------------------------
@@ -1058,7 +1084,10 @@ bool CBasePlayer::ShouldTakeDamageInCommentaryMode( const CTakeDamageInfo &input
 	if ( inputInfo.GetInflictor() == this && inputInfo.GetAttacker() == this )
 		return true;
 
-
+#ifdef PORTAL
+	if (inputInfo.GetDamageType() & DMG_ACID)
+		return true;
+#endif
 
 	// In commentary, ignore all damage except for falling and leeches
 	if ( !(inputInfo.GetDamageType() & (DMG_BURN | DMG_PLASMA | DMG_FALL | DMG_CRUSH)) && inputInfo.GetDamageType() != DMG_GENERIC )
@@ -4519,7 +4548,9 @@ void CBasePlayer::PostThink()
 				if ( m_hUseEntity->OnControls( this ) && 
 					( !GetActiveWeapon() || GetActiveWeapon()->IsEffectActive( EF_NODRAW ) ||
 					( GetActiveWeapon()->GetActivity() == ACT_VM_HOLSTER ) 
-		
+#ifdef PORTAL // Portalgun view model stays up when holding an object -Jeep
+						|| FClassnameIs(GetActiveWeapon(), "weapon_portalgun")
+#endif //#ifdef PORTAL	
 					) )
 				{  
 					m_hUseEntity->Use( this, this, USE_SET, 2 );	// try fire the gun
@@ -4957,7 +4988,6 @@ void CBasePlayer::Spawn( void )
 	
 	m_flFieldOfView		= 0.766;// some NPCs use this to determine whether or not the player is looking at them.
 
-
 	m_vecAdditionalPVSOrigin = vec3_origin;
 	m_vecCameraPVSOrigin = vec3_origin;
 
@@ -5057,8 +5087,6 @@ void CBasePlayer::Spawn( void )
 
 	// track where we are in the nav mesh
 	UpdateLastKnownArea();
-
-	m_nAirJumpsRemaining = 1;
 
 	BaseClass::Spawn();
 
@@ -5905,7 +5933,7 @@ void CBasePlayer::ImpulseCommands( )
 		{
 			FlashlightTurnOff( PLAY_FLASHLIGHT_SOUND );
 		}
-        else 
+        else
 		{
 			FlashlightTurnOn( PLAY_FLASHLIGHT_SOUND );
 		}
@@ -5987,7 +6015,7 @@ static void CreateJalopy( CBasePlayer *pPlayer )
 	// Cheat to create a jeep in front of the player
 	Vector vecForward;
 	AngleVectors( pPlayer->EyeAngles(), &vecForward );
-	CBaseEntity *pJeep = (CBaseEntity *)CreateEntityByName( "prop_vehicle_jeep" );
+	CBaseEntity *pJeep = (CBaseEntity *)CreateEntityByName( "prop_vehicle_jalopy" );
 	if ( pJeep )
 	{
 		Vector vecOrigin = pPlayer->GetAbsOrigin() + vecForward * 256 + Vector(0,0,64);
@@ -6160,7 +6188,6 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			#ifdef HL2_EPISODIC
 				GiveAmmo( 5,	"Hopwire" );
 			#endif
-			GiveAmmo( 255,	"mp5");
 
 			GiveNamedItem( "weapon_smg1" );
 			GiveNamedItem( "weapon_frag" );

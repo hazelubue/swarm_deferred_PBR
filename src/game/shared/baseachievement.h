@@ -11,7 +11,9 @@
 #endif
 
 #include "GameEventListener.h"
-//#include "hl2orange.spa.h"
+#if defined(HL2_DLL)
+#include "../../common/hl2orange.spa.h"
+#endif
 #include "iachievementmgr.h"
 
 class CAchievementMgr;

@@ -47,6 +47,17 @@ const wchar_t *GetStringForIndex( int index );
 #endif
 static bool g_bPermitDirectSoundPrecache = false;
 
+template< class T >
+static FORCEINLINE T Clamp( T const &val, T const &minVal, T const &maxVal )
+{
+	if ( val < minVal )
+		return minVal;
+	else if ( val > maxVal )
+		return maxVal;
+	else
+		return val;
+}
+
 #if !defined( CLIENT_DLL )
 
 static ConVar cc_norepeat( "cc_norepeat", "5", 0, "In multiplayer games, don't repeat captions more often than this many seconds." );
@@ -580,10 +591,10 @@ public:
 			params.soundname, 
 			params.soundlevel, 
 			params.volume, 
-			ep.m_nFlags, 
-			params.pitch, 
+			ep.m_nFlags | SND_SHOULDPAUSE,
+			Clamp( int( params.pitch * engine->GetTimescale() ), 0, 255 ),
 			ep.m_pOrigin, 
-			ep.m_flSoundTime,
+			ep.m_flSoundTime / engine->GetTimescale(),
 			ep.m_UtlVecSoundOrigin );
 		if ( bSwallowed )
 			return;
@@ -596,7 +607,7 @@ public:
 		}
 #endif
 
-		float st = ep.m_flSoundTime;
+		float st = ep.m_flSoundTime / engine->GetTimescale();
 		if ( !st && 
 			params.delay_msec != 0 )
 		{
@@ -611,9 +622,9 @@ public:
 			params.channel, 
 			params.soundname,
 			params.volume,
-			(soundlevel_t)params.soundlevel,
-			ep.m_nFlags,
-			params.pitch,
+			params.soundlevel,
+			ep.m_nFlags | SND_SHOULDPAUSE,
+			Clamp( int( params.pitch * engine->GetTimescale() ), 0, 255 ),
 			ep.m_pOrigin,
 			NULL,
 			&ep.m_UtlVecSoundOrigin,
@@ -669,15 +680,15 @@ public:
 			  ep.m_pSoundName[0] == '!' ) )
 		{
 #if !defined( CLIENT_DLL )
-			bool bSwallowed = CEnvMicrophone::OnSoundPlayed( 
-				entindex, 
-				ep.m_pSoundName, 
-				ep.m_SoundLevel, 
-				ep.m_flVolume, 
-				ep.m_nFlags, 
-				ep.m_nPitch, 
-				ep.m_pOrigin, 
-				ep.m_flSoundTime,
+			bool bSwallowed = CEnvMicrophone::OnSoundPlayed(
+				entindex,
+				ep.m_pSoundName,
+				ep.m_SoundLevel,
+				ep.m_flVolume,
+				ep.m_nFlags | SND_SHOULDPAUSE,
+				Clamp( int( ep.m_nPitch * engine->GetTimescale() ), 0, 255 ),
+				ep.m_pOrigin,
+				ep.m_flSoundTime / engine->GetTimescale(),
 				ep.m_UtlVecSoundOrigin );
 			if ( bSwallowed )
 				return;
@@ -698,20 +709,20 @@ public:
 				Msg( "Sound %s was not precached\n", ep.m_pSoundName );
 			}
 #endif
-			enginesound->EmitSound( 
-				filter, 
-				entindex, 
-				ep.m_nChannel, 
-				ep.m_pSoundName, 
-				ep.m_flVolume, 
-				ep.m_SoundLevel, 
-				ep.m_nFlags, 
-				ep.m_nPitch, 
+			enginesound->EmitSound(
+				filter,
+				entindex,
+				ep.m_nChannel,
+				ep.m_pSoundName,
+				ep.m_flVolume,
+				ep.m_SoundLevel,
+				ep.m_nFlags | SND_SHOULDPAUSE,
+				Clamp( int( ep.m_nPitch * engine->GetTimescale() ), 0, 255 ),
 				ep.m_pOrigin,
-				NULL, 
+				NULL,
 				&ep.m_UtlVecSoundOrigin,
-				true, 
-				ep.m_flSoundTime,
+				true,
+				ep.m_flSoundTime / engine->GetTimescale(),
 				ep.m_nSpeakerEntity );
 			if ( ep.m_pflSoundDuration )
 			{
@@ -720,7 +731,7 @@ public:
 				UTIL_LogPrintf( "getting wav duration for %s\n", ep.m_pSoundName );
 #endif
 				VPROF( "CSoundEmitterSystem::EmitSound GetSoundDuration (calls engine)" );
-				*ep.m_pflSoundDuration = enginesound->GetSoundDuration( ep.m_pSoundName );
+				*ep.m_pflSoundDuration = enginesound->GetSoundDuration( ep.m_pSoundName ) / engine->GetTimescale();
 			}
 
 			TraceEmitSound( entindex, "%f EmitSound:  Raw wave emitted '%s' (ent %i) (vol %f)\n",
@@ -769,7 +780,7 @@ public:
 			char const *wav = soundemitterbase->GetWavFileForSound( token, GENDER_NONE );
 			if ( wav )
 			{
-				duration = enginesound->GetSoundDuration( wav );
+				duration = enginesound->GetSoundDuration( wav ) / engine->GetTimescale();
 			}
 			else
 			{
@@ -983,9 +994,9 @@ public:
 		}
 
 #if defined( CLIENT_DLL )
-		enginesound->EmitAmbientSound( params.soundname, params.volume, params.pitch, iFlags, soundtime );
+		enginesound->EmitAmbientSound( params.soundname, params.volume, Clamp( int( params.pitch * engine->GetTimescale() ), 0, 255 ), iFlags | SND_SHOULDPAUSE, soundtime / engine->GetTimescale() );
 #else
-		engine->EmitAmbientSound(entindex, origin, params.soundname, params.volume, params.soundlevel, iFlags, params.pitch, soundtime );
+		engine->EmitAmbientSound(entindex, origin, params.soundname, params.volume, params.soundlevel, iFlags | SND_SHOULDPAUSE, Clamp( int( params.pitch * engine->GetTimescale() ), 0, 255 ), soundtime / engine->GetTimescale() );
 #endif
 
 		bool needsCC = !( iFlags & ( SND_STOP | SND_CHANGE_VOL | SND_CHANGE_PITCH ) );
@@ -994,7 +1005,7 @@ public:
 		
 		if ( duration || needsCC )
 		{
-			soundduration = enginesound->GetSoundDuration( params.soundname );
+			soundduration = enginesound->GetSoundDuration( params.soundname ) / engine->GetTimescale();
 			if ( duration )
 			{
 				*duration = soundduration;
@@ -1106,10 +1117,10 @@ public:
 							pSample, 
 							soundlevel, 
 							volume, 
-							flags, 
-							pitch, 
+							flags | SND_SHOULDPAUSE,
+							Clamp( int( pitch * engine->GetTimescale() ), 0, 255 ),
 							&origin, 
-							soundtime,
+							soundtime / engine->GetTimescale(),
 							dummyorigins );
 		if ( bSwallowed )
 			return;
@@ -1118,14 +1129,14 @@ public:
 		if ( pSample && ( Q_stristr( pSample, ".wav" ) || Q_stristr( pSample, ".mp3" )) )
 		{
 #if defined( CLIENT_DLL )
-			enginesound->EmitAmbientSound( pSample, volume, pitch, flags, soundtime );
+			enginesound->EmitAmbientSound( pSample, volume, Clamp( int( pitch * engine->GetTimescale() ), 0, 255 ), flags | SND_SHOULDPAUSE, soundtime / engine->GetTimescale() );
 #else
-			engine->EmitAmbientSound( entindex, origin, pSample, volume, soundlevel, flags, pitch, soundtime );
+			engine->EmitAmbientSound( entindex, origin, pSample, volume, soundlevel, flags | SND_SHOULDPAUSE, Clamp( int( pitch * engine->GetTimescale() ), 0, 255 ), soundtime / engine->GetTimescale() );
 #endif
 
 			if ( duration )
 			{
-				*duration = enginesound->GetSoundDuration( pSample );
+				*duration = enginesound->GetSoundDuration( pSample ) / engine->GetTimescale();
 			}
 
 			TraceEmitSound( entindex, "EmitAmbientSound:  Raw wave emitted '%s' (ent %i)\n",
@@ -1735,13 +1746,13 @@ void UTIL_EmitAmbientSound( int entindex, const Vector &vecOrigin, const char *s
 			char name[32];
 			Q_snprintf( name, sizeof(name), "!%d", sentenceIndex );
 #if !defined( CLIENT_DLL )
-			engine->EmitAmbientSound( entindex, vecOrigin, name, vol, soundlevel, fFlags, pitch, soundtime );
+			engine->EmitAmbientSound( entindex, vecOrigin, name, vol, soundlevel, fFlags | SND_SHOULDPAUSE, Clamp( int( pitch * engine->GetTimescale() ), 0, 255 ), soundtime / engine->GetTimescale() );
 #else
-			enginesound->EmitAmbientSound( name, vol, pitch, fFlags, soundtime );
+			enginesound->EmitAmbientSound( name, vol, Clamp( int( pitch * engine->GetTimescale() ), 0, 255 ), fFlags | SND_SHOULDPAUSE, soundtime / engine->GetTimescale() );
 #endif
 			if ( duration )
 			{
-				*duration = enginesound->GetSoundDuration( name );
+				*duration = enginesound->GetSoundDuration( name ) / engine->GetTimescale();
 			}
 
 			g_SoundEmitterSystem.TraceEmitSound( entindex, "UTIL_EmitAmbientSound:  Sentence emitted '%s' (ent %i)\n",

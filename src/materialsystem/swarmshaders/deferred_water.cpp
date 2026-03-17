@@ -67,58 +67,6 @@ SHADER_PARAM(MRAOTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Texture with metalness
 
 END_SHADER_PARAMS
 
-
-
-
-void SetupParmsGBuffer0(defParms_gBuffer_translucent& p)
-{
-	p.bModel = false;
-
-	p.iAlbedo = BASETEXTURE;
-#if DEFCFG_DEFERRED_SHADING == 1
-	p.iAlbedo2 = BASETEXTURE2;
-#endif
-	p.iBumpmap = NORMALMAP;
-	p.iBumpmap2 = 0;
-	p.PARALLAX = 0;
-
-	p.iSSBump = 0;
-	//p.iAlphatestRef = ALPHATESTREFERENCE;
-
-	p.m_nMRAO = MRAOTEXTURE;
-	p.m_nAlpha = 0;
-	//p.m_nTransparency = TRANSPARENCY;
-	//p.m_nTrasncluent = TRANSLUCENT;
-
-	p.FLOWMAP = FLOWMAP;
-	p.FLOWMAPFRAME = FLOWMAPFRAME;
-	p.FLOW_NOISE_TEXTURE = FLOW_NOISE_TEXTURE;
-
-	p.FLOW_WORLDUVSCALE = FLOW_WORLDUVSCALE;
-	p.FLOW_NORMALUVSCALE = FLOW_NORMALUVSCALE;
-	p.FLOW_BUMPSTRENGTH = FLOW_BUMPSTRENGTH;
-	p.COLOR_FLOW_DISPLACEBYNORMALSTRENGTH = COLOR_FLOW_DISPLACEBYNORMALSTRENGTH;
-
-	p.FLOW_TIMEINTERVALINSECONDS = FLOW_TIMEINTERVALINSECONDS;
-	p.FLOW_UVSCROLLDISTANCE = FLOW_UVSCROLLDISTANCE;
-	p.FLOW_NOISE_SCALE = FLOW_NOISE_SCALE;
-
-	p.COLOR_FLOW_UVSCALE = COLOR_FLOW_UVSCALE;
-	p.COLOR_FLOW_TIMEINTERVALINSECONDS = COLOR_FLOW_TIMEINTERVALINSECONDS;
-	p.COLOR_FLOW_UVSCROLLDISTANCE = COLOR_FLOW_UVSCROLLDISTANCE;
-	p.COLOR_FLOW_LERPEXP = COLOR_FLOW_LERPEXP;
-
-	p.REFRACTTINT = REFRACTTINT;
-	p.REFLECTAMOUNT = REFLECTAMOUNT;
-	p.REFRACTAMOUNT = REFRACTAMOUNT;
-	p.FOGCOLOR = FOGCOLOR;
-	p.REFLECTTINT = REFLECTTINT;
-	//p.WATERBLENDFACTOR = WATERBLENDFACTOR;
-	p.FOGSTART = FOGSTART;
-	p.FOGEND = FOGEND;
-
-}
-
 void SetupParmsShadow(defParms_shadow& p)
 {
 	p.bModel = false;
@@ -207,9 +155,6 @@ SHADER_INIT_PARAMS()
 
 	if (bDrawToGBuffer)
 	{
-		defParms_gBuffer_translucent parms_gbuffer;
-		SetupParmsGBuffer0(parms_gbuffer);
-		InitParmsGBuffer_translucent(parms_gbuffer, this, params);
 
 		defParms_shadow parms_shadow;
 		SetupParmsShadow(parms_shadow);
@@ -234,9 +179,7 @@ SHADER_INIT
 
 	if (bDrawToGBuffer)
 	{
-		defParms_gBuffer_translucent parms_gbuffer;
-		SetupParmsGBuffer0(parms_gbuffer);
-		InitPassGBuffer_translucent(parms_gbuffer, this, params);
+
 
 		defParms_shadow parms_shadow;
 		SetupParmsShadow(parms_shadow);
@@ -273,16 +216,6 @@ SHADER_DRAW
 
 	if (bDrawToGBuffer)
 	{
-		if (pShaderShadow != NULL ||
-			iDeferredRenderStage == DEFERRED_RENDER_STAGE_GBUFFER)
-		{
-			defParms_gBuffer_translucent parms_gbuffer;
-			SetupParmsGBuffer0(parms_gbuffer);
-			DrawPassGBuffer_translucent(parms_gbuffer, this, params, pShaderShadow, pShaderAPI,
-				vertexCompression, pDefContext);
-		}
-		else
-			SkipPass();
 
 		if (pShaderShadow != NULL ||
 			iDeferredRenderStage == DEFERRED_RENDER_STAGE_SHADOWPASS)

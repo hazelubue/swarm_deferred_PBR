@@ -23,7 +23,26 @@ void DoSpark( CBaseEntity *ent, const Vector &location, int nMagnitude, int nTra
 
 	if ( bPlaySound )
 	{
-		ent->EmitSound( "DoSpark" );
+		if( nMagnitude == 1)
+		{
+			ent->EmitSound( "Spark.Small" );
+		}
+		else if ( nMagnitude == 2)
+		{
+			ent->EmitSound( "Spark.Medium" );
+		}
+		else if ( nMagnitude == 5)
+		{
+			ent->EmitSound( "Spark.High" );
+		}
+		else if ( nMagnitude == 8)
+		{
+			ent->EmitSound( "Spark.Large" );
+		}
+		else 
+		{
+			ent->EmitSound( "DoSpark" );
+		}
 	}
 }
 
@@ -131,7 +150,11 @@ void CEnvSpark::Precache(void)
 	engine->LockNetworkStringTables( oldLock );
 
 	if ( IsPrecacheAllowed() )
-	{
+	{	
+		PrecacheScriptSound( "Spark.Small" );
+		PrecacheScriptSound( "Spark.Medium" );
+		PrecacheScriptSound( "Spark.Large" );
+		PrecacheScriptSound( "Spark.High" );
 		PrecacheScriptSound( "DoSpark" );
 	}
 }

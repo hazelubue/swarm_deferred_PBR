@@ -57,12 +57,22 @@ LINK_ENTITY_TO_CLASS( prop_ragdoll, CRagdollProp );
 EXTERN_SEND_TABLE(DT_Ragdoll)
 
 IMPLEMENT_SERVERCLASS_ST(CRagdollProp, DT_Ragdoll)
-	SendPropArray	(SendPropQAngles(SENDINFO_ARRAY(m_ragAngles), 13, 0 ), m_ragAngles),
-	SendPropArray	(SendPropVector(SENDINFO_ARRAY(m_ragPos), -1, SPROP_COORD ), m_ragPos),
-	SendPropEHandle(SENDINFO( m_hUnragdoll ) ),
-	SendPropFloat(SENDINFO(m_flBlendWeight), 8, SPROP_ROUNDDOWN, 0.0f, 1.0f ),
-	SendPropInt(SENDINFO(m_nOverlaySequence), 11),
+SendPropArray(SendPropQAngles(SENDINFO_ARRAY(m_ragAngles), 13, 0), m_ragAngles),
+SendPropArray(SendPropVector(SENDINFO_ARRAY(m_ragPos), -1, SPROP_COORD), m_ragPos),
+SendPropEHandle(SENDINFO(m_hUnragdoll)),
+SendPropFloat(SENDINFO(m_flBlendWeight), 8, SPROP_ROUNDDOWN, 0.0f, 1.0f),
+SendPropInt(SENDINFO(m_nOverlaySequence), 11),
 END_SEND_TABLE()
+
+
+#ifdef PLATFORM_POSIX
+#define PRAGMA_DISABLE_NARROWING_WARNING 
+#define PRAGMA_ENABLE_NARROWING_WARNING 
+#else
+#define PRAGMA_DISABLE_NARROWING_WARNING __pragma(warning(disable:4838))
+#define PRAGMA_ENABLE_NARROWING_WARNING __pragma(warning(default:4838))
+#endif
+
 
 #define DEFINE_RAGDOLL_ELEMENT( i ) \
 	DEFINE_FIELD( m_ragdoll.list[i].originParentSpace, FIELD_VECTOR ), \
@@ -70,6 +80,8 @@ END_SEND_TABLE()
 	DEFINE_PHYSPTR( m_ragdoll.list[i].pConstraint ), \
 	DEFINE_FIELD( m_ragdoll.list[i].parentIndex, FIELD_INTEGER )
 
+
+PRAGMA_DISABLE_NARROWING_WARNING;
 BEGIN_DATADESC(CRagdollProp)
 //					m_ragdoll (custom handling)
 	DEFINE_AUTO_ARRAY	( m_ragdoll.boneIndex,	FIELD_INTEGER	),
@@ -150,6 +162,7 @@ BEGIN_DATADESC(CRagdollProp)
 	DEFINE_RAGDOLL_ELEMENT( 31 ),
 
 END_DATADESC()
+PRAGMA_ENABLE_NARROWING_WARNING;
 
 //-----------------------------------------------------------------------------
 // Disable auto fading under dx7 or when level fades are specified

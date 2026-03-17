@@ -54,31 +54,40 @@ bool CAvatarImage::SetAvatarSteamID( CSteamID steamIDUser )
 
 	ClearAvatarSteamID();
 	m_steamIDUser = steamIDUser;
+	m_SteamID = steamIDUser;
 
 	if ( steamapicontext->SteamFriends() && steamapicontext->SteamUtils() )
 	{
-		m_SteamID = steamIDUser;
+		int avatarId = -1;
 
-		int iAvatar = steamapicontext->SteamFriends()->GetFriendAvatar( steamIDUser, m_SourceArtSize );
+		/*switch (m_SourceArtSize)
+		{
+		case k_EAvatarSize32x32:
+			avatarId = steamapicontext->SteamFriends()->GetSmallFriendAvatar( steamIDUser );
+			break;
+		case k_EAvatarSize64x64:
+			avatarId = steamapicontext->SteamFriends()->GetMediumFriendAvatar( steamIDUser );
+			break;
+		case k_EAvatarSize184x184:
+			avatarId = steamapicontext->SteamFriends()->GetLargeFriendAvatar( steamIDUser );
+			break;
+		}*/
 
-		/*
-		// See if it's in our list already
-		*/
+		
+		if (avatarId == -1)
+		{
+			m_bValid = false;
+			return m_bValid;
+		}
 
 		uint32 wide, tall;
-		if ( steamapicontext->SteamUtils()->GetImageSize( iAvatar, &wide, &tall ) )
+		if ( steamapicontext->SteamUtils()->GetImageSize(avatarId, &wide, &tall ) )
 		{
-			int cubImage = wide * tall * 4;
-			byte *rgubDest = (byte*)_alloca( cubImage );
-			steamapicontext->SteamUtils()->GetImageRGBA( iAvatar, rgubDest, cubImage );
-			InitFromRGBA( rgubDest, wide, tall );
-
-			/*
-			// put it in the list
-			RGBAImage *pRGBAImage = new RGBAImage( rgubDest, wide, tall );
-			int iImageList = m_pImageList->AddImage( pRGBAImage );
-			m_mapAvatarToIImageList.Insert( iAvatar, iImageList );
-			*/
+			const int imageSize = wide * tall * 4;
+			unsigned char* rgba = new unsigned char[imageSize];
+			steamapicontext->SteamUtils()->GetImageRGBA(avatarId, rgba, imageSize);
+			InitFromRGBA(rgba, wide, tall );
+			delete rgba;
 		}
 
 		UpdateFriendStatus();

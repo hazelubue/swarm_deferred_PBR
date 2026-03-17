@@ -1,0 +1,18 @@
+[vpc crc file version 2]
+8209bbc3 C:\Users\hazel\Desktop\Shared\#hengine\deferred\src_enhanced\devtools\bin\vpc.exe
+_Nc_/define:vs2019VS2013/vpcgame:deferred_
+7c445ce9 client_deferred.vpc
+a34d320e ..\..\game\client\client_base.vpc
+9a02405f ..\..\vpc_scripts\source_dll_base.vpc
+d752cf80 ..\..\vpc_scripts\platform_dirs.vpc
+6c4a5ff1 ..\..\vpc_scripts\source_base.vpc
+9a41fed7 ..\..\vpc_scripts\source_dll_win32_base.vpc
+486b766d ..\..\vpc_scripts\version.vpc
+846102f0 ..\..\vpc_scripts\loadaddress.vpc
+1a665d77 ..\..\vpc_scripts\source_dll_win32_debug.vpc
+7cf17fbc ..\..\vpc_scripts\source_dll_win32_release.vpc
+ca0b8332 ..\..\vpc_scripts\source_win32_base.vpc
+49651204 ..\..\vpc_scripts\source_video_base.vpc
+4297db2e ..\..\game\client\client_shadereditor_base.vpc
+c12d3d3f ..\..\game\client\client_deferred_base.vpc
+30bf2216 ..\..\vpc_scripts\definitions\win32_2010.def

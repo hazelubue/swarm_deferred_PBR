@@ -56,8 +56,6 @@ public:
 	float			m_flMaxSpeed;
 	float			m_flClientMaxSpeed;
 
-	int				m_nJumpsRemaining;
-
 	// Variables from the player edict (sv_player) or entvars on the client.
 	// These are copied in here before calling and copied out after calling.
 	Vector			m_vecVelocity;		// edict::velocity		// Current movement direction.
@@ -117,7 +115,7 @@ public:
 	virtual			~IGameMovement( void ) {}
 	
 	// Process the current movement command
-	virtual void	ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove ) = 0;
+	virtual void	ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove, CGameMovement* pMovement ) = 0;
 	virtual void	Reset( void ) = 0;
 	virtual void	StartTrackPredictionErrors( CBasePlayer *pPlayer ) = 0;
 	virtual void	FinishTrackPredictionErrors( CBasePlayer *pPlayer ) = 0;

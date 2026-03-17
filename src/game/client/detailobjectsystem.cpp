@@ -5,7 +5,9 @@
 // $Revision: $
 // $NoKeywords: $
 //===========================================================================//
+
 #include "cbase.h"
+#pragma warning( disable: 4005 )
 #include <algorithm>
 #include "DetailObjectSystem.h"
 #include "GameBspFile.h"

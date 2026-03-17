@@ -49,7 +49,7 @@ class CAchievementHLXKillWithPhysicsObjects : public CBaseAchievement
 	}
 
 };
-DECLARE_ACHIEVEMENT( CAchievementHLXKillWithPhysicsObjects, ACHIEVEMENT_HLX_KILL_ENEMIES_WITHPHYSICS, "HLX_KILL_ENEMIES_WITHPHYSICS", 5 );
+DECLARE_ACHIEVEMENT_ORDER( CAchievementHLXKillWithPhysicsObjects, ACHIEVEMENT_HLX_KILL_ENEMIES_WITHPHYSICS, "HLX_KILL_ENEMIES_WITHPHYSICS", 5, 1 );
 
 class CAchievementHLXKillWithHopper : public CBaseAchievement
 {
@@ -76,7 +76,7 @@ class CAchievementHLXKillWithHopper : public CBaseAchievement
 		}
 	}
 };
-DECLARE_ACHIEVEMENT( CAchievementHLXKillWithHopper, ACHIEVEMENT_HLX_KILL_ENEMY_WITHHOPPERMINE, "HLX_KILL_ENEMY_WITHHOPPERMINE", 5 );
+DECLARE_ACHIEVEMENT_ORDER( CAchievementHLXKillWithHopper, ACHIEVEMENT_HLX_KILL_ENEMY_WITHHOPPERMINE, "HLX_KILL_ENEMY_WITHHOPPERMINE", 5, 2 );
 
 class CAchievementHLXKillWithManhack : public CBaseAchievement
 {
@@ -104,7 +104,7 @@ class CAchievementHLXKillWithManhack : public CBaseAchievement
 		}
 	}
 };
-DECLARE_ACHIEVEMENT( CAchievementHLXKillWithManhack, ACHIEVEMENT_HLX_KILL_ENEMIES_WITHMANHACK, "HLX_KILL_ENEMIES_WITHMANHACK", 5 );
+DECLARE_ACHIEVEMENT_ORDER( CAchievementHLXKillWithManhack, ACHIEVEMENT_HLX_KILL_ENEMIES_WITHMANHACK, "HLX_KILL_ENEMIES_WITHMANHACK", 5, 3 );
 
 class CAchievementHLXKillSoldierWithOwnGrenade : public CBaseAchievement
 {
@@ -139,7 +139,7 @@ protected:
 		}			
 	}
 };
-DECLARE_ACHIEVEMENT( CAchievementHLXKillSoldierWithOwnGrenade, ACHIEVEMENT_HLX_KILL_SOLDIER_WITHHISGRENADE, "HLX_KILL_SOLDIER_WITHHISGRENADE", 10 );
+DECLARE_ACHIEVEMENT_ORDER( CAchievementHLXKillSoldierWithOwnGrenade, ACHIEVEMENT_HLX_KILL_SOLDIER_WITHHISGRENADE, "HLX_KILL_SOLDIER_WITHHISGRENADE", 10, 4 );
 
 class CAchievementHLXKillWithOneEnergyBall : public CBaseAchievement
 {
@@ -182,7 +182,7 @@ protected:
 	CBaseEntity *m_pLastInflictor;
 	int m_iLocalCount;
 };
-DECLARE_ACHIEVEMENT( CAchievementHLXKillWithOneEnergyBall, ACHIEVEMENT_HLX_KILL_ENEMIES_WITHONEENERGYBALL, "HLX_KILL_ENEMIES_WITHONEENERGYBALL", 5 );
+DECLARE_ACHIEVEMENT_ORDER( CAchievementHLXKillWithOneEnergyBall, ACHIEVEMENT_HLX_KILL_ENEMIES_WITHONEENERGYBALL, "HLX_KILL_ENEMIES_WITHONEENERGYBALL", 5, 5 );
 
 class CAchievementHLXKillEliteSoldierWithOwnEnergyBall : public CBaseAchievement
 {
@@ -216,7 +216,7 @@ protected:
 		}
 	}
 };
-DECLARE_ACHIEVEMENT( CAchievementHLXKillEliteSoldierWithOwnEnergyBall, ACHIEVEMENT_HLX_KILL_ELITESOLDIER_WITHHISENERGYBALL, "HLX_KILL_ELITESOLDIER_WITHHISENERGYBALL", 10 );
+DECLARE_ACHIEVEMENT_ORDER( CAchievementHLXKillEliteSoldierWithOwnEnergyBall, ACHIEVEMENT_HLX_KILL_ELITESOLDIER_WITHHISENERGYBALL, "HLX_KILL_ELITESOLDIER_WITHHISENERGYBALL", 10, 6 );
 
 //-----------------------------------------------------------------------------
 // Purpose: Counts the accumulated # of primary and secondary attacks from all

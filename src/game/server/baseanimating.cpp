@@ -61,7 +61,6 @@ class CIKSaveRestoreOps : public CClassPtrSaveRestoreOps
 	}
 };
 
-#if 0
 //-----------------------------------------------------------------------------
 // Relative lighting entity
 //-----------------------------------------------------------------------------
@@ -155,7 +154,6 @@ int CInfoLightingRelative::UpdateTransmitState( void )
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
-#endif
 static CIKSaveRestoreOps s_IKSaveRestoreOp;
 
 
@@ -194,6 +192,7 @@ BEGIN_DATADESC( CBaseAnimating )
 	DEFINE_FIELD( m_nNewSequenceParity, FIELD_INTEGER ),
 	DEFINE_FIELD( m_nResetEventsParity, FIELD_INTEGER ),
 	DEFINE_FIELD( m_nMuzzleFlashParity, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_bSuppressAnimSounds, FIELD_BOOLEAN ),
 
 	DEFINE_KEYFIELD( m_iszLightingOriginRelative, FIELD_STRING, "LightingOriginHack" ),
 	DEFINE_KEYFIELD( m_iszLightingOrigin, FIELD_STRING, "LightingOrigin" ),
@@ -217,13 +216,17 @@ BEGIN_DATADESC( CBaseAnimating )
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetLightingOrigin", InputSetLightingOrigin ),
 	DEFINE_OUTPUT( m_OnIgnite, "OnIgnite" ),
 
+	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetModelScale", InputSetModelScale ),
+
 	DEFINE_FIELD( m_flFrozen, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flFrozenThawRate, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flFrozenMax, FIELD_FLOAT ),
 
 	DEFINE_FIELD( m_fBoneCacheFlags, FIELD_SHORT ),
 
-
+#ifdef PORTAL
+	DEFINE_OUTPUT(m_OnFizzled, "OnFizzled"),
+#endif
 
 	END_DATADESC()
 
@@ -268,6 +271,8 @@ IMPLEMENT_SERVERCLASS_ST(CBaseAnimating, DT_BaseAnimating)
 	SendPropDataTable( "serveranimdata", 0, &REFERENCE_SEND_TABLE( DT_ServerAnimationData ), SendProxy_ClientSideAnimation ),
 
 	SendPropFloat( SENDINFO( m_flFrozen ) ),
+
+	SendPropBool( SENDINFO(m_bSuppressAnimSounds) ),
 
 END_SEND_TABLE()
 
@@ -634,6 +639,17 @@ void CBaseAnimating::InputSetLightingOrigin( inputdata_t &inputdata )
 	SetLightingOrigin( strLightingOrigin );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : &inputdata - 
+//-----------------------------------------------------------------------------
+void CBaseAnimating::InputSetModelScale(inputdata_t &inputdata)
+{
+	Vector vecScale;
+	inputdata.value.Vector3D(vecScale);
+
+	SetModelScale(vecScale.x, vecScale.y);
+}
 
 //=========================================================
 // SelectWeightedSequence
@@ -4007,4 +4023,9 @@ bool CBaseAnimating::IsSequenceLooping( CStudioHdr *pStudioHdr, int iSequence )
 	return (::GetSequenceFlags( pStudioHdr, iSequence ) & STUDIO_LOOPING) != 0;
 }
 
-
+#ifdef PORTAL
+void CBaseAnimating::OnFizzled(void)
+{
+	m_OnFizzled.FireOutput(this, this);
+}
+#endif

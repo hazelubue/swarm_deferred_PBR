@@ -6,13 +6,14 @@ float g_SheenStrength = 0.5f;
 
 const float2 g_vecFullScreenTexel : register(c1);
 const float4 g_vecFogParams : register(c2);
-const float3 g_vecOrigin : register(c3);
-const float3 g_vecDirection : register(c4);
 
 static const int MAX_FORWARD_LIGHTS = 12;
-float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c63);
-float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c38);
+//float4 g_ForwardLightData[MAX_FORWARD_LIGHTS * 2] : register(c70);
+//float4 g_ForwardSpotLightData[MAX_FORWARD_LIGHTS * 2] : register(c46);
 float4 g_ForwardLightCount : register(c11);
+
+sampler sMixedSampler[FREE_LIGHT_SAMPLERS] : register(FIRST_LIGHT_SAMPLER_FXC);
+const float4 g_flMixedData[112] : register(c65);
 
 float3x3 ComputeTangentFrame(float3 N, float3 P, float2 uv, out float3 T, out float3 B, out float sign_det)
 {
@@ -178,6 +179,35 @@ float Visibility_SmithGGX(half vdotN, half ldotN, float alpha)
     return (1.0 / max(V1 * V2, 0.15));
 }
 
+//float3 Subsurface_ScatteringApprox(float3 L, float3 V, float3 N, float3 H, float VdotH, float att, in float3 diffuse, float vFace)
+//{
+//    float3 Ladj = (vFace < 0.0) ? -L : L;
+//
+//    float3 I = (VdotH)*g_flthickness;
+//    float NdotL = abs(dot(N, Ladj));
+//
+//    float Samt = NdotL * (1.0 - abs(dot(V, N)));
+//    float bS = Samt * g_flthickness;
+//
+//    float sss = (I + bS) * att;
+//
+//    return diffuse * sss;
+//}
+
+float3 EvaluateFastSSS(float3 normal, float3 viewDir, float3 lightDir, float3 lightColor, float3 sssColor, float thickness,
+    float distortion, float power, float scale, float ambient, float attenuation)
+{
+    float3 H = normalize(lightDir + normal * distortion);
+    float VdotH = saturate(dot(viewDir, -H));
+    float back = pow(VdotH, power) * scale;
+    float intensity = attenuation * (back + ambient) * thickness;
+    //float shadowFactor = lerp(shadow, 1.0f, ignoreShadows);
+    float ndotl = saturate(dot(normal, lightDir));
+    float shadowApplied = lerp(1.0f, 0.0, ndotl);
+    //shadowFactor = lerp(shadowApplied, 0.0, backfaceShadow);
+    return lightColor * sssColor * intensity;
+}
+
 float3 Diffuse_OrenNayar(float3 DiffuseColor, float Roughness, float NoV, float NoL, float VoH)
 {
     float a = Roughness * Roughness;
@@ -190,7 +220,7 @@ float3 Diffuse_OrenNayar(float3 DiffuseColor, float Roughness, float NoV, float 
     return DiffuseColor / 3.1456 * (C1 + C2) * (1 + Roughness * 0.5);
 }
 
-float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightPos, float radius)
+float ComputeSpotlightAttenuation(int idx, float3 worldPos, float3 lightPos, float radius)
 {
     float3 toLight = lightPos - worldPos;
     float dist = length(toLight);
@@ -200,11 +230,10 @@ float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightP
     float fade = saturate(1.0f - distNorm);
     fade = fade * fade;
 
-    int spotDataIndex = lightIndex * 2;
-
-    float3 spotForwardDir = g_ForwardSpotLightData[spotDataIndex].xyz;
-    float coneInner = g_ForwardSpotLightData[spotDataIndex].w;
-    float coneOuter = g_ForwardSpotLightData[spotDataIndex + 1].w;
+    float coneOuter = g_flMixedData[idx + 2].w;
+    float3 spotForwardDir = -g_flMixedData[idx + 3].xyz;
+    float coneInner = g_flMixedData[idx + 3].w;
+    //float lShadow = g_flMixedData[idx + 4].x;
 
     float spotDot = dot(normalize(spotForwardDir), -L);
     float spotAtten = smoothstep(coneOuter, coneInner, spotDot);
@@ -216,7 +245,7 @@ float ComputeSpotlightAttenuation(int lightIndex, float3 worldPos, float3 lightP
 float3 calculateLight(int index,float NdotV, float NdotL, float VdotH, float NdotH,
     float3 L, float3 normal, float3 vWorldPos, float3 vEye,
     float roughness, float metalness, float3 albedo,
-    float3 effectiveLightColor, float attenuation, float lightType, float3 lightPos, float lightRadius)
+    float3 effectiveLightColor, float attenuation, float lightType, float3 lightPos, float lightRadius, float3 H, float vFace)
 {
     float3 V = normalize(vEye - vWorldPos);
 
@@ -243,6 +272,8 @@ float3 calculateLight(int index,float NdotV, float NdotL, float VdotH, float Ndo
     float3 diffuse = (diffuseBRDF + sheenBRDF) * effectiveLightColor * NdotL;
     float3 specular = specularBRDF * effectiveLightColor * NdotL * 0.5;
 
+    //float3 subsurface_scattering = Subsurface_ScatteringApprox(L, V, normal, H, VdotH, attenuation, diffuse, vFace);
+
     if (lightType == 0.0)
     {
         diffuse *= attenuation;
@@ -255,7 +286,7 @@ float3 calculateLight(int index,float NdotV, float NdotL, float VdotH, float Ndo
         specular *= spotAtten;
     }
 
-    return (diffuse + specular);
+    return (diffuse + specular); //+ subsurface_scattering;
 }
 
 //void DoPointLightPBR(const int index, float3 normal,
@@ -372,6 +403,27 @@ float4 customTex2D(in float Texture, in float2 uv)
 
     return color;
 }
+
+//float4 customTex2D(in float3 Texture, in float2 uv)
+//{
+//    //clamp to 0 - 1
+//    uv = clamp(uv, 0.0, 1.0);
+//
+//    float2 texSize = Texture;
+//    //grab coord
+//    float2 pixelCoord = uv * texSize;
+//    int2 pixelPos = int2(pixelCoord);
+//
+//    //clamp pixel pos to texelsize 1 to 1
+//    pixelPos = clamp(pixelPos, int2(0, 0), int2(texSize) - int2(1, 1));
+//
+//    float packedPixelPos = pixelPos.xy;
+//
+//    //composite
+//    float4 color = float4(Texture, packedPixelPos);
+//
+//    return color;
+//}
 
 float GenerateMetallic(in float3 normal, in float4 albedo)
 {

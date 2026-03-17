@@ -36,10 +36,12 @@ public:
 
 	CPlayerLocalData() :
 		m_iv_vecPunchAngle( "CPlayerLocalData::m_iv_vecPunchAngle" ),
-		m_iv_vecPunchAngleVel( "CPlayerLocalData::m_iv_vecPunchAngleVel" )
+		m_iv_vecPunchAngleVel( "CPlayerLocalData::m_iv_vecPunchAngleVel" ),
+		m_iv_vecTargetPunchAngle("CPlayerLocalData::m_iv_vecTargetPunchAngle")
 	{
 		m_iv_vecPunchAngle.Setup( &m_vecPunchAngle, LATCH_SIMULATION_VAR );
 		m_iv_vecPunchAngleVel.Setup( &m_vecPunchAngleVel, LATCH_SIMULATION_VAR );
+		m_iv_vecTargetPunchAngle.Setup(&m_vecTargetPunchAngle.m_Value, LATCH_SIMULATION_VAR);
 		m_flFOVRate = 0;
 	}
 
@@ -55,13 +57,18 @@ public:
 	int						m_nDuckTimeMsecs;
 	int						m_nDuckJumpTimeMsecs;
 	int						m_nJumpTimeMsecs;
+	// Mobility
+	float                   m_flSlideTime; // power slide time
+	float                   m_flWallRunTime;
 
-	float					m_lurchTimer;
 	float					m_flFallVelocity;
 	float					m_flStepSize;
 
 	CNetworkQAngle( m_vecPunchAngle );		// auto-decaying view angle adjustment
 	CNetworkQAngle( m_vecPunchAngleVel );		// velocity of auto-decaying view angle adjustment
+	CNetworkQAngle(m_vecTargetPunchAngle);// punch angle decays toward target angle	
+	CInterpolatedVar< QAngle >	m_iv_vecTargetPunchAngle;
+
 
 	bool					m_bDucked;
 	bool					m_bDucking;

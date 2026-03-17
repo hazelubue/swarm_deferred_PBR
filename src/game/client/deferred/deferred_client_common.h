@@ -34,7 +34,7 @@ extern ConVar deferred_override_globalLight_ambient_low;
 #include "deferred/IDefCookie.h"
 #include "deferred/DefCookieTexture.h"
 #include "deferred/DefCookieProjectable.h"
-#include "deferred/def_light_t.h"
+#include "../public/deferred/def_light_t.h"
 #include "deferred/cascade_t.h"
 
 #include "deferred/vgui/vgui_deferred.h"
@@ -43,7 +43,7 @@ extern ConVar deferred_override_globalLight_ambient_low;
 #include "deferred/clight_manager.h"
 #include "deferred/clight_editor.h"
 
-#include "deferred/viewrender_deferred.h"
+#include "deferred/antiquated/viewrender_deferred.h"
 
 #include "deferred/flashlighteffect_deferred.h"
 #include "deferred/materialsystem_passthru.h"

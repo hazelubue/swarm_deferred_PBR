@@ -8,6 +8,7 @@ CDeferredExtension::CDeferredExtension()
 {
 	m_bDefLightingEnabled = false;
 
+    m_pIndexTexture = nullptr;
 	m_vecOrigin.Init();
 	m_vecForward.Init();
 	m_flZDists[0] = m_flZDists[1] = m_flZDists[2] = 0;
@@ -108,8 +109,9 @@ void CDeferredExtension::CommitClock(const float& curTime)
 }
 
 void CDeferredExtension::CommitMatrixData(float* data, const float& aspect, const float& fov, const Vector& origin, const float& zNear, const float& zFar,
-    VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
-    VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv)
+    const QAngle& angles, VMatrix& m_matView, VMatrix& m_matProj, VMatrix& m_matViewInv,
+    VMatrix& m_matProjInv, VMatrix& m_matLockedViewProjInv, VMatrix& matStaticView,
+    VMatrix& matStaticViewInv, float viewportOffsetX, float viewportOffsetY)
 {
     if (data)
     {
@@ -122,11 +124,16 @@ void CDeferredExtension::CommitMatrixData(float* data, const float& aspect, cons
         m_commonData.vecOrigin = Vector4D(origin.x, origin.y, origin.z, 1.0f);
         m_commonData.flZDists[0] = zNear;
         m_commonData.flZDists[1] = zFar;
+        m_commonData.angles = angles;
         m_commonData.matView = m_matView;
         m_commonData.matProj = m_matProj;
         m_commonData.matViewInv = m_matViewInv;
         m_commonData.matProjInv = m_matProjInv;
-        m_commonData.matLockedViewProjInv = m_matLockedViewProjInv;
+        //m_commonData.matLockedViewProjInv = m_matLockedViewProjInv;
+        m_commonData.matStaticView = matStaticView;
+        m_commonData.matStaticViewInv = matStaticViewInv;
+        m_commonData.viewportOffsetX = viewportOffsetX;
+        m_commonData.viewportOffsetY = viewportOffsetY;
     }
 }
 
@@ -361,49 +368,136 @@ int CDeferredExtension::GetLightBufferSize()
     return m_vecForwardLightBuffer.Count();
 }
 
-class CLightDataRegenerator : public ITextureRegenerator
+ITexture* CDeferredExtension::GetTexture_WaterNormals()
 {
-public:
-    CLightDataRegenerator(CDeferredExtension* pExtension) : m_pExtension(pExtension) {}
+    return m_pTexWaterNormals;
+}
 
-    virtual void RegenerateTextureBits(ITexture* pTexture, IVTFTexture* pVTFTexture, Rect_t* pRect)
-    {
-        float* plightData = m_pExtension->GetForwardLightData();
-        if (!plightData)
-            return;
+#include "..\..\public\deferred\str_light_regenerator.h"
 
-        unsigned char* pImageData = pVTFTexture->ImageData();
+//class CDeferredLightDataRegenerator : public ITextureRegenerator {
+//public:
+//    float data[8];
+//
+//    void RegenerateTextureBits(ITexture* pTexture, IVTFTexture* pVTFTexture, Rect_t* pRect) override {
+//        CMatRenderContextPtr pRenderContext(materials);
+//
+//        // Set up the rendertarget
+//        pRenderContext->BindRenderTarget(pTexture);
+//        pRenderContext->ClearColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+//        pRenderContext->DrawRectangle(0, 0, pTexture->GetActualWidth(), pTexture->GetActualHeight());
+//
+//        // Write pixel data
+//        CPixelWriter writer;
+//        imageformat_t fmt = pTexture->GetFormat();
+//        if (fmt == IMAGE_FORMAT_RGBA32323232F) {
+//            writer.SetPixelMemory(fmt, pTexture->GetBuffer(), pTexture->GetBufferSize());
+//        }
+//
+//        // Write pixel data based on stored data
+//        for (int i = 0; i < 2; ++i) {
+//            writer.Seek(i, 0);
+//            writer.WritePixel(
+//                (uint8)(clamp(data[i * 4 + 0], 0, 1) * 255),
+//                (uint8)(clamp(data[i * 4 + 1], 0, 1) * 255),
+//                (uint8)(clamp(data[i * 4 + 2], 0, 1) * 255),
+//                (uint8)(clamp(data[i * 4 + 3], 0, 1) * 255)
+//            );
+//        }
+//    }
+//
+//    void Release() override { delete this; }
+//
+//    ITexture* m_pTex;
+//};
 
-        // Get the actual buffer size from the vector
-        // This includes light count (4 floats) + all light data
-        int totalBytes = m_pExtension->GetLightBufferSize() * sizeof(float);
-
-        memcpy(pImageData, plightData, totalBytes);
-    }
-
-    virtual void Release()
-    {
-        delete this;
-    }
-
-private:
-    CDeferredExtension* m_pExtension;
-};
-
-void CDeferredExtension::FillDataForFramebuffer()
+uint8 CDeferredExtension::LightType(uint8 type)
 {
-    float* plightData = GetForwardLightData();
-    if (!plightData || !m_pForwardData)
-        return;
+    return type;
+}
 
-    if (m_pForwardData->IsProcedural())
-    {
-        if (!m_bRegeneratorSet)
-        {
-            m_pForwardData->SetTextureRegenerator(new CLightDataRegenerator(this));
-            m_bRegeneratorSet = true;
-        }
+std::array<float, 8> CDeferredExtension::IndexTextureData(def_light_t* l)
+{
+    Vector pos = l->pos;
+    Vector col_diffuse = l->col_diffuse;
+    float radius = l->flRadius;
+    uint8 type = l->iLighttype;
 
-        m_pForwardData->Download();
+    std::array<float, 8> data = {
+        pos.x, pos.y, pos.z,
+        col_diffuse.x, col_diffuse.y, col_diffuse.z,
+        radius,
+        static_cast<float>(type)
+    };
+
+    return data;
+}
+
+void CDeferredExtension::InitIndexTexture()
+{
+    CDeferredLightDataRegenerator* m_pRegen = nullptr;
+    m_pRegen = new CDeferredLightDataRegenerator();
+    // potentially getting garbage data from writing to this then trying to read from it when regenerating directly below?
+    m_pRegen->m_pTex = GetTexture_ForwardData();
+
+    m_pRegen->RegenerateTextureBits(m_pRegen->m_pTex, nullptr, nullptr);
+    
+    //m_pIndexTexture->SetTextureRegenerator(m_pRegen);
+    if (m_pIndexTexture != nullptr) {
+        m_pIndexTexture->SetTextureRegenerator(m_pRegen);
     }
 }
+
+void CDeferredExtension::UpdateIndexTexture(def_light_t* l)
+{
+    if (!m_pIndexTexture || !m_pRegen)
+        return;
+
+    auto data = IndexTextureData(l);
+    // !!
+    memcpy(m_pRegen->data, data.data(), sizeof(float) * 8);
+
+    /*int height = m_pIndexTexture->GetActualHeight();
+    int width = m_pIndexTexture->GetActualWidth();
+
+    Rect_t* rect = nullptr;
+    rect = new Rect_t();
+
+    rect->x = 0;
+    rect->y = 0;
+    rect->height = height;
+    rect->width = width;*/
+
+    m_pIndexTexture->Download();
+}
+
+ITexture* CDeferredExtension::IndexTexture()
+{
+    return m_pIndexTexture;
+}
+
+//struct Rect_t
+//{
+//    int x, y;
+//    int width, height;
+//};
+//
+//// This will be called when the texture bits need to be regenerated.
+//// Use the VTFTexture interface, which has been set up with the
+//// appropriate texture size + format
+//// The rect specifies which part of the texture needs to be updated
+//// You can choose to update all of the bits if you prefer
+////virtual void RegenerateTextureBits(ITexture* pTexture, IVTFTexture* pVTFTexture, Rect_t* pRect) = 0;
+//
+//// This will be called when the regenerator needs to be deleted
+//// which will happen when the texture is destroyed
+//virtual void Release() = 0;
+//
+//// Used to modify the texture bits (procedural textures only)
+//virtual void SetTextureRegenerator(ITextureRegenerator* pTextureRegen, bool releaseExisting = true) = 0;
+//
+//// Reconstruct the texture bits in HW memory
+//
+//// If rect is not specified, reconstruct all bits, otherwise just
+//// reconstruct a subrect.
+//virtual void Download(Rect_t* pRect = 0) = 0;

@@ -106,6 +106,43 @@ bool C_AnimationLayer::IsActive( void )
 }
 
 //-----------------------------------------------------------------------------
+// Relative lighting entity
+//-----------------------------------------------------------------------------
+class C_InfoLightingRelative : public C_BaseEntity
+{
+public:
+	DECLARE_CLASS(C_InfoLightingRelative, C_BaseEntity);
+	DECLARE_CLIENTCLASS();
+
+	void GetLightingOffset(matrix3x4_t &offset);
+
+private:
+	EHANDLE			m_hLightingLandmark;
+};
+
+IMPLEMENT_CLIENTCLASS_DT(C_InfoLightingRelative, DT_InfoLightingRelative, CInfoLightingRelative)
+RecvPropEHandle(RECVINFO(m_hLightingLandmark)),
+END_RECV_TABLE()
+
+
+//-----------------------------------------------------------------------------
+// Relative lighting entity
+//-----------------------------------------------------------------------------
+void C_InfoLightingRelative::GetLightingOffset(matrix3x4_t &offset)
+{
+	if (m_hLightingLandmark.Get())
+	{
+		matrix3x4_t matWorldToLandmark;
+		MatrixInvert(m_hLightingLandmark->EntityToWorldTransform(), matWorldToLandmark);
+		ConcatTransforms(EntityToWorldTransform(), matWorldToLandmark, offset);
+	}
+	else
+	{
+		SetIdentityMatrix(offset);
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Base Animating
 //-----------------------------------------------------------------------------
 
@@ -178,6 +215,8 @@ IMPLEMENT_CLIENTCLASS_DT(C_BaseAnimating, DT_BaseAnimating, CBaseAnimating)
 	RecvPropDataTable( "serveranimdata", 0, 0, &REFERENCE_RECV_TABLE( DT_ServerAnimationData ) ),
 
 	RecvPropFloat( RECVINFO( m_flFrozen ) ), 
+
+	RecvPropBool( RECVINFO( m_bSuppressAnimSounds ) ),
 
 END_RECV_TABLE()
 
@@ -2036,7 +2075,7 @@ bool C_BaseAnimating::GetAttachment( int number, Vector &origin, QAngle &angles 
 	if ( !pData->m_bAnglesComputed )
 	{
 		MatrixAngles( pData->m_AttachmentToWorld, pData->m_angRotation );
-		pData->m_bAnglesComputed = true;
+		pData->m_bAnglesComputed = -1; // evals to true. vs2019 doesnt like `true` because its technically an overflow
 	}
 	angles = pData->m_angRotation;
 	MatrixPosition( pData->m_AttachmentToWorld, origin );
@@ -4078,17 +4117,20 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 
 	case AE_CL_PLAYSOUND:
 		{
-			CLocalPlayerFilter filter;
+			if (!m_bSuppressAnimSounds)
+			{
+				CLocalPlayerFilter filter;
 
-			if ( m_Attachments.Count() > 0)
-			{
-				GetAttachment( 1, attachOrigin, attachAngles );
-				EmitSound( filter, GetSoundSourceIndex(), options, &attachOrigin );
+				if (m_Attachments.Count() > 0)
+				{
+					GetAttachment(1, attachOrigin, attachAngles);
+					EmitSound(filter, GetSoundSourceIndex(), options, &attachOrigin);
+				}
+				else
+				{
+					EmitSound(filter, GetSoundSourceIndex(), options, &GetAbsOrigin());
+				}
 			}
-			else
-			{
-				EmitSound( filter, GetSoundSourceIndex(), options, &GetAbsOrigin() );
-			} 
 		}
 		break;
 	case AE_CL_STOPSOUND:
@@ -4175,39 +4217,10 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 			DevWarning( "Unhandled eject brass animevent\n" );
 		}
 		break;
+
 	case AE_MUZZLEFLASH:
 		{
 			// Send out the effect for a player
-#if defined ( HL2MP ) || defined ( SDK_DLL ) // works for the modified CSS weapons included in the new template sdk.
-			// HL2MP - Make third person muzzleflashes as reliable as the first person ones
-			// while in third person the view model dispatches the muzzleflash event - note: the weapon models dispatch them too, but not frequently.
-			if ( IsViewModel() )
-			{
-				C_BasePlayer *pPlayer = ToBasePlayer( dynamic_cast<C_BaseViewModel *>(this)->GetOwner() );
-				if ( pPlayer && pPlayer == C_BasePlayer::GetLocalPlayer())
-				{
-					if ( ::input->CAM_IsThirdPerson() )
-					{
-						// Dispatch on the weapon - the player model doesn't have the attachments in hl2mp.
-						C_BaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
-						if ( !pWeapon )
-							break;
-						pWeapon->DispatchMuzzleEffect( options, false );
-						break;
-					}
-				}
-			}
-
-			// Check if we're a weapon, if we belong to the local player, and if the local player is in third person - if all are true, don't do a muzzleflash in this instance, because
-			// we're using the view models dispatch for smoothness.
-			if ( dynamic_cast< C_BaseCombatWeapon *>(this) != NULL )
-			{
-				C_BaseCombatWeapon *pWeapon = dynamic_cast< C_BaseCombatWeapon *>(this);
-				if ( pWeapon && pWeapon->GetOwner() == C_BasePlayer::GetLocalPlayer() && ::input->CAM_IsThirdPerson() )
-					break;
-			}
-			
-#endif
 			DispatchMuzzleEffect( options, true );
 			break;
 		}
@@ -4232,16 +4245,16 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 	case CL_EVENT_DISPATCHEFFECT7:
 	case CL_EVENT_DISPATCHEFFECT8:
 	case CL_EVENT_DISPATCHEFFECT9:
+	case CL_EVENT_MUZZLEFLASH0:
+	case CL_EVENT_MUZZLEFLASH1:
+	case CL_EVENT_MUZZLEFLASH2:
+	case CL_EVENT_MUZZLEFLASH3:
 	case CL_EVENT_NPC_MUZZLEFLASH0:
 	case CL_EVENT_NPC_MUZZLEFLASH1:
 	case CL_EVENT_NPC_MUZZLEFLASH2:
 	case CL_EVENT_NPC_MUZZLEFLASH3:
 	case CL_EVENT_SPARK0:
 	case CL_EVENT_SOUND:
-	case CL_EVENT_MUZZLEFLASH0:
-	case CL_EVENT_MUZZLEFLASH1:
-	case CL_EVENT_MUZZLEFLASH2:
-	case CL_EVENT_MUZZLEFLASH3:
 		FireObsoleteEvent( origin, angles, event, options );
 		break;
 
@@ -4520,16 +4533,19 @@ void C_BaseAnimating::FireObsoleteEvent( const Vector& origin, const QAngle& ang
 	// Obsolete: Use the AE_CL_PLAYSOUND event instead, which doesn't rely on a magic number in the .qc
 	case CL_EVENT_SOUND:
 		{
-			CLocalPlayerFilter filter;
+			if (!m_bSuppressAnimSounds)
+			{
+				CLocalPlayerFilter filter;
 
-			if ( m_Attachments.Count() > 0)
-			{
-				GetAttachment( 1, attachOrigin, attachAngles );
-				EmitSound( filter, GetSoundSourceIndex(), options, &attachOrigin );
-			}
-			else
-			{
-				EmitSound( filter, GetSoundSourceIndex(), options );
+				if (m_Attachments.Count() > 0)
+				{
+					GetAttachment(1, attachOrigin, attachAngles);
+					EmitSound(filter, GetSoundSourceIndex(), options, &attachOrigin);
+				}
+				else
+				{
+					EmitSound(filter, GetSoundSourceIndex(), options);
+				}
 			}
 		}
 		break;

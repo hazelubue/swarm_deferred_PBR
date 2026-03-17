@@ -1,15 +1,27 @@
 
 #include "deferred_includes.h"
 
-#include "include/composite_translucent_vs30.inc"
+#include "include/composite_vs30.inc"
 #include "include/composite_translucent_ps30.inc"
-
-#include "tier0/memdbgon.h"
 #include "../../game/client/rendertexture.h"
+#include "tier0/memdbgon.h"
+
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
-
 extern ConVar building_cubemaps;
+
+ConVar r_ss_distortion("r_ss_distortion", "0.1");
+ConVar r_ss_power("r_ss_power", "1");
+ConVar r_ss_scale("r_ss_scale", "1");
+ConVar r_debug_translucent_pipeline("r_debug_translucent_pipeline", "0");
+ConVar r_ibl_bluramt("r_ibl_bluramt", "8");
+ConVar r_enable_ssr("r_enable_ssr", "1");
+
+ConVar r_Clearcoat_gloss("r_Clearcoat_gloss", "0, 1, 0 ");
+ConVar r_Clearcoat("r_Clearcoat", "0, 1, 1");
+
+ConVar r_specularTint("r_specularTint", "1, 1, 1");
+ConVar r_specular("r_specular", "1");
 
 void InitParmsComposite_translucent(const defParms_composite_translucent& info, CBaseVSShader* pShader, IMaterialVar** params)
 {
@@ -18,7 +30,7 @@ void InitParmsComposite_translucent(const defParms_composite_translucent& info, 
 		params[info.iAlphatestRef]->SetFloatValue(DEFAULT_ALPHATESTREF);
 
 	PARM_INIT_FLOAT(info.iPhongScale, DEFAULT_PHONG_SCALE);
-	PARM_INIT_INT(info.iPhongFresnel, 0);
+	PARM_INIT_INT(info.iPhongFresnel, 1.0f);
 
 	PARM_INIT_FLOAT(info.iEnvmapContrast, 0.0f);
 	PARM_INIT_FLOAT(info.iEnvmapSaturation, 1.0f);
@@ -54,6 +66,8 @@ void InitPassComposite_translucent(const defParms_composite_translucent& info, C
 	if (bTranslucent)
 	{
 
+		SET_FLAGS(MATERIAL_VAR_NOCULL);
+
 		if (PARM_DEFINED(info.BUMPMAP))
 			pShader->LoadBumpMap(info.BUMPMAP);
 
@@ -65,6 +79,9 @@ void InitPassComposite_translucent(const defParms_composite_translucent& info, C
 
 		if (PARM_DEFINED(info.MRAOTEXTURE))
 			pShader->LoadTexture(info.MRAOTEXTURE);
+
+		if (PARM_DEFINED(info.iThickness))
+			params[info.iThickness]->SetFloatValue(0.25f);
 		
 	}
 
@@ -113,7 +130,7 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 	//const bool bAlbedo4 = !bModel && bAlbedo && PARM_TEX(info.iAlbedo4);
 
 	const bool bAlphatest = IS_FLAG_SET(MATERIAL_VAR_ALPHATEST) && bAlbedo;
-	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT) && bAlbedo && !bAlphatest;
+	const bool bTranslucent = IS_FLAG_SET(MATERIAL_VAR_TRANSLUCENT);
 
 	const bool bNoCull = IS_FLAG_SET(MATERIAL_VAR_NOCULL);
 
@@ -125,12 +142,12 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 	//const bool bEnvmapMask2 = bEnvmapMask && PARM_TEX(info.iEnvmapMask2);
 	const bool bEnvmapFresnel = bEnvmap && PARM_SET(info.iEnvmapFresnel);
 
-	const bool bRimLight = PARM_SET(info.iRimlightEnable);
+	const bool bRimLight = true;
 	//const bool bRimLightModLight = bRimLight && PARM_SET(info.iRimlightModLight);
 
-	const bool bSelfIllum = IS_FLAG_SET(MATERIAL_VAR_SELFILLUM);
-	const bool bSelfIllumMaskInEnvmapMask = bSelfIllum && bEnvmapMask && PARM_SET(info.iSelfIllumMaskInEnvmapAlpha);
-	const bool bSelfIllumMask = bSelfIllum && !bSelfIllumMaskInEnvmapMask && !bEnvmapMask && PARM_TEX(info.iSelfIllumMask);
+	//const bool bSelfIllum = IS_FLAG_SET(MATERIAL_VAR_SELFILLUM);
+	//const bool bSelfIllumMaskInEnvmapMask = bSelfIllum && bEnvmapMask && PARM_SET(info.iSelfIllumMaskInEnvmapAlpha);
+	//const bool bSelfIllumMask = bSelfIllum && !bSelfIllumMaskInEnvmapMask && !bEnvmapMask && PARM_TEX(info.iSelfIllumMask);
 
 	const bool bNeedsFresnel = bPhongFresnel || bEnvmapFresnel;
 	const bool bGBufferNormal = bEnvmap || bRimLight || bNeedsFresnel;
@@ -140,17 +157,11 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 	const bool bNormal = PARM_SET(info.BUMPMAP);
 	//const bool bLightMapped = !bModel;
 
-	AssertMsgOnce(!(bTranslucent || bAlphatest) || !bAlbedo2,
-		"blended albedo not supported by gbuffer pass!");
-
 	AssertMsgOnce(IS_FLAG_SET(MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK) == false,
 		"Normal map sampling should stay out of composition pass.");
 
 	AssertMsgOnce(!PARM_TEX(info.iSelfIllumMask) || !bEnvmapMask,
 		"Can't use separate selfillum mask with envmap mask - use SELFILLUM_ENVMAPMASK_ALPHA instead.");
-
-	AssertMsgOnce(PARM_SET(info.iMultiblend) == bMultiBlend,
-		"Multiblend forced off due to invalid usage! May cause vertexformat mis-matches between passes.");
 
 
 	SHADOW_STATE
@@ -159,10 +170,8 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			pShaderShadow->SetDefaultState();
 			pShaderShadow->EnableSRGBWrite(bUseSRGB);
 
-			if (bNoCull)
-			{
-				pShaderShadow->EnableCulling(false);
-			}
+			pShaderShadow->EnableCulling(false);
+			
 
 			int iVFmtFlags = VERTEX_POSITION;
 			int iUserDataSize = 0;
@@ -185,7 +194,6 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			pShaderShadow->EnableTexture(SHADER_SAMPLER1, true);
 			pShaderShadow->EnableSRGBRead(SHADER_SAMPLER1, false);
 
-
 			if (bTranslucent)
 			{
 				pShader->EnableAlphaBlending(SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA);
@@ -204,13 +212,15 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 
 				}
 			}
-			else if (bSelfIllumMask)
+			/*else if (bSelfIllumMask)
 			{
 				pShaderShadow->EnableTexture(SHADER_SAMPLER4, true);
-			}
+			}*/
 
 			pShaderShadow->EnableTexture(SHADER_SAMPLER11, true);
 			pShaderShadow->EnableTexture(SHADER_SAMPLER12, true);
+			pShaderShadow->EnableTexture(SHADER_SAMPLER13, true);
+			pShaderShadow->EnableTexture(SHADER_SAMPLER14, true);
 
 			pShaderShadow->EnableAlphaWrites(false);
 			pShaderShadow->EnableDepthWrites(!bTranslucent);
@@ -219,7 +229,7 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 
 			pShaderShadow->VertexShaderVertexFormat(iVFmtFlags, iTexCoordNum, pTexCoordDim, iUserDataSize);
 
-			DECLARE_STATIC_VERTEX_SHADER(composite_translucent_vs30);
+			DECLARE_STATIC_VERTEX_SHADER(composite_vs30);
 			SET_STATIC_VERTEX_SHADER_COMBO(MODEL, bModel);
 			SET_STATIC_VERTEX_SHADER_COMBO(MORPHING_VTEX, bModel && bFastVTex);
 			SET_STATIC_VERTEX_SHADER_COMBO(DECAL, bModel && bIsDecal);
@@ -227,7 +237,7 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			SET_STATIC_VERTEX_SHADER_COMBO(BASETEXTURE2, 0);
 			SET_STATIC_VERTEX_SHADER_COMBO(BLENDMODULATE, 0);
 			SET_STATIC_VERTEX_SHADER_COMBO(MULTIBLEND, 0);
-			SET_STATIC_VERTEX_SHADER(composite_translucent_vs30);
+			SET_STATIC_VERTEX_SHADER(composite_vs30);
 
 			DECLARE_STATIC_PIXEL_SHADER(composite_translucent_ps30);
 			SET_STATIC_PIXEL_SHADER_COMBO(READNORMAL, bGBufferNormal);
@@ -237,11 +247,14 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			SET_STATIC_PIXEL_SHADER_COMBO(ENVMAPFRESNEL, bEnvmapFresnel);
 			SET_STATIC_PIXEL_SHADER_COMBO(PHONGFRESNEL, bPhongFresnel);
 			SET_STATIC_PIXEL_SHADER_COMBO(BASETEXTURE2, 0);
-			SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM, bSelfIllum);
-			SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_MASK, bSelfIllumMask);
-			SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_ENVMAP_ALPHA, bSelfIllumMaskInEnvmapMask);
+			SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM, 0);
+			SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_MASK, 0);
+			SET_STATIC_PIXEL_SHADER_COMBO(SELFILLUM_ENVMAP_ALPHA, 0);
 			SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
+			SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
+			//SET_STATIC_PIXEL_SHADER_COMBO(RIMLIGHT, 0);
 			SET_STATIC_PIXEL_SHADER(composite_translucent_ps30);
+
 	}
 		DYNAMIC_STATE
 	{
@@ -294,23 +307,9 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			if (bRimLight)
 			{
 				float fl9[4] = { 0 };
-				fl9[0] = PARM_FLOAT(info.iRimlightExponent);
-				fl9[1] = PARM_FLOAT(info.iRimlightAlbedoScale);
+				fl9[0] = 0.3f;
+				fl9[1] = 0.298f;
 				tmpBuf.SetPixelShaderConstant(9, fl9);
-			}
-
-			if (bNormal)
-			{
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER1, info.BUMPMAP);
-			}
-			else
-			{
-				tmpBuf.BindStandardTexture( SHADER_SAMPLER1, TEXTURE_NORMALMAP_FLAT);
-			}
-			
-			if (bSelfIllum && bSelfIllumMask)
-			{
-				tmpBuf.BindTexture(pShader, SHADER_SAMPLER4, info.iSelfIllumMask);
 			}
 
 			tmpBuf.SetPixelShaderFogParams(2);
@@ -331,64 +330,74 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		if (bModel && bFastVTex)
 			pShader->SetHWMorphVertexShaderState(VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, VERTEX_SHADER_SHADER_SPECIFIC_CONST_11, SHADER_VERTEXTEXTURE_SAMPLER0);
 
-		DECLARE_DYNAMIC_VERTEX_SHADER(composite_translucent_vs30);
+		DECLARE_DYNAMIC_VERTEX_SHADER(composite_vs30);
 		SET_DYNAMIC_VERTEX_SHADER_COMBO(COMPRESSED_VERTS, (bModel && (int)vertexCompression) ? 1 : 0);
 		SET_DYNAMIC_VERTEX_SHADER_COMBO(SKINNING, (bModel && pShaderAPI->GetCurrentNumBones() > 0) ? 1 : 0);
 		SET_DYNAMIC_VERTEX_SHADER_COMBO(MORPHING, (bModel && pShaderAPI->IsHWMorphingEnabled()) ? 1 : 0);
-		SET_DYNAMIC_VERTEX_SHADER(composite_translucent_vs30);
-
-		CDeferredExtension* pExt = GetDeferredExt();
-		const lightData_Global_t& globalLight = pExt->GetLightData_Global();
+		SET_DYNAMIC_VERTEX_SHADER(composite_vs30);
 
 		DECLARE_DYNAMIC_PIXEL_SHADER(composite_translucent_ps30);
 		SET_DYNAMIC_PIXEL_SHADER_COMBO(PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo());
-		////SET_DYNAMIC_PIXEL_SHADER_COMBO(USE_GLOBAL_LIGHT, globalLight.bEnabled);
 		SET_DYNAMIC_PIXEL_SHADER(composite_translucent_ps30);
+
+		CDeferredExtension* pExt = GetDeferredExt();
+		const lightData_Global_t& globalLight = pExt->GetLightData_Global(); 
+
+		// textures
+		ITexture* pSource = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
+		ITexture* pDepthTexture = materials->FindTexture("_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET);
+		ITexture* pIndexData = pExt->IndexTexture();
+		ITexture* pLightAccum = pExt->GetTexture_LightAccum();
+		//ITexture* pNormalTexture = pExt->GetTexture_Normals();
+
+		// binds
+		pShader->BindTexture(SHADER_SAMPLER11, pSource);
+		pShader->BindTexture(SHADER_SAMPLER12, pDepthTexture);
+		pShader->BindTexture(SHADER_SAMPLER13, pIndexData);
+		pShader->BindTexture(SHADER_SAMPLER14, pLightAccum);
+
+		// for now force texture normal for everything
+		// gbuffer provides uninterupted texture with a clean image that is the goal for non translucent objects as they use deferred.
+
+		//if (bTranslucent) {
+
+			if (bNormal)
+			{
+				pShader->BindTexture(SHADER_SAMPLER1, info.BUMPMAP);
+			}
+			else
+			{
+				pShaderAPI->BindStandardTexture(SHADER_SAMPLER1, TEXTURE_NORMALMAP_FLAT);
+			}
+		/*}
+		else
+		{
+
+			if (bNormal)
+			{
+				pShader->BindTexture(SHADER_SAMPLER1, pNormalTexture);
+			}
+			else
+			{
+				pShaderAPI->BindStandardTexture(SHADER_SAMPLER1, TEXTURE_NORMALMAP_FLAT);
+			}
+		}*/
+
+		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE));
+
+		float debugVars[1];
+		debugVars[0] = r_debug_translucent_pipeline.GetFloat();
+
+		int numForwardLights = pExt->GetActiveLights_NumRows();
+
+		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
+		pShaderAPI->SetPixelShaderConstant(11, forwardLightCount);
 
 		if (bModel && bFastVTex)
 		{
 			bool bUnusedTexCoords[3] = { false, true, !pShaderAPI->IsHWMorphingEnabled() || !bIsDecal };
 			pShaderAPI->MarkUnusedVertexFields(0, 3, bUnusedTexCoords);
 		}
-
-		ITexture* pSource = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
-
-		pShader->BindTexture(SHADER_SAMPLER11, pSource);
-
-		ITexture* pDepthTexture = materials->FindTexture("_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET);
-
-		pShader->BindTexture(SHADER_SAMPLER12, pDepthTexture);
-
-		//pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_ForwardData());
-
-		lightData_Global_t dataGlobal = GetDeferredExt()->GetLightData_Global();
-
-		//if (dataGlobal.bShadow)
-		//{
-		//	for (int i = 0; i < 4; i++)
-		//	{
-		//		const shadowData_ortho_t& data = GetDeferredExt()->GetShadowData_Ortho(i);
-
-		//		pShader->BindTexture(SHADER_SAMPLER11, GetDeferredExt()->GetTexture_ShadowDepth_Ortho(0));
-
-		//		COMPILE_TIME_ASSERT(CSM_USE_COMPOSITED_TARGET == 1); // This shader relies on composited cascades!
-		//		COMPILE_TIME_ASSERT(SHADOW_NUM_CASCADES == 2); // This shader has been made for 2 cascades!
-		//		
-		//		pShaderAPI->SetPixelShaderConstant(16, data.matWorldToTexture.Base(), 3);
-		//		pShaderAPI->SetPixelShaderConstant(22, data.vecUVTransform.Base());
-		//		pShaderAPI->SetPixelShaderConstant(24, data.vecSlopeSettings.Base());
-
-		//		float fl_0[4] = { 0, 0, 0, 0 };
-		//		float fl_1[4] = { 0, 0, 0, 0 };
-
-		//		MakeShadowProjectionConstants(fl_0, fl_1, data.iRes_x, data.iRes_y);
-
-		//		pShaderAPI->SetPixelShaderConstant(26, fl_0);
-		//		pShaderAPI->SetPixelShaderConstant(8, fl_1);
-		//	}
-		//}
-
-		pShaderAPI->ExecuteCommandBuffer(pDeferredContext->GetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE));
 
 		float vEyePos_SpecExponent[4];
 		pShaderAPI->GetWorldSpaceCameraPosition(vEyePos_SpecExponent);
@@ -400,29 +409,9 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		vEyeDir_SpecExponent[3] = 0.0f;
 		pShaderAPI->SetPixelShaderConstant(4, vEyeDir_SpecExponent, 1);
 
-		int numForwardLights = pExt->GetNumActiveForwardLights();
-
-		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
-		pShaderAPI->SetPixelShaderConstant(11, forwardLightCount);
-
-		if (pShaderAPI != NULL && numForwardLights > 0 && numForwardLights < 14)
-		{
-			float* pLightData = pExt->GetForwardLightData();
-			if (pLightData)
-			{
-				pShaderAPI->SetPixelShaderConstant(63,
-					pLightData,
-					pExt->GetForwardLights_NumRows());
-			}
-		}
-		
-		float* pSpotlightData = pExt->GetForwardSpotlightData();
-		if (pSpotlightData)
-		{
-			pShaderAPI->SetPixelShaderConstant(38,
-				pSpotlightData,
-				pExt->GetForwardSpotLights_NumRows());
-		}
+		pShaderAPI->SetPixelShaderConstant(65,
+			pExt->GetActiveLightData(),
+			pExt->GetActiveLights_NumRows());
 
 		if (globalLight.bEnabled)
 		{
@@ -439,26 +428,20 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			pShaderAPI->SetPixelShaderConstant(15, globalLight.ambl.Base(), 1);
 		}
 
-		// These constants are used to rotate the world space water normals around the up axis to align the
-		// normal with the camera and then give us a 2D offset vector to use for reflection and refraction uv's
-		VMatrix mView;
-		pShaderAPI->GetMatrix(MATERIAL_VIEW, mView.m[0]);
-		mView = mView.Transpose3x3();
-
-		Vector4D vCameraRight(mView.m[0][0], mView.m[0][1], mView.m[0][2], 0.0f);
-		vCameraRight.z = 0.0f; // Project onto the plane of water
-		vCameraRight.AsVector3D().NormalizeInPlace();
-
-		Vector4D vCameraForward;
-		CrossProduct(Vector(0.0f, 0.0f, 1.0f), vCameraRight.AsVector3D(), vCameraForward.AsVector3D()); // I assume the water surface normal is pointing along z!
-
-		////Vector4D vCameraRight(1.0f, 0.0f, 0.0f, 0.0f);   // World X axis
-		////Vector4D vCameraForward(0.0f, 1.0f, 0.0f, 0.0f); // World Y axis
-
-		//pShaderAPI->SetPixelShaderConstant(24, vCameraRight.Base());
-		pShaderAPI->SetPixelShaderConstant(36, vCameraForward.Base());
+		lightData_Global_t dataGlobal = GetDeferredExt()->GetLightData_Global();
 
 		const Matrix_Data_t& data = GetDeferredExt()->GetCommonData();
+
+		VMatrix mView;
+		VMatrix mViewInv;
+		VMatrix mProj;
+		VMatrix mProjInv;
+
+		pShaderAPI->GetMatrix(MATERIAL_VIEW, mView.m[0]);
+		pShaderAPI->GetMatrix(MATERIAL_PROJECTION, mProj.m[0]);
+
+		MatrixInverseGeneral(mView, mViewInv);
+		MatrixInverseGeneral(mProj, mProjInv);
 
 		pShaderAPI->SetPixelShaderConstant(16, data.matViewInv.Base(), 4);
 		pShaderAPI->SetPixelShaderConstant(20, data.matProjInv.Base(), 4);
@@ -467,7 +450,113 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 		pShaderAPI->SetPixelShaderConstant(35, data.flZDists, 2);
 		pShaderAPI->SetPixelShaderConstant(36, &data.aspect, 1);
 		pShaderAPI->SetPixelShaderConstant(37, &data.fov, 1);
-		
+
+		float angles[3];
+		angles[0] = data.angles.x;
+		angles[1] = data.angles.y;
+		angles[2] = data.angles.z;
+
+		pShaderAPI->SetPixelShaderConstant(53, angles);
+
+		float viewportOffset[2];
+		viewportOffset[0] = data.viewportOffsetX;
+		viewportOffset[1] = data.viewportOffsetY;
+
+		pShaderAPI->SetPixelShaderConstant(38, viewportOffset, 1);
+
+		float flthickness = info.iThickness;
+
+		pShaderAPI->SetPixelShaderConstant(39, &flthickness, 1);
+
+		float flscatteringVars[3];
+		flscatteringVars[0] = r_ss_distortion.GetFloat();
+		flscatteringVars[1] = r_ss_power.GetFloat();
+		flscatteringVars[2] = r_ss_scale.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(41, flscatteringVars, 1);
+
+		float fliblBlurAmt[1];
+		fliblBlurAmt[0] = r_ibl_bluramt.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(40, fliblBlurAmt, 1);
+
+		Vector4D vViewRight(mView.m[0][0], mView.m[1][0], mView.m[2][0], 0.0f);
+		Vector4D vViewUp(mView.m[0][1], mView.m[1][1], mView.m[2][1], 0.0f);
+		Vector4D vViewForward(mView.m[0][2], mView.m[1][2], mView.m[2][2], 0.0f);
+
+		float vViewOrigin[4];
+		pShaderAPI->GetWorldSpaceCameraPosition(vViewOrigin);
+		vViewOrigin[3] = 0.0f;
+
+		pShaderAPI->SetPixelShaderConstant(42, vViewForward.Base(), 1);
+		pShaderAPI->SetPixelShaderConstant(43, vViewRight.Base(), 1);
+		pShaderAPI->SetPixelShaderConstant(44, vViewUp.Base(), 1);
+		pShaderAPI->SetPixelShaderConstant(45, vViewOrigin, 1);
+
+		bool b_enableSSR = r_enable_ssr.GetBool();
+
+		const float fl_enableSSR = (float)b_enableSSR;
+
+		pShaderAPI->SetPixelShaderConstant(46, &fl_enableSSR);
+
+		const uint8 iLightType = pExt->LightType(NULL);
+		float flLightType = (float)iLightType;
+
+		pShaderAPI->SetPixelShaderConstant(47, &flLightType);
+
+		const bool isGlobalLight_Enabled = pExt->IsGlobalLight_Enabled();
+		const float flGlobalLight_enabled = (float)isGlobalLight_Enabled;
+
+		pShaderAPI->SetPixelShaderConstant(48, &flGlobalLight_enabled);
+
+		const int iNumShadowedCookied = pExt->GetNumActiveLights_ShadowedCookied();
+		const int iNumShadowed = pExt->GetNumActiveLights_Shadowed();
+		const int iNumCookied = pExt->GetNumActiveLights_Cookied();
+
+		float fliNumShadowedCookied = (float)iNumShadowedCookied;
+		float fliNumShadowed = (float)iNumShadowed;
+		float fliNumCookied = (float)iNumCookied;
+
+		pShaderAPI->SetPixelShaderConstant(49, &fliNumShadowedCookied);
+		pShaderAPI->SetPixelShaderConstant(50, &fliNumShadowed);
+		pShaderAPI->SetPixelShaderConstant(51, &fliNumCookied);
+
+		if (pIndexData != NULL)
+		{
+			float IndexWidth = (float)pIndexData->GetActualWidth();
+			pShaderAPI->SetPixelShaderConstant(52, &IndexWidth);
+		}
+		else
+		{
+			float IndexWidth = 1.0f;
+			pShaderAPI->SetPixelShaderConstant(52, &IndexWidth);
+		}
+
+		pShaderAPI->SetPixelShaderConstant(56, GetDeferredExt()->GetFrustumDeltaBase(), 3);
+
+		// disney integration
+
+		/*const float anistropyLevel = g_pMaterialSystemHardwareConfig->MaximumAnisotropicLevel();
+
+		pShaderAPI->SetPixelShaderConstant(103, &anistropyLevel);
+
+		float flClearcoat = r_Clearcoat.GetFloat();
+		float flClearcoat_gloss = r_Clearcoat_gloss.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(104, &flClearcoat);
+		pShaderAPI->SetPixelShaderConstant(105, &flClearcoat_gloss);
+
+		float flSpecTint = r_specularTint.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(106, &flSpecTint);
+
+		int Specular = r_specular.GetInt();
+		float flSpecular = (float)Specular;
+
+		pShaderAPI->SetPixelShaderConstant(107, &flSpecular);*/
+
+		CommitBaseDeferredConstants_Origin(pShaderAPI, 62);
+
 		if (bWorldEyeVec)
 		{
 			float vEyepos[4] = {0,0,0,0};
@@ -475,15 +564,15 @@ void DrawPassComposite_translucent(const defParms_composite_translucent& info, C
 			pShaderAPI->SetVertexShaderConstant(VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, vEyepos);
 		}
 
-		if (bRimLight)
+		/*if (bRimLight)
 		{
 			pShaderAPI->SetPixelShaderConstant(8, params[info.iRimlightTint]->GetVecValue());
-		}
+		}*/
 
-		if (bSelfIllum)
+		/*if (bSelfIllum)
 		{
 			pShaderAPI->SetPixelShaderConstant(10, params[info.iSelfIllumTint]->GetVecValue());
-		}
+		}*/
 
 		pShader->SetVertexShaderTextureTransform(VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, BASETEXTURETRANSFORM);
 	}

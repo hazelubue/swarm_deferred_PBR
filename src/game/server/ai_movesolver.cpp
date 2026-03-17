@@ -15,7 +15,11 @@
 
 //-----------------------------------------------------------------------------
 
-inline float round( float f )
+#if _MSC_VER >= 1700
+inline float V_round(float f)
+#else
+inline float round(float f)
+#endif
 {
 	return (float)( (int)( f + 0.5 ) );
 }

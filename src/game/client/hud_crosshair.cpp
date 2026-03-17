@@ -14,7 +14,9 @@
 #include "vgui/ISurface.h"
 #include "IVRenderView.h"
 
-
+#ifdef PORTAL
+#include "c_portal_player.h"
+#endif // PORTAL
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -72,6 +74,12 @@ bool CHudCrosshair::ShouldDraw( void )
 	C_BaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
 	if ( pWeapon && !pWeapon->ShouldDrawCrosshair() )
 		return false;
+
+#ifdef PORTAL
+	/*C_Portal_Player *portalPlayer = ToPortalPlayer(pPlayer);
+	if (portalPlayer && portalPlayer->IsSuppressingCrosshair())
+		return false;*/
+#endif // PORTAL
 
 	/* disabled to avoid assuming it's an HL2 player.
 	// suppress crosshair in zoom.
@@ -179,45 +187,15 @@ void CHudCrosshair::Paint( void )
 		}
 	}
 
-	//x += 0.5f * screen[0] * ScreenWidth() + 0.5f;
-	//y += 0.5f * screen[1] * ScreenHeight() + 0.5f;
+	x += 0.5f * screen[0] * ScreenWidth() + 0.5f;
+	y += 0.5f * screen[1] * ScreenHeight() + 0.5f;
 
 
-	int width = MAX( 1, y * 0.03f );
-	int height = MAX( 1, y * 0.005f );
 
-	surface()->DrawSetColor( 128, 196, 220, 255 );
-
-	surface()->DrawFilledRect( x - width - height,
-		y - height / 2,
-		x - width,
-		y + height / 2 );
-
-	surface()->DrawFilledRect( x + width,
-		y - height / 2,
-		x + width + height,
-		y + height / 2 );
-
-	surface()->DrawFilledRect( x - height / 2,
-		y - width - height,
-		x + height / 2,
-		y - width );
-
-	surface()->DrawFilledRect( x - height / 2,
-		y + width,
-		x + height / 2,
-		y + width + height );
-
-	surface()->DrawFilledRect( x - height / 2,
-		y - height / 2,
-		x + height / 2,
-		y + height / 2 );
-
-
-	//m_pCrosshair->DrawSelf( 
-	//		x - 0.5f * m_pCrosshair->Width(), 
-	//		y - 0.5f * m_pCrosshair->Height(),
-	//		m_clrCrosshair );
+	m_pCrosshair->DrawSelf( 
+			x - 0.5f * m_pCrosshair->Width(), 
+			y - 0.5f * m_pCrosshair->Height(),
+			m_clrCrosshair );
 }
 
 //-----------------------------------------------------------------------------

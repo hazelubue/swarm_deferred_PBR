@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -15,8 +15,10 @@
 #include "tier1/KeyValues.h"
 #include "toolframework_client.h"
 
+#ifdef DEFERRED
 // @Deferred - Biohazard
 #include "deferred/deferred_shared_common.h"
+#endif
 
 #ifdef HL2_CLIENT_DLL
 #include "c_basehlplayer.h"
@@ -93,8 +95,7 @@ CFlashlightEffect::CFlashlightEffect(int nEntIndex, const char *pszTextureName, 
 	m_bIsOn = false;
 
 	UpdateFlashlightTexture( pszTextureName );
-	//m_MuzzleFlashTexture.Init( "effects/muzzleflash_light", TEXTURE_GROUP_OTHER, true );
-	m_MuzzleFlashTexture.Init( "white", TEXTURE_GROUP_OTHER, true );
+	m_MuzzleFlashTexture.Init( "effects/muzzleflash_light", TEXTURE_GROUP_OTHER, true );
 }
 
 
@@ -234,7 +235,7 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 	state.m_Color[3] = r_flashlightambient.GetFloat();
 	state.m_NearZ = r_flashlightnear.GetFloat() + m_flCurrentPullBackDist;		// Push near plane out so that we don't clip the world when the flashlight pulls back 
 	state.m_FarZ = state.m_FarZAtten = r_flashlightfar.GetFloat();	// Strictly speaking, these are different, but the game can treat them the same
-	state.m_bEnableShadows = state.m_bEnableShadows && r_flashlightdepthtexture.GetBool();
+	state.m_bEnableShadows = m_bCastsShadows && r_flashlightdepthtexture.GetBool();
 	state.m_flShadowMapResolution = r_flashlightdepthres.GetInt();
 
 	state.m_pSpotlightTexture = m_FlashlightTexture;
@@ -245,11 +246,11 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 	state.m_flShadowDepthBias = g_pMaterialSystemHardwareConfig->GetShadowDepthBias();
 
 	// @Deferred - Biohazard
-	UpdateLightProjection( state );
+	UpdateLightProjection(state);
 
 	// Kill the old flashlight method if we have one.
 	// FIXME: This doesn't compile
-//	LightOffOld();
+	//	LightOffOld();
 
 #ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
@@ -303,8 +304,8 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 	}
 
 	// @Deferred - Biohazard
-	UpdateLightProjection( state );
-
+	UpdateLightProjection(state);
+	
 #ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
 	{
@@ -354,7 +355,7 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 	}
 
 	// @Deferred - Biohazard
-	UpdateLightProjection( state );
+	UpdateLightProjection(state);
 
 #ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
@@ -371,21 +372,21 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 }
 
 // @Deferred - Biohazard
-void CFlashlightEffect::UpdateLightProjection( FlashlightState_t &state )
+void CFlashlightEffect::UpdateLightProjection(FlashlightState_t &state)
 {
-	if( m_FlashlightHandle == CLIENTSHADOW_INVALID_HANDLE )
+	if (m_FlashlightHandle == CLIENTSHADOW_INVALID_HANDLE)
 	{
-		m_FlashlightHandle = g_pClientShadowMgr->CreateFlashlight( state );
+		m_FlashlightHandle = g_pClientShadowMgr->CreateFlashlight(state);
 	}
 	else
 	{
-		if( !r_flashlightlockposition.GetBool() )
+		if (!r_flashlightlockposition.GetBool())
 		{
-			g_pClientShadowMgr->UpdateFlashlightState( m_FlashlightHandle, state );
+			g_pClientShadowMgr->UpdateFlashlightState(m_FlashlightHandle, state);
 		}
 	}
 
-	g_pClientShadowMgr->UpdateProjectedTexture( m_FlashlightHandle, true );
+	g_pClientShadowMgr->UpdateProjectedTexture(m_FlashlightHandle, true);
 }
 
 bool CFlashlightEffect::UpdateDefaultFlashlightState( FlashlightState_t& state, const Vector &vecPos, const Vector &vecForward,
@@ -551,9 +552,12 @@ void CFlashlightEffect::UpdateFlashlightTexture( const char* pTextureName )
 bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, const Vector &vecForward, const Vector &vecRight, const Vector &vecUp,
 														Vector& vecFinalPos, Quaternion& quatOrientation, bool bTracePlayers )
 {
+	//DM - this works fine on hl2 base. Portal is TBD
+//#ifdef DEFERRED // TODO(Josh): Works on more than just deferred?
 	vecFinalPos = vecPos;
 	BasisToQuaternion( vecForward, vecRight, vecUp, quatOrientation );
 	return true;
+//#endif
 
 	const float flEpsilon = 0.1f;			// Offset flashlight position along vecUp
 	float flDistCutoff = r_flashlighttracedistcutoff.GetFloat();
@@ -791,7 +795,7 @@ void CHeadlightEffect::UpdateLight( const Vector &vecPos, const Vector &vecDir, 
 }
 
 // @Deferred - Biohazard
-void CFlashlightEffectManager::TurnOnFlashlight( int nEntIndex, const char *pszTextureName, float flFov, float flFarZ, float flLinearAtten )
+void CFlashlightEffectManager::TurnOnFlashlight(int nEntIndex, const char *pszTextureName, float flFov, float flFarZ, float flLinearAtten)
 {
 	m_pFlashlightTextureName = pszTextureName;
 	m_nFlashlightEntIndex = nEntIndex;
@@ -800,24 +804,25 @@ void CFlashlightEffectManager::TurnOnFlashlight( int nEntIndex, const char *pszT
 	m_flLinearAtten = flLinearAtten;
 	m_bFlashlightOn = true;
 
-	if ( m_bFlashlightOverride )
+	if (m_bFlashlightOverride)
 	{
 		// somebody is overriding the flashlight. We're keeping around the params to restore it later.
 		return;
 	}
 
-	if ( !m_pFlashlightEffect )
+	if (!m_pFlashlightEffect)
 	{
-		if ( GetDeferredManager()->IsDeferredRenderingEnabled() )
-			m_pFlashlightEffect = new CFlashlightEffectDeferred( m_nFlashlightEntIndex, pszTextureName, flFov, flFarZ, flLinearAtten );
+		#ifdef DEFERRED
+		if (GetDeferredManager()->IsDeferredRenderingEnabled())
+			m_pFlashlightEffect = new CFlashlightEffectDeferred(m_nFlashlightEntIndex, pszTextureName, flFov, flFarZ, flLinearAtten);
 		else
-			m_pFlashlightEffect = new CFlashlightEffect( m_nFlashlightEntIndex, pszTextureName, flFov, flFarZ, flLinearAtten );
+		#endif
+			m_pFlashlightEffect = new CFlashlightEffect(m_nFlashlightEntIndex, pszTextureName, flFov, flFarZ, flLinearAtten);
 
-		if( !m_pFlashlightEffect )
+		if (!m_pFlashlightEffect)
 		{
 			return;
 		}
 	}
-
 	m_pFlashlightEffect->TurnOn();
 }

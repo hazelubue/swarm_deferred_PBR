@@ -561,25 +561,25 @@ void CClientScoreBoardDialog::UpdatePlayerAvatar( int playerIndex, KeyValues *kv
 				CSteamID steamIDForPlayer( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
 
 				// See if the avatar's changed
-				int iAvatar = steamapicontext->SteamFriends()->GetFriendAvatar( steamIDForPlayer, k_EAvatarSize32x32 );
-				if ( m_iImageAvatars[playerIndex] != iAvatar )
-				{
-					m_iImageAvatars[playerIndex] = iAvatar;
+				//int iAvatar = steamapicontext->SteamFriends()->GetSmallFriendAvatar( steamIDForPlayer );
+				//if ( m_iImageAvatars[playerIndex] != iAvatar )
+				//{
+				//	m_iImageAvatars[playerIndex] = iAvatar;
 
-					// Now see if we already have that avatar in our list
-					int iIndex = m_mapAvatarsToImageList.Find( iAvatar );
-					if ( iIndex == m_mapAvatarsToImageList.InvalidIndex() )
-					{
-						CAvatarImage *pImage = new CAvatarImage();
-						pImage->SetAvatarSteamID( steamIDForPlayer );
-						pImage->SetAvatarSize( 32, 32 );	// Deliberately non scaling
-						int iImageIndex = m_pImageList->AddImage( pImage );
+				//	// Now see if we already have that avatar in our list
+				//	int iIndex = m_mapAvatarsToImageList.Find( iAvatar );
+				//	if ( iIndex == m_mapAvatarsToImageList.InvalidIndex() )
+				//	{
+				//		CAvatarImage *pImage = new CAvatarImage();
+				//		pImage->SetAvatarSteamID( steamIDForPlayer );
+				//		pImage->SetAvatarSize( 32, 32 );	// Deliberately non scaling
+				//		int iImageIndex = m_pImageList->AddImage( pImage );
 
-						m_mapAvatarsToImageList.Insert( iAvatar, iImageIndex );
-					}
-				}
+				//		m_mapAvatarsToImageList.Insert( iAvatar, iImageIndex );
+				//	}
+				//}
 
-				int iIndex = m_mapAvatarsToImageList.Find( iAvatar );
+				/*int iIndex = m_mapAvatarsToImageList.Find( iAvatar );
 
 				if ( iIndex != m_mapAvatarsToImageList.InvalidIndex() )
 				{
@@ -587,7 +587,7 @@ void CClientScoreBoardDialog::UpdatePlayerAvatar( int playerIndex, KeyValues *kv
 
 					CAvatarImage *pAvIm = (CAvatarImage *)m_pImageList->GetImage( m_mapAvatarsToImageList[iIndex] );
 					pAvIm->UpdateFriendStatus();
-				}
+				}*/
 			}
 		}
 	}

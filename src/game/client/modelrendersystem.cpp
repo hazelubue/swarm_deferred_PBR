@@ -14,6 +14,7 @@
 #include "model_types.h"
 #include "iviewrender.h"
 #include "tier3/tier3.h"
+#pragma warning( disable: 4005 )
 #include <algorithm>
 #include "tier1/memstack.h"
 #include "engine/ivdebugoverlay.h"

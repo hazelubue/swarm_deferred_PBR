@@ -389,6 +389,7 @@ void ClientPrecache( void )
 	engine->ForceExactFile( "scripts/instructor_lessons.txt" );
 	engine->ForceExactFile( "scripts/mod_lessons.txt" );
 
+#ifdef INFESTED_DLL
 	// weapon scripts
 	engine->ForceExactFile( "scripts/asw_weapon_ammo_bag.txt" );
 	engine->ForceExactFile( "scripts/asw_weapon_ammo_satchel.txt" );
@@ -434,6 +435,9 @@ void ClientPrecache( void )
 	engine->ForceExactFile( "scripts/asw_weapon_tesla_trap.txt" );
 	engine->ForceExactFile( "scripts/asw_weapon_vindicator.txt" );
 	engine->ForceExactFile( "scripts/asw_weapon_welder.txt" );
+#else
+	engine->ForceExactFile( "scripts/weapon_manifest.txt" );
+#endif
 }
 
 CON_COMMAND_F( cast_ray, "Tests collision detection", FCVAR_CHEAT )

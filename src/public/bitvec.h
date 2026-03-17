@@ -221,6 +221,7 @@ inline int CalcNumIntsForBits( int numBits )	{ return (numBits + (BITS_PER_INT-1
 // by clients
 //
 
+
 template <class BASE_OPS>
 class CBitVecT : public BASE_OPS
 {
@@ -358,36 +359,39 @@ template <> struct BitCountToEndMask_t<31> { enum { MASK = 0x7fffffff }; };
 
 //-------------------------------------
 
+
+
 template <int NUM_BITS>
 class CFixedBitVecBase
 {
 public:
-	bool	IsFixedSize() const								{ return true; }
-	int		GetNumBits(void) const							{ return NUM_BITS; }
-	void	Resize( int numBits, bool bClearAll = false )	{ Assert(numBits == NUM_BITS); if ( bClearAll ) Plat_FastMemset( m_Ints, 0, NUM_INTS * sizeof(uint32) ); }// for syntatic consistency (for when using templates)
-	
-	int 			GetNumDWords() const					{ return NUM_INTS; }
-	uint32 *		Base()									{ return m_Ints;	}
-	const uint32 *	Base() const							{ return m_Ints;	}
+	bool	IsFixedSize() const { return true; }
+	int		GetNumBits(void) const { return NUM_BITS; }
+	void	Resize(int numBits, bool bClearAll = false) { Assert(numBits == NUM_BITS); if (bClearAll) Plat_FastMemset(m_Ints, 0, NUM_INTS * sizeof(uint32)); }// for syntatic consistency (for when using templates)
+
+	int 			GetNumDWords() const { return NUM_INTS; }
+	uint32* Base() { return m_Ints; }
+	const uint32* Base() const { return m_Ints; }
 
 	int		FindNextSetBit(int iStartBit) const; // returns -1 if no set bit was found
 
 protected:
-	CFixedBitVecBase()				{}
-	CFixedBitVecBase(int numBits)	{ Assert( numBits == NUM_BITS ); } // doesn't make sense, really. Supported to simplify templates & allow easy replacement of variable 
-	
-	void 		ValidateOperand( const CFixedBitVecBase<NUM_BITS> &operand ) const	{ } // no need, compiler does so statically
+	CFixedBitVecBase() {}
+	CFixedBitVecBase(int numBits) { Assert(numBits == NUM_BITS); } // doesn't make sense, really. Supported to simplify templates & allow easy replacement of variable 
+
+	void 		ValidateOperand(const CFixedBitVecBase<NUM_BITS>& operand) const { } // no need, compiler does so statically
 
 public: // for test code
-	unsigned	GetEndMask() const		{ return static_cast<unsigned>( BitCountToEndMask_t<NUM_BITS % BITS_PER_INT>::MASK ); }
+	unsigned	GetEndMask() const { return static_cast<unsigned>(BitCountToEndMask_t<NUM_BITS% BITS_PER_INT>::MASK); }
 
 private:
 	enum
 	{
-		NUM_INTS = (NUM_BITS + (BITS_PER_INT-1)) / BITS_PER_INT
+		NUM_INTS = (NUM_BITS + (BITS_PER_INT - 1)) / BITS_PER_INT,
+		NUM_INTS_ACTUAL = (NUM_INTS > 0) ? NUM_INTS : 1
 	};
 
-	uint32 m_Ints[(NUM_BITS + (BITS_PER_INT-1)) / BITS_PER_INT];
+	uint32 m_Ints[NUM_INTS_ACTUAL];
 };
 
 //-----------------------------------------------------------------------------

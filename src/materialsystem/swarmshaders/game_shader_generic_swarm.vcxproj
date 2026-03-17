@@ -14,6 +14,7 @@
     <ProjectName>game_shader_generic_deferred</ProjectName>
     <ProjectGuid>{C8D2DC83-E117-7576-7B43-10C844264C51}</ProjectGuid>
     <RootNamespace>stdshader_dx9-2005</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -206,27 +207,26 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\public\deferred\str_light_regenerator.cpp" />
     <ClCompile Include="BaseVSShader.cpp" />
     <ClCompile Include="blur.cpp" />
     <ClCompile Include="debug_lightingctrl.cpp" />
     <ClCompile Include="debug_shadow.cpp" />
     <ClCompile Include="deferred_brush.cpp" />
     <ClCompile Include="deferred_model.cpp" />
+    <ClCompile Include="deferred_screenspace_general.cpp" />
     <ClCompile Include="deferred_utility.cpp" />
     <ClCompile Include="deferred_water.cpp" />
     <ClCompile Include="defpass_composite.cpp" />
     <ClCompile Include="defpass_composite_translucent.cpp" />
-    <ClCompile Include="defpass_gbuffer.cpp" />
     <ClCompile Include="defpass_gbuffer_translucent.cpp" />
     <ClCompile Include="defpass_shadow.cpp" />
     <ClCompile Include="IDeferredExt.cpp" />
     <ClCompile Include="lighting_global.cpp" />
     <ClCompile Include="lighting_pass_basic.cpp" />
     <ClCompile Include="lighting_pass_volum.cpp" />
-    <ClCompile Include="lighting_world.cpp" />
     <ClCompile Include="lighting_volume.cpp" />
-    <ClCompile Include="lightmappedgeneric_dx9.cpp" />
-    <ClCompile Include="lightmappedgeneric_dx9_helper.cpp" />
+    <ClCompile Include="lighting_world.cpp" />
     <ClCompile Include="refract.cpp" />
     <ClCompile Include="refract_dx9_helper.cpp" />
     <ClCompile Include="skydome_atmosphere.cpp" />
@@ -234,21 +234,22 @@
     <ClCompile Include="volume_blend.cpp" />
     <ClCompile Include="volume_prepass.cpp" />
     <ClCompile Include="water.cpp" />
-    <ClCompile Include="\\host.lan\Data\#hengine\deferred\src\materialsystem\swarmshaders\deferred_screenspace.cpp" />
-    <ClCompile Include="\\host.lan\Data\#hengine\deferred\src\materialsystem\swarmshaders\deferred_screenspace_general.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseVSShader.h" />
     <ClInclude Include="cloudCoord.h" />
     <ClInclude Include="clouds\reimaginedClouds_old.h" />
     <ClInclude Include="commandbuilder.h" />
+    <ClInclude Include="common_2.h" />
     <ClInclude Include="common_deferred_fxc.h" />
+    <ClInclude Include="common_disney_brdf.h" />
     <ClInclude Include="common_fxc.h" />
     <ClInclude Include="common_glass_pbr.h" />
     <ClInclude Include="common_hlsl_cpp_consts.h" />
     <ClInclude Include="common_lighting_fxc.h" />
     <ClInclude Include="common_pragmas.h" />
     <ClInclude Include="common_ps_fxc.h" />
+    <ClInclude Include="common_self_shadow.h" />
     <ClInclude Include="common_shadowmapping_fxc.h" />
     <ClInclude Include="common_ssr.h" />
     <ClInclude Include="common_vertexlitgeneric_dx9.h" />
@@ -258,18 +259,13 @@
     <ClInclude Include="deferred_context.h" />
     <ClInclude Include="deferred_global_common.h" />
     <ClInclude Include="deferred_includes.h" />
+    <ClInclude Include="deferred_screenspace.h" />
     <ClInclude Include="deferred_utility.h" />
     <ClInclude Include="deferred_water.h" />
-    <ClInclude Include="defpass_composite.h" />
     <ClInclude Include="defpass_composite_translucent.h" />
-    <ClInclude Include="defpass_gbuffer.h" />
-    <ClInclude Include="defpass_gbuffer_translucent.h" />
     <ClInclude Include="defpass_shadow.h" />
     <ClInclude Include="IDeferredExt.h" />
-    <ClInclude Include="lighting_helper.h" />
-    <ClInclude Include="lighting_pass_basic.h" />
     <ClInclude Include="lighting_pass_volum.h" />
-    <ClInclude Include="lightmappedgeneric_dx9_helper.h" />
     <ClInclude Include="refract_dx9_helper.h" />
     <ClInclude Include="reimaginedClouds.h" />
     <ClInclude Include="skydome_atmosphere_helper.h" />

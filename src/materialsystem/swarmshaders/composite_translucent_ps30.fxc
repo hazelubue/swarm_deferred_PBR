@@ -1,4 +1,3 @@
-
 // STATIC:		"READNORMAL"		"0..1"
 // STATIC:		"PHONGFRESNEL"		"0..1"
 // STATIC:		"NOCULL"			"0..1"
@@ -12,7 +11,7 @@
 // STATIC:		"SELFILLUM"					"0..1"
 // STATIC:		"SELFILLUM_MASK"			"0..1"
 // STATIC:		"SELFILLUM_ENVMAP_ALPHA"	"0..1"
-
+// STATIC:		"TRANSLUCENT"				"0..1"
 
 // DYNAMIC:		"PIXELFOGTYPE"		"0..1"
 
@@ -27,8 +26,6 @@
 // SKIP:		!$RIMLIGHT && $RIMLIGHTMODULATELIGHT
 
 // SKIP:		!$BASETEXTURE2 && !$MULTIBLEND && $BLENDMODULATE
-// SKIP:		$MODEL && $BASETEXTURE2
-// SKIP:		$MODEL && $MULTIBLEND
 // SKIP:		$BASETEXTURE2 && $MULTIBLEND
 // SKIP:		$ENVMAPMASK && $MULTIBLEND
 // SKIP:		$SELFILLUM_MASK && $MULTIBLEND
@@ -53,7 +50,6 @@ sampler sAlbedo : register(s0);
 #if ALPHATEST
 const float g_flAlphaRef				: register( c0 );
 #endif
-
 
 sampler sNormals : register(s1);
 
@@ -101,26 +97,20 @@ sampler sSelfIllumMask						: register( s4 ); // override envmap mask
 #endif
 #endif
 
+#if RIMLIGHT
+const float2 g_flRimLight_Exponent_AlbedoScale		: register( c9 );
+#endif
+
 sampler ReflectSampler : register(s11);
-sampler depthsampler   : register(s12);
+sampler depthsampler : register(s12);
+sampler2D indexData	   : register(s13);
+sampler sLightAccum : register(s14);
 
-const float4 g_GlobalLightDir				: register(c12); // xyz = direction, w = has shadow
-const float4 g_GlobalLightDiffuse		    : register(c13); // xyz = diffuse color
-const float4 g_GlobalLightAmbHigh			: register(c14); // xyz = ambient high color
-const float4 g_GlobalLightAmbLow			: register(c15); // xyz = ambient low color
-
-// These constants are used to rotate the world space water normals around the up axis to align the
-// normal with the camera and then give us a 2D offset vector to use for reflection and refraction uv's
-
-//const float3 g_vWorldToViewWater0 : register(c24);
-//const float3 g_vWorldToViewWater1 : register(c36);
-const float4 g_ReflectRefractScale = (float4) 0.25f; // xy - reflect scale, zw - refract scale
-
-//const float4x3 g_matOrtho[2]				: register(c16);
-//const float4 g_vecUVTransform[2]			: register(c22);
-//const float3 g_vecSlopeData[2]				: register(c24);
-//const float4 g_vecFilterConfig_A[2]			: register(c26); //= (float4[2]) 0;
-//const float4 g_vecFilterConfig_B[2]			: register(c8); //= (float4[2]) 0;
+const float4 g_GlobalLightDir : register(c12);
+const float4 g_GlobalLightDiffuse : register(c13);
+const float4 g_GlobalLightAmbHigh : register(c14);
+const float4 g_GlobalLightAmbLow : register(c15);
+const float4 g_ReflectRefractScale = (float4) 0.25f;
 
 const float4x4 g_ViewInv : register(c16);
 const float4x4 g_ProjInv : register(c20);
@@ -129,6 +119,54 @@ const float4x4 g_Proj : register(c31);
 const float2 g_zPlanes : register(c35);
 const float aspect : register(c36);
 const float fov : register(c37);
+const float2 g_viewportOffset : register(c38);
+const float g_flthickness : register(c39);
+
+#define g_blurSize 2.0
+#define g_blurArea 0.05
+#define g_blurAngle 0.9
+
+const float3 ScatteringVars : register(c41);
+
+uniform float3 g_ViewForward : register(c42);
+uniform float3 g_ViewRight : register(c43);
+uniform float3 g_ViewUp : register(c44);
+uniform float3 g_ViewOrigin : register(c45);
+
+bool b_ssrToggle : register(c46); //was 100
+bool lightType : register(c47); //was 101
+
+bool bGloballight_enabled : register(c48); //was 102
+
+int iNumShadowedCookied : register(c49); //was 108
+int iNumShadowed : register(c50); //was 109
+int iNumCookied : register(c51); //was 110
+
+float g_IndexTexelWidth : register(c52);
+float3 g_angles : register(c53);
+
+#define g_pitch g_angles.x
+#define g_yaw g_angles.y
+#define g_roll g_angles.z
+
+float3 g_eyeDir : register(c4);
+float3 g_eyePos : register(c3);
+
+const float3 g_vecFrustumCenter : register(c56);
+const float3 g_vecFrustumRight : register(c57);
+const float3 g_vecFrustumUp : register(c58);
+
+const float4x4 g_viewProj : register(c59);
+
+float3 g_vecOrigin : register(c62);
+
+// disney integration
+
+//const float anisotropLevel : register(c103);
+//const float3 clearcoat : register(c104);
+//const float3 clearcoat_gloss : register(c105);
+//const float3 specular_tint : register(c106);
+//const float g_specular : register(c107);
 
 #define FIELD_OF_VIEW fov.x
 #define ASPECT_RATIO aspect.x
@@ -158,43 +196,45 @@ struct PS_INPUT
 	float4 vColor_0					: COLOR0;
 #endif
 	
-    float3 vPositionToCameraRayWs   : TEXCOORD4;
-    float4 vReflectXY_vRefractYX    : TEXCOORD5;
+    float3 vPositionToCameraRayWs : TEXCOORD4;
+    float4 vReflectXY_vRefractYX : TEXCOORD5;
 	
-    float3 stabilizedOrigin			: TEXCOORD7;
+    float3 vTangentS : TANGENT;
+    float3 vTangentT : BINORMAL;
 
-#if NOCULL
-	float vDir						: VFACE;
-#endif
+    float vDir : VFACE;
 	
-    float2 vScreenPos				: VPOS;
+    float2 vScreenPos : VPOS;
  
 };
 
-
 struct PS_OUTPUT
 {
-    float4 vColor_0					: COLOR0;
+    float4 vColor_0 : COLOR0;
 };
 
 float4x4 GetViewProj()
 {
     //return 0;
-    return mul(g_View, g_Proj);
+    return mul(float4x4(g_View[0], g_View[1], g_View[2], float4(0, 0, 0, 1)), g_Proj);
 }
 
 float4x4 GetViewProjInv()
 {
     //return 0;
-    return mul(g_ProjInv, g_ViewInv);
+    return mul(g_ProjInv, float4x4(g_ViewInv[0], g_ViewInv[1], g_ViewInv[2], float4(0, 0, 0, 1)));
 }
 
 #include "common_glass_pbr.h"
+#include "common_disney_brdf.h"
 #include "common_ssr.h"
+#include "common_spherical_harmonics.h"
+#include "common_self_shadow.h"
 
 PS_OUTPUT main(const PS_INPUT In)
 {
     PS_OUTPUT Out;
+
 
     float4 flAlbedoSample = tex2D(sAlbedo, In.vTexCoord.xy);
 
@@ -208,9 +248,12 @@ PS_OUTPUT main(const PS_INPUT In)
 	clip( flAlbedoSample.a - g_flAlphaRef );
 #endif
 	
-    float4 ssrWorldNormal = (float4) 0;
-    float4 worldNormal = (float4) 0;
+    float2 screenUV = (In.vScreenPos.xy + 0.5f) * g_vecFullScreenTexel;
 	
+    float3 worldNormal = (float3) 0;
+    float4 normalTexel = (float4) 0;
+	
+//#if TRANSLUCENT
     float3 dPdx = ddx(In.vWorldPos);
     float3 dPdy = ddy(In.vWorldPos);
     float3 geometricNormal = cross(dPdy, dPdx);
@@ -219,8 +262,12 @@ PS_OUTPUT main(const PS_INPUT In)
 	
     worldNormal = normalize(worldNormal);
 	
-    ssrWorldNormal = tex2D(sNormals, In.vTexCoord) * 0.5f + 0.5f;
-
+	normalTexel = tex2D(sNormals, In.vTexCoord.xy);
+//#else
+//    worldNormal.xyz = tex2D(sNormals, screenUV).xyz * 2.0f - 1.0f;
+//    normalTexel = tex2D(sNormals, screenUV);
+//#endif
+	
 #if RIMLIGHT || PHONGFRESNEL || ENVMAPFRESNEL
 	float3 worldToEye = normalize( In.worldToEye );
 	worldNormal = normalize( worldNormal );
@@ -231,73 +278,188 @@ PS_OUTPUT main(const PS_INPUT In)
 #endif
 
     float3 flSpecularLighting = (float3) 0;
+    float3 rimLighting = (float3) 0;
 
 #if RIMLIGHT
 	float dotEyeVec = 1.0f - saturate( dot( worldNormal, worldToEye ) );
 
-	float3 rimLighting = pow( dotEyeVec, g_flRimLight_Exponent_AlbedoScale.x );
+	rimLighting = pow( dotEyeVec, g_flRimLight_Exponent_AlbedoScale.x );
 	rimLighting *= lerp( 1, flAlbedoSample.rgb, g_flRimLight_Exponent_AlbedoScale.y );
-	rimLighting *= g_flRimLight_Tint;
 
+	rimLighting *= g_GlobalLightAmbHigh;
+	
 	flSpecularLighting += rimLighting;
 #endif
 	
     float roughness = 0.0f;
-    float GenRoughness = customTex2D(GenerateRoughness(worldNormal.xyz, flAlbedoSample), In.vTexCoord.xy);
-    roughness = GenRoughness;
-
     float metallic = 0.0f;
-    float GenMetallic = customTex2D(GenerateMetallic(worldNormal.xyz, flAlbedoSample), In.vTexCoord.xy);
-    metallic = GenMetallic;
 	
+    float GenRoughness = (float) 0;
+    float GenMetallic = (float) 0;
+	
+//#if TRANSLUCENT
+    GenRoughness = customTex2D(GenerateRoughness(worldNormal.xyz, flAlbedoSample), In.vTexCoord.xy);
+	GenMetallic = customTex2D(GenerateMetallic(worldNormal.xyz, flAlbedoSample), In.vTexCoord.xy);
+//#else
+//    GenRoughness = customTex2D(GenerateRoughness(worldNormal.xyz, flAlbedoSample), screenUV);
+//    GenMetallic = customTex2D(GenerateMetallic(worldNormal.xyz, flAlbedoSample), screenUV);
+//#endif
+	
+    roughness = GenRoughness;
+    metallic = GenMetallic;
+
     float4 worldPos = In.vWorldPos.xyzw;
 	
     float3 V = normalize(g_vecOrigin.xyz - worldPos.xyz);
-    float4 N = worldNormal;
+	
+    float3 N = (float3) 0;
+	
+//#if TRANSLUCENT
+    N = worldNormal;
+//#else
+//  N = normalize(worldNormal);
+//#endif
     float NdotV = max(0.0f, dot(N.xyz, V));
-		
-    float3 compositeLighting = (float3) 0;
-     
-    int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), MAX_FORWARD_LIGHTS);
-	//[unroll(16)]
-    for (int i = 0; i < LIGHT_COUNT; i++)
-    {
-		
-        int baseIdx = i * 2; 
+	
+    float3 compositeLightingFw = (float3) 0;
+    float3 compositeLightingDf = (float3) 0;
+    float3 ambient = (float3) 0;
+    float3 sheen = (float3) 0;
     
-        float4 lightPosRadius = g_ForwardLightData[baseIdx];
-        float3 lightPos = lightPosRadius.xyz;
-        float lightRadius = max(lightPosRadius.w, 0.001);
+    float vFace = In.vDir;
+    vFace = 1.0 - vFace;
+	
+    float g_Distortion = ScatteringVars.x;
+    float g_Power = ScatteringVars.y;
+    float g_Scale = ScatteringVars.z;
+	
+    float3 subsurface_scattering = (float3) 0;
+    float3 spherical_harmonic_ambient = (float3) 0;
+    float3 self_shadow = (float3) 0;
+    
+    float3 flLighting = (float3) 0;
+	
+    /*
+    
+    
+    Point lights:
 
-        float4 lightColorIntensity = g_ForwardLightData[baseIdx + 1];
-        float3 lightColor = lightColorIntensity.rgb;
-        float lightType = lightColorIntensity.w;
-        //float lightIntensity = max(lightColorIntensity.a, 0.001);
-    
-        float3 toLight = lightPos - worldPos.xyz;
-        float distance = length(toLight);
-    
-        // Skip lights outside radius
-        if (distance > lightRadius)
-            continue;
-    
-        float3 L = normalize(toLight);
-        
-        float distFade = 1.0 - saturate(distance / lightRadius);
+	1 - position		x y z	radius			w					
+	2 - color diffuse	x y z	falloffpower	w
+	3 - color ambient	x y z
+
+	** shadowed or cookied **
+							shadowscale		w
+
+	4 - rotationmatrix	x y z
+	5 					x y z
+	6 					x y z
+
+	max num constants: 10 * 3 +				-- simple
+						3 * 6 +				-- cookie
+						3 * 6 +				-- shadowed
+						2 * 6				-- shadowed cookie
+
+
+	Spot lights:
+
+	7 - position			x y z	radius			w
+	8 - color diffuse		x y z	falloffpower	w
+	9 - color ambient		x y z	cone outer		w
+	10-  backward			x y z	cone inner		w
+
+	** shadowed or cookied **
+	11 - shadowscale			x
+
+	12 - world2texture		x y z w
+	13 						x y z w
+	14						x y z w
+	15						x y z w
+
+	[15] total index
+	
+	max num constants: 10 * 4 +				-- simple
+						3 * 9 +				-- cookie
+						3 * 9 +				-- shadowed
+						2 * 9				-- shadowed cookie
+	
+	
+	*/	
+	
+	// slowest shit i have ever seen ( compiler )
+	
+    const int NUM_SHADOWED_COOKIE = min(max((int) iNumShadowedCookied, 0), 0); // was 2
+    const int NUM_SHADOWED = min(max((int) iNumShadowed, 0), 0); // was 3
+    const int NUM_COOKIE = min(max((int) iNumCookied, 0), 0); // was 3
+	
+	// slowest shit i have ever seen ( compiler ) ^^
+	
+    int LIGHT_COUNT = min(max((int) g_ForwardLightCount.x, 0), 8);
+	
+    int base = (NUM_SHADOWED_COOKIE + NUM_SHADOWED + NUM_COOKIE) * NUM_CONSTS_POINT_ADVANCED; // 30 if left how is now // at most 48
+	
+    int idx = 0;
+	//[unroll(16)]
+	// dynamic branching is a lot faster.
+	[loop]
+    for (int i = 0; i < LIGHT_COUNT; ++i)
+    {
+	  //      float flIndexTexelWidth = g_IndexTexelWidth;
+		
+	  //      float4 d0 = tex2Dlod(indexData, float4((i * 2 + 0.5) * flIndexTexelWidth, 0.5, 0, 0));
+	  //      float4 d1 = tex2Dlod(indexData, float4((i * 2 + 1.5) * flIndexTexelWidth, 0.5, 0, 0));
+
+	  //      float3 lp = d0.xyz;
+	  //      float3 lc = float3(d0.w, d1.x, d1.y);
+	  //      float rad = d1.z;
+	  //      float type = d1.w;
+		
+		// remove base to observe stupid stable 10 light max operation
+        idx = base + i * NUM_CONSTS_POINT_SIMPLE; // 174 if LIGHT_COUNT is max 10.
+		
+        bool whatType = g_flMixedData[idx + 2].w;
+        float flLightType = whatType ? 1.0f : 0.0f;
+
+        float3 lp = g_flMixedData[idx].xyz;
+        float rad = max(g_flMixedData[idx].w, 1e-6);
+        float3 lc = g_flMixedData[idx + 1].xyz;
+        float powf = max(g_flMixedData[idx + 1].w, 0.001);
+        ambient = g_flMixedData[idx + 2].xyz;
+		
+        float3 toL = lp - worldPos.xyz;
+        float d = length(toL);
+        float distFade = 1.0 - saturate(d / max(rad, 1e-6));
         float attenuation = distFade * distFade;
-   
-        float3 effectiveLightColor = lightColor;
+
+        float3 L = normalize(toL);
         
+        float3 vecDelta = worldPos.xyz - lp;
+        float distance = length(vecDelta);
+		
         float3 H = normalize(L + V);
         float NdotL = max(0.0f, dot(N, L));
         float NdotH = max(0.0f, dot(N, H));
         float VdotH = max(0.0f, dot(V, H));
-	
-        float3 flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N, worldPos.xyz, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, effectiveLightColor, attenuation, lightType, lightPos, lightRadius);
-	
-		compositeLighting += flLighting;
+			
+        flLighting = calculateLight(i, NdotV, NdotL, VdotH, NdotH, L, N.xyz, worldPos.xyz, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, lc, attenuation, flLightType, lp, rad, H, vFace);
+        //spherical_harmonic_ambient = sphericalHarmonics(L, ambient, roughness) * attenuation;  
+		
+		// disney integration
+		
+        //sheen = SheenBRDF_DreamWorks(N, V, L, specular_tint, 0.01, roughness);
+        //float3 sheen_tint = (float3) 1;
+		
+		//float3 X = normalize(In.vTangentS);
+        //float3 Y = normalize(In.vTangentT);
+		
+        //int specular = g_specular;
+		
+		//flLighting = BRDF(i, L, V, N.xyz, g_flMixedData[idx + 1].xyz, metallic, subsurface_scattering, specular, roughness, specular_tint, sheen, sheen_tint, clearcoat, clearcoat_gloss, anisotropLevel, attenuation, lightType, worldPos.xyz, g_flMixedData[idx].xyz, g_flMixedData[idx].w);
+		
+        compositeLightingFw += flLighting.xyz;
+		
     }
-
+	
     float3 L_global = normalize(g_GlobalLightDir.xyz);
     float NdotL_global = max(0.0f, dot(N.xyz, L_global));
 
@@ -309,30 +471,40 @@ PS_OUTPUT main(const PS_INPUT In)
     //shadow += PerformCascadedShadow(
     //    sShadowDepth, worldPos, g_matOrtho, g_vecUVTransform, g_vecSlopeData,
     //    g_vecFilterConfig_A, g_vecFilterConfig_B, N, dot(g_GlobalLightDir.xyz, N));
-    
-    float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N.xyz, worldPos.xyz, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, g_GlobalLightDiffuse, 1.0, 0.0, (float3) 0, 1.0);
+
+    float3 globalLighting = calculateLight(i, NdotV, NdotL_global, VdotH_global, NdotH_global, L_global, N.xyz, worldPos.xyz, g_vecOrigin, roughness, metallic, flAlbedoSample.rgb, g_GlobalLightDiffuse.xyz, 1.0, 0.0, (float3) 0, 1.0, H_global, vFace);
    
-	compositeLighting += globalLighting;
+    if (bGloballight_enabled == true)
+    {
+        compositeLightingFw += globalLighting;
+    }
+
+    float4 rawLighting = tex2D(sLightAccum, screenUV);
+    flLighting.rgb = rawLighting.rgb;
 	
-    float2 screenUV = (In.vScreenPos.xy + 0.5f) * g_vecFullScreenTexel;
+    compositeLightingDf += flLighting.xyz;
 	
-	float4 vReflectColor = (float4) 0;
+    float4 vReflectColor = (float4) 0;
 	
-    float3 viewSpacePos = mul(float4(worldPos.xyz, 1.0), g_View).xyz;
-    //float3 V_viewspace = normalize(-viewSpacePos);
-    //float3 Vssr = normalize(mul(float4(V_viewspace, 0.0), g_ViewInv).xyz);
-	
-    //float depth = tex2D(depthsampler, In.vTexCoord.xy).a;
-	
-    //vReflectColor.rgb += ssrComposition(depth, roughness, screenUV, N.rgb, depthsampler, ReflectSampler, In.vWorldPos.xyzw);
-	
-    //float4 ProjPos = In.vProjPos;
-    //ProjPos.xyz * rcp(ProjPos.w);
-    float3 Vssr = normalize(g_vecOrigin.xyz - viewSpacePos.xyz);
-    vReflectColor.rgb += ssrComposition_simple(roughness, metallic, screenUV, N.rgb, ReflectSampler, depthsampler, In.vWorldPos.xyzw, V);
+    if (b_ssrToggle == true)
+    {
+        vReflectColor.rgb += ssrComposition_simple(roughness, metallic, screenUV, N.rgb, ReflectSampler, depthsampler, In.vWorldPos.xyzw, V);
+    }
 
     float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - NdotV, 5.0);
     float ssrStrength = fresnel * (1.0 - roughness * roughness);
+	
+    static const int SCATTERING_S_COUNT = 4;
+	
+	[unroll(4)]
+    for (int i = 0; i < SCATTERING_S_COUNT; ++i)
+    {
+        float2 Xi = Hammersley(i, 1024);
+        float3 H = ImportanceSampleGGX(Xi, N, roughness);
+        float3 L = normalize(2.0 * dot(V, H) * H - V);
+		
+        subsurface_scattering = EvaluateFastSSS(N.xyz, V, L, flLighting.xyz, (float3) 0.1f, g_flthickness, g_Distortion, g_Power, g_Scale, 0.0, 0.0);
+    }
 
 #if ENVMAP
 	float flSpecularFactor;
@@ -392,6 +564,20 @@ PS_OUTPUT main(const PS_INPUT In)
 	
 	float3 flCubemap = (prefilteredColor / max(totalWeight, 0.001)) * ENV_MAP_SCALE;
 	
+	//[unroll(16)]
+	//for(int i = 0; i < SAMPLE_COUNT; ++i)
+ //   {
+ //       float2 Xi = Hammersley(i, 1024);
+ //       float3 H = ImportanceSampleGGX(Xi, N.rgb, roughness);
+ //       float3 L = normalize(2.0 * dot(V, H) * H - V);
+ //       float3 sampleColor = texCUBE(sEnvmap, L).rgb;
+	
+ //       prefilteredColor = sphericalHarmonics(L, sampleColor, roughness);
+		
+ //   }
+	
+ //   float3 flCubemap = (prefilteredColor / max(totalWeight, 0.001)) * ENV_MAP_SCALE;
+	
 	flCubemap *= flSpecularFactor;
 	flCubemap *= g_flEnvmapTint;
 	
@@ -409,8 +595,8 @@ PS_OUTPUT main(const PS_INPUT In)
 	float3 kS = F * A + B;
 	
 	flSpecularLighting += flCubemap * kS;
-#else
-    flSpecularLighting += vReflectColor.rgb * ssrStrength;
+//#else
+//    flSpecularLighting += vReflectColor.rgb * ssrStrength;
 #endif
 
 #if SELFILLUM
@@ -432,9 +618,16 @@ PS_OUTPUT main(const PS_INPUT In)
 #endif
 	
     float3 diffuse_specular = (float3) 0;
-    
-    float3 finalLighting = compositeLighting;
-    diffuse_specular = flAlbedoSample.xyz * finalLighting + flSpecularLighting;
+    float3 finalLighting = (float3) 0;
+	
+#if TRANSLUCENT	
+    finalLighting = compositeLightingFw;
+	diffuse_specular = flAlbedoSample.xyz * finalLighting + flSpecularLighting + vReflectColor.rgb * ssrStrength;
+	//float blendWeight = saturate(length(compositeLightingDf) / (length(compositeLightingFw) + length(compositeLightingDf) + 0.0001));
+    //diffuse_specular = flAlbedoSample.rgb * lerp(finalLighting, compositeLightingDf, blendWeight) + subsurface_scattering + flSpecularLighting + vReflectColor.rgb * ssrStrength;
+#else
+    diffuse_specular = flAlbedoSample.xyz * compositeLightingDf + subsurface_scattering + flSpecularLighting + vReflectColor.rgb * ssrStrength;
+#endif	
 	
     Out.vColor_0.xyzw = float4((diffuse_specular) * flLightScale, flAlbedoSample.a);
 

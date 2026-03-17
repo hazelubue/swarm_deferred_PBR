@@ -294,7 +294,10 @@ static void RagdollCreateObjects( IPhysicsEnvironment *pPhysEnv, ragdoll_t &ragd
 	
 	if ( !params.pCollide || params.pCollide->solidCount > RAGDOLL_MAX_ELEMENTS )
 	{
-		Warning( "Ragdoll solid count %d exceeds maximum limit of %d - Ragdoll not created", params.pCollide->solidCount, RAGDOLL_MAX_ELEMENTS );
+		// Whoever wrote the line that I commented out needs to rethink their career in programming.
+		//Warning("Ragdoll solid count %d exceeds maximum limit of %d - Ragdoll not created", params.pCollide->solidCount, RAGDOLL_MAX_ELEMENTS);
+		// Yeah! Let's check if a pointer is null and then reference it. Idiot.
+		Warning( "Ragdoll solid count exceeds maximum limit of %d - Ragdoll not created", RAGDOLL_MAX_ELEMENTS );
 		Assert( false );
 		return;
 	}
@@ -794,7 +797,7 @@ bool ShouldRemoveThisRagdoll( CBaseAnimating *pRagdoll )
 
 		return true;
 	}
-	else if( !pPlayer->FInViewCone( pRagdoll ) )
+	else if(pPlayer && !pPlayer->FInViewCone( pRagdoll ) )
 	{
 		if ( g_debug_ragdoll_removal.GetBool() )
 			 NDebugOverlay::Line( pRagdoll->GetAbsOrigin(), pRagdoll->GetAbsOrigin() + Vector( 0, 0, 64 ), 0, 0, 255, true, 5 );

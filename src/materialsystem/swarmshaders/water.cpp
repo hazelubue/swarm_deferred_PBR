@@ -223,6 +223,7 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 				pShaderShadow->EnableTexture( SHADER_SAMPLER8, true );
 			}
 
+			pShaderShadow->EnableTexture(SHADER_SAMPLER12, true);
 			pShaderShadow->EnableTexture(SHADER_SAMPLER11, true);
 
 			int fmt = VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TANGENT_S | VERTEX_TANGENT_T;
@@ -283,6 +284,10 @@ void InitWater_DX9(CBaseVSShader* pShader, IMaterialVar** params, defParms_Water
 				ITexture* pReflection = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
 				pShader->BindTexture( SHADER_SAMPLER1, pReflection, -1 );
 			}
+
+			ITexture* pRefraction = materials->FindTexture("_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET);
+			pShader->BindTexture(SHADER_SAMPLER12, pRefraction, -1);
+
 			pShader->BindTexture( SHADER_SAMPLER2, info.NORMALMAP, info.BUMPFRAME );
 
 			if ( bUsingLightmap )

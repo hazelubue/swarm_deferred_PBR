@@ -276,6 +276,11 @@ public:
 	void Display( CBaseEntity *pActivator );
 	void InputSetText ( inputdata_t &inputdata );
 	void SetText( const char* pszStr );
+	void InputSetPosX( inputdata_t &inputdata );
+	void InputSetPosY( inputdata_t &inputdata );
+	void InputSetTextColor( inputdata_t &inputdata );
+	void InputSetTextColor2( inputdata_t &inputdata );
+
 
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
@@ -310,6 +315,10 @@ BEGIN_DATADESC( CGameText )
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_VOID, "Display", InputDisplay ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetText", InputSetText ),
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPosX", InputSetPosX ),
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetPosY", InputSetPosY ),
+	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetTextColor", InputSetTextColor ),
+	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetTextColor2", InputSetTextColor2 ),
 
 END_DATADESC()
 
@@ -382,6 +391,33 @@ void CGameText::SetText( const char* pszStr )
 	m_iszMessage = AllocPooledString( pszStr );
 }
 
+void CGameText::InputSetPosX(inputdata_t &inputdata)
+{
+	m_textParms.x = inputdata.value.Float();
+}
+
+void CGameText::InputSetPosY(inputdata_t &inputdata)
+{
+	m_textParms.y = inputdata.value.Float();
+}
+
+void CGameText::InputSetTextColor(inputdata_t &inputdata)
+{
+	color32 clr = inputdata.value.Color32();
+	m_textParms.r1 = clr.r;
+	m_textParms.g1 = clr.g;
+	m_textParms.b1 = clr.b;
+	m_textParms.a1 = clr.a;
+}
+
+void CGameText::InputSetTextColor2(inputdata_t &inputdata)
+{
+	color32 clr2 = inputdata.value.Color32();
+	m_textParms.r2 = clr2.r;
+	m_textParms.g2 = clr2.g;
+	m_textParms.b2 = clr2.b;
+	m_textParms.a2 = clr2.a;
+}
 
 /* TODO: Replace with an entity I/O version
 //

@@ -5,9 +5,7 @@
 // STATIC:       "BLENDMODULATE"     "0..1"
 // STATIC:       "PARALLAXOCCLUSION" "0..1"
 // STATIC:       "TRANSLUCENT"       "0..1"
-// STATIC:       "FLOWMAP"           "0..1"
 // STATIC:       "DEDICATEDMRAO"     "0..1"
-// STATIC:       "LIGHTMAP"          "0..1"
 
 
 // SKIP:         !$BUMPMAP2 && $BLENDMODULATE
@@ -18,6 +16,7 @@
 #include "common_deferred_fxc.h"
 #include "pbr_common_ps2_3_x.h"
 #include "shader_constant_register_map.h"
+
 
 // Samplers
 sampler sAlbedo : register(s0);
@@ -41,13 +40,11 @@ sampler sBlendmodulate                      : register(s4);
 sampler sSpecular							: register( s5 );
 #endif
 
-#if FLOWMAP
-	sampler FlowmapSampler			        : register( s6 );
-	sampler FlowNoiseSampler		        : register( s7 );
-#endif
 
-sampler sLightmap                           : register(s8);
+sampler depthsampler                        : register(s7);
+sampler ReflectSampler                      : register(s8);
 
+const float3 g_ZDist : register(c6);
 const float g_flSSSScale                    : register(c7);
 const float g_ParallaxDepth                 : register(c8);
 const float g_ParallaxCenter                : register(c9);
@@ -60,40 +57,49 @@ const int g_nParallaxSamples                    : register( c10 );
 
 const float4 g_EyePos : register(c11);
 
-const float4 g_vFlowParams1 : register(c13);
-#define g_flWorldUvScale		( g_vFlowParams1.x ) // 1.0f / 10.0f
-#define g_flNormalUvScale		( g_vFlowParams1.y ) // 1.0f / 1.15f
-#define g_flBumpStrength		( g_vFlowParams1.z ) // 3.0f
-#define g_flDisplaceStrength	( g_vFlowParams1.w ) // 0.025f // Amount to displace the color fetch based on the normals
+const float g_flTime : register(c12);
 
-const float3 g_vFlowParams2 : register(c14);
-#define g_flFlowTimeIntervalInSeconds ( g_vFlowParams2.x ) // 0.4f // Number of seconds to lerp from texture 1 to texture 2
-#define g_flFlowUvScrollDistance      ( g_vFlowParams2.y ) // 0.25f // Distance in uv space to fetch
-#define g_flNoiseScale                ( g_vFlowParams2.z )
+const float2 g_vecFullScreenTexel : register(c13);
 
-const float4 g_vColorFlowParams1 : register(c26);
-#define g_flColorFlowUvScale				( g_vColorFlowParams1.x ) // 1.0f / 1.15f
-#define g_flColorFlowTimeIntervalInSeconds	( g_vColorFlowParams1.y ) // 0.4f // Number of seconds to lerp from texture 1 to texture 2
-#define g_flColorFlowUvScrollDistance		( g_vColorFlowParams1.z ) // 0.25f // Distance in uv space to fetch
-#define g_flColorFlowLerpExp				( g_vColorFlowParams1.w )
+const float4x4 g_ViewInv : register(c16);
+const float4x4 g_ProjInv : register(c20);
+const float4x4 g_View : register(c24);
+const float4x4 g_Proj : register(c31);
+const float2 g_zPlanes : register(c35);
+const float aspect : register(c36);
+const float fov : register(c37);
+const float2 g_viewportOffset : register(c38);
+const float g_flthickness : register(c39);
 
-const float4 g_vRefractTint : register(c30);
-const float4 g_vReflectTint : register(c34);
-#define g_flWaterBlendFactor (g_vReflectTint.a)
-const float4 g_ReflectRefractScale : register(c35); // xy - reflect scale, zw - refract scale
-const float4 g_WaterFogColor : register(c36);
+const float3 blurVars : register(c40);
 
-const float4 g_WaterFogParams : register(c37);
-#define g_WaterFogStart			g_WaterFogParams.x
-#define g_WaterFogEndMinusStart	g_WaterFogParams.y
-#define g_Reflect_OverBright	g_WaterFogParams.z
+#define g_blurSize 2.0
+#define g_blurArea 0.05
+#define g_blurAngle 0.9
 
-const float g_flTime : register(c38);
+const float3 ScatteringVars : register(c41);
 
-const float3 cAmbientCube[6] : register(c39);
+#define FIELD_OF_VIEW fov.x
+#define ASPECT_RATIO aspect.x
+
+#define g_zNear g_zPlanes.x
+#define g_zFar g_zPlanes.y
 
 const float4 g_DiffuseModulation : register(PSREG_DIFFUSE_MODULATION);
 
+float4x4 GetViewProj()
+{
+    //return 0;
+    return mul(g_View, g_Proj);
+}
+
+float4x4 GetViewProjInv()
+{
+    //return 0;
+    return mul(g_ProjInv, g_ViewInv);
+}
+
+//#include "common_ssr.h"
 
 float NormalToHeight(float3 normalSample)
 {
@@ -376,11 +382,9 @@ struct PS_INPUT
     float4 vColor_0 : COLOR0; // .w = blend factor
 #endif
 
-    float3 worldPos : TEXCOORD4;
+    float4 worldPos : TEXCOORD4;
     float2 baseTexCoord : TEXCOORD6;
     
-    float4 lightmapTexCoord1And2 : TEXCOORD5;
-    float4 lightmapTexCoord3 : TEXCOORD7;
 };
 
 
@@ -388,12 +392,11 @@ struct PS_OUTPUT
 {
     float4 vColor_Normal : COLOR0;
     float4 vColor_Depth : COLOR1;
-    float4 vColor_Lightmap : COLOR2;
+    float4 vColor_SSR : COLOR2;
     float4 vColor_LightCtrl : COLOR3;
     //float4 vColor_MRAO : COLOR3;
 };
 
-const float3 g_ZDist : register(c6);
 
 static const float WORLD_UV_SCALE = 0.01f;
 
@@ -413,110 +416,7 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
     #define EnvAmbientCube cAmbientCube
 #endif
-    
-#if FLOWMAP
-		float flWorldUvScale				= g_flWorldUvScale;
-		float flNormalUvScale				= g_flNormalUvScale;
-		float flFlowTimeIntervalInSeconds	= g_flFlowTimeIntervalInSeconds;
-		float flFlowUvScrollDistance		= g_flFlowUvScrollDistance;
-		float flBumpStrength				= g_flBumpStrength;
-		float flNoiseScale					= g_flNoiseScale;
-
-		// Input uv
-		float2 vWorldUv = In.baseTexCoord.xy * flWorldUvScale;
-		float2 vUv1 = float2( In.worldPos.x, -In.worldPos.y ) * flNormalUvScale;
-		float2 vUv2 = vUv1.xy;
-
-		// Noise texture is used to offset the time interval different spatially so we don't see pulsing
-		float flNoise = tex2D( FlowNoiseSampler, float2( In.worldPos.x, -In.worldPos.y ) * flNoiseScale ).g;
-
-		// Flow texel has a 2D flow vector in the rg channels of the texture
-		float4 vFlowTexel = tex2D( FlowmapSampler, vWorldUv.xy );
-#if FLOW_DEBUG == 1 // Flow vectors
-
-			vResult.rgba = float4( pow( vFlowTexel.rgb, 2.2f ), 0 );
-			flFogFactor = 0;
-			return FinalOutput( float4( vResult.rgb, 1.0f ), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE );
-#elif FLOW_DEBUG == 2 // Noise
-			vResult.rgba = pow( flNoise, 2.2 );
-			flFogFactor = 0;
-			return FinalOutput( float4( vResult.rgb, 1.0f ), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE );
-#endif
-
-		// Unpack world flow vector from texture
-		float2 vFlowVectorTs = ( vFlowTexel.rg * 2.0f ) - 1.0f;
-
-		float flTimeInIntervals = ( g_flTime / ( flFlowTimeIntervalInSeconds * 2.0f ) ) + flNoise;
-		float flScrollTime1 = frac( flTimeInIntervals );
-		float flScrollTime2 = frac( flTimeInIntervals + 0.5f ); // Half an interval off from texture 1
-
-		// Every interval has a unique offset so we don't see the same bump texels repeating continuously
-		float flOffset1 = floor( flTimeInIntervals ) * 0.311f;
-		float flOffset2 = floor( flTimeInIntervals + 0.5f ) * 0.311f + 0.5f; // The +0.5 is to match the phase offset
-
-		// Final flow uv is originalUv + interval offset + ( flowvector * scroll
-		float2 vFlowUv1 = vUv1.xy + flOffset1 + ( flScrollTime1 * ( flFlowUvScrollDistance * vFlowVectorTs.xy ) );
-		float2 vFlowUv2 = vUv2.xy + flOffset2 + ( flScrollTime2 * ( flFlowUvScrollDistance * vFlowVectorTs.xy ) );
-
-		// Lerp values to blend between the two layers of bump
-		float flWeight1 = abs( ( 2.0f * frac( flTimeInIntervals + 0.5f ) ) - 1.0f );
-		float flWeight2 = abs( ( 2.0f * frac( flTimeInIntervals ) ) - 1.0f );
-
-		float4 vNormalTexel1 = tex2D( sBumpmap, vFlowUv1.xy );
-		float4 vNormalTexel2 = tex2D( sBumpmap, vFlowUv2.xy );
-
-		float3 vNormal1 = ( vNormalTexel1.rgb );
-		float3 vNormal2 = ( vNormalTexel2.rgb );
-
-		// Combine both layers
-		vNormalWs.xy = UnpackNormal2D( lerp( vNormal1.xy, vNormal2.xy, flWeight2 ) );
-
-		// Change bump strength based on the length of the flow vector
-		//vNormalWs.xy *= ( length( vFlowVectorTs.xy ) + 0.05f ) * flBumpStrength;
-		vNormalWs.xy *= ( ( vFlowVectorTs.x * vFlowVectorTs.x + vFlowVectorTs.y * vFlowVectorTs.y ) + 0.1f ) * flBumpStrength;
-
-		// Generate normal from 2D scaled normal
-		vNormalWs.xyz = ComputeNormalFromXY( vNormalWs.xy );
-		//return pow( float4( vNormalWs.xy*0.5+0.5, 0, 0), 2.2);
-
-		//vResult.rgba = float4( SrgbGammaToLinear( vNormalWs.xyz * 0.5 + 0.5 ), 0 );
-		//flFogFactor = 0;
-		//return FinalOutput( float4( vResult.rgb, 1.0f ), flFogFactor, PIXELFOGTYPE, TONEMAP_SCALE_NONE );
-
-		vNormalWs.a = 1.0f;
-
-		//-------------------------------------------------------------//
-		// Specifying a base texture with flow gives us a sludge layer //
-		//-------------------------------------------------------------//
-#if BASETEXTURE
-			float flParallaxIntensity = lerp( vNormalTexel1.a, vNormalTexel2.a, flWeight2 );
-			flParallaxIntensity *= g_flDisplaceStrength;
-			float2 vParallaxDirWs = vPositionToCameraDirWs.xy - vNormalWs.xy;
-			float2 vColorUv = ( float2( In.worldPos.x, -In.worldPos.y ) )* g_flColorFlowUvScale + vParallaxDirWs * flParallaxIntensity;
-
-			float flTimeInIntervals = ( g_flTime / ( g_flColorFlowTimeIntervalInSeconds * 2.0f ) ) + flNoise;
-			float flScrollTime1 = frac( flTimeInIntervals ) - 0.5;
-			float flScrollTime2 = frac( flTimeInIntervals + 0.5f ) - 0.5; // Half an interval off from texture 1
-
-			float flOffset1 = floor( flTimeInIntervals ) * 0.311f;
-			float flOffset2 = floor( flTimeInIntervals + 0.5f ) * 0.311f + 0.5f; // The +0.5 is to match the phase offset
-
-			float2 vColorFlowUv1 = vColorUv.xy + flOffset1 + ( flScrollTime1 * ( g_flColorFlowUvScrollDistance * vFlowVectorTs.xy ) );
-			float2 vColorFlowUv2 = vColorUv.xy + flOffset2 + ( flScrollTime2 * ( g_flColorFlowUvScrollDistance * vFlowVectorTs.xy ) );
-
-			float flWeight1 = pow( abs( ( 2.0f * frac( flTimeInIntervals + 0.5f ) ) - 1.0f ), g_flColorFlowLerpExp );
-			float flWeight2 = pow( abs( ( 2.0f * frac( flTimeInIntervals ) ) - 1.0f ), g_flColorFlowLerpExp );
-
-			float4 vColorTexel1 = tex2Dsrgb( BaseTextureSampler, vColorFlowUv1.xy );
-			float4 vColorTexel2 = tex2Dsrgb( BaseTextureSampler, vColorFlowUv2.xy );
-
-			vFlowColor.rgba = vColorTexel1.rgba * flWeight1;
-			vFlowColor.rgba += vColorTexel2.rgba * flWeight2;
-			vFlowColor.rgba *= vFlowTexel.a; // Mask color flow by alpha of flowmap
-		
-#endif
-#endif
-    
+        
 #if PARALLAXOCCLUSION && BUMPMAP
     float2 pixelPos = In.vProjPos.xy;
     float3 outgoingLightRay = g_EyePos.xyz - In.worldPos;
@@ -539,6 +439,9 @@ PS_OUTPUT main(const PS_INPUT In)
     
     float4 flAlbedoSample = tex2D(sAlbedo, correctedTexCoord);
     
+    float3 tangentNormal = (float3) 0;
+    float3 bumpNormal = (float3) 0;
+    
 #if ALPHATEST
     clip(flAlbedoSample.a - g_flAlphaRef);
 #endif
@@ -548,7 +451,7 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
 
 #if BUMPMAP && !FLOWMAP
-        float3 bumpNormal = tex2D(sBumpmap, correctedTexCoord).rgb;
+        bumpNormal = tex2D(sBumpmap, correctedTexCoord).rgb;
 
 #if BUMPMAP2
             float3 bumpNormal2 = tex2D(sBumpmap2, correctedTexCoord).rgb;
@@ -586,7 +489,7 @@ PS_OUTPUT main(const PS_INPUT In)
                         tex2D(sBumpmap4, In.vTexCoord.xy) * flBlendFactors.w;
 #endif
 
-        float3 tangentNormal;
+        tangentNormal;
     
 
     
@@ -602,21 +505,6 @@ PS_OUTPUT main(const PS_INPUT In)
 #else
     float3 worldNormal = In.worldNormal_Depth.xyz;
 #endif
-    
-#if FLOWMAP && BUMPMAP
-    float3 tangentNormal;
-    
-    float3 bumpNormal = tex2D(sBumpmap, correctedTexCoord).rgb;
-    
-    float3 baseNormalTS = bumpNormal * 2.0f - 1.0f;
-    
-    float3 flowNormalTS = vNormalWs.xyz * 2.0f - 1.0f; // Convert from [0,1] to [-1,1] if needed
-    
-    float flFlowBlend = saturate(length(vNormalWs.xy));  
-    tangentNormal = lerp(baseNormalTS, flowNormalTS, flFlowBlend);
-    
-    worldNormal = Vec3TangentToWorld(tangentNormal, In.worldNormal_Depth.xyz, In.worldTangentS, In.worldTangentT);
-#endif
 
 #if NOCULL
         worldNormal *= In.vDir;
@@ -624,6 +512,20 @@ PS_OUTPUT main(const PS_INPUT In)
 
     worldNormal = worldNormal * 0.5f + 0.5f;
     
+    float3 worldNormalSSR = (float3) 0;
+	
+    float3 dPdx = ddx(In.worldPos);
+    float3 dPdy = ddy(In.worldPos);
+    float3 geometricNormal = cross(dPdy, dPdx);
+    float len = length(geometricNormal);
+    worldNormalSSR.xyz = len > 0.0001 ? geometricNormal / len : float3(0, 0, 1) * 0.5f + 0.5f;
+	
+    worldNormalSSR = normalize(worldNormalSSR);
+    
+//#if BUMPMAP
+//    worldNormalSSR = Vec3TangentToWorld(tangentNormal, In.worldNormal_Depth.xyz,
+//                                        In.worldTangentS, In.worldTangentT);
+//#endif 
     float3 textureNormal = tex2D(sBumpmap, In.vTexCoord);
     
     //float3 cubemap = tex2D(sCubemap, correctedTexCoord).rgb;
@@ -644,16 +546,14 @@ PS_OUTPUT main(const PS_INPUT In)
     
     float alpha = flAlbedoSample.a;
     
-    float3 lightmapSample = (float3) 0;
+    float3 vSSRColor = (float3) 0;
+   
+    float3 V = normalize(g_EyePos.xyz - In.worldPos.xyz);
     
-#if LIGHTMAP
-    lightmapSample = AmbientLookup(In.worldPos.xyz, worldNormal, EnvAmbientCube,
-        textureNormal, In.lightmapTexCoord1And2, In.lightmapTexCoord3, sLightmap, g_DiffuseModulation);
-#endif
-    
+    //vSSRColor += ssrComposition_simple(roughness, metallic, correctedTexCoord, worldNormalSSR.rgb, ReflectSampler, depthsampler, In.worldPos.xyzw, V);
 
     Out.vColor_Normal = float4(worldNormal, 1.0f);
-    Out.vColor_Lightmap = float4(lightmapSample.rgb, alpha);
+    Out.vColor_SSR = float4(flAlbedoSample.rgb, 0.0f);
     //Out.vColor_Alpha = float4(0, 0, 0, alpha);
     Out.vColor_Depth = float4(In.worldNormal_Depth.w, 0, 0, 1);
 #if DEDICATEDMRAO

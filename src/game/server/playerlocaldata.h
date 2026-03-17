@@ -42,7 +42,6 @@ public:
 
 	CNetworkVar( int,	m_iHideHUD );		// bitfields containing sections of the HUD to hide
 	CNetworkVar( float, m_flFOVRate );		// rate at which the FOV changes (defaults to 0)
-	CNetworkVar(float, m_lurchTimer);
 		
 	Vector				m_vecOverViewpoint;			// Viewpoint overriding the real player's viewpoint
 	
@@ -57,6 +56,9 @@ public:
 	CNetworkVar( int, m_nDuckJumpTimeMsecs );
 	// Jump time, time to auto unduck (since we auto crouch jump now).
 	CNetworkVar( int, m_nJumpTimeMsecs );
+	// Mobility - power slide time
+	CNetworkVar(float, m_flSlideTime);
+	CNetworkVar(float, m_flWallRunTime);
 	// Step sound side flip/flip
 	int m_nStepside;;
 	// Velocity at time when we hit ground
@@ -67,7 +69,8 @@ public:
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
 	// auto-decaying view angle adjustment
-	CNetworkQAngle( m_vecPunchAngle );		
+	CNetworkQAngle( m_vecPunchAngle );	
+	CNetworkQAngle(m_vecTargetPunchAngle);
 	CNetworkQAngle( m_vecPunchAngleVel );
 	// Draw view model for the player
 	CNetworkVar( bool, m_bDrawViewmodel );

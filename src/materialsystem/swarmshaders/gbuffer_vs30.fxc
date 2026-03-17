@@ -100,8 +100,6 @@ struct VS_INPUT
 
 #endif
 	
-    float4 vLightmapTexCoord : TEXCOORD3;
-    float4 vLightmapTexCoordOffset : TEXCOORD4;
 };
 
 struct VS_OUTPUT
@@ -126,15 +124,13 @@ struct VS_OUTPUT
     float4 worldPos : TEXCOORD4;
     float2 baseTexCoord : TEXCOORD6;
 	
-    float4 lightmapTexCoord1And2 : TEXCOORD5;
-    float4 lightmapTexCoord3 : TEXCOORD7;
 };
 
 VS_OUTPUT main(const VS_INPUT In)
 {
     VS_OUTPUT Out = (VS_OUTPUT) 0; // Initialize all members to zero
 
-    float3 worldPos;
+    float4 worldPos;
     float3 worldNormal;
 
 	// unpack stuff (model) &&
@@ -170,7 +166,7 @@ VS_OUTPUT main(const VS_INPUT In)
 
 	SkinPositionNormalAndTangentSpace( g_bSkinning, vPos, vNormal, vTangentMixed,
 		In.vBoneWeights, In.vBoneIndices,
-		worldPos, worldNormal, worldTangentS, worldTangentT );
+		worldPos.xyz, worldNormal, worldTangentS, worldTangentT );
 
 	worldTangentS = normalize( worldTangentS );
 	worldTangentT = normalize( worldTangentT );
@@ -193,7 +189,7 @@ VS_OUTPUT main(const VS_INPUT In)
 
 	SkinPositionAndNormal( g_bSkinning, vPos, vNormal,
 		In.vBoneWeights, In.vBoneIndices,
-		worldPos, worldNormal );
+		worldPos.xyz, worldNormal );
 
 #endif // NOT TANGENTSPACE
 
@@ -201,7 +197,8 @@ VS_OUTPUT main(const VS_INPUT In)
 
 #else // MODEL
 
-    worldPos = mul(float4(In.vPos, 1), cModel[0]);
+    worldPos.xyz = mul(float4(In.vPos, 1), cModel[0]);
+    worldPos.w = 1.0f;
     worldNormal = mul(In.vNormal, (float3x3) cModel[0]);
 
 #if TANGENTSPACE
@@ -221,30 +218,16 @@ VS_OUTPUT main(const VS_INPUT In)
 
 #endif // NOT MODEL
 
-    Out.vProjPos = mul(float4(worldPos, 1), cViewProj);
+    Out.vProjPos = mul(float4(worldPos.xyz, 1), cViewProj);
     Out.worldPos = float4(worldPos.xyz, Out.vProjPos.w);
     Out.vTexCoord.xy = In.vTexCoord_0;
 
     Out.worldNormal_Depth.xyz = worldNormal;
-    Out.worldNormal_Depth.w = WriteDepth(worldPos, g_vecOrigin, g_vecForward, g_flDepthScale);
+    Out.worldNormal_Depth.w = WriteDepth(worldPos.xyz, g_vecOrigin, g_vecForward, g_flDepthScale);
 	
     Out.baseTexCoord.x = dot(In.vTexCoord_0, cBaseTexCoordTransform[0].xy) + cBaseTexCoordTransform[0].w;
     Out.baseTexCoord.y = dot(In.vTexCoord_0, cBaseTexCoordTransform[1].xy) + cBaseTexCoordTransform[1].w;
 
-#if !MODEL
-    Out.lightmapTexCoord1And2.xy = In.vLightmapTexCoord.xy;
-    
-    float2 lightmapTexCoord2 = Out.lightmapTexCoord1And2.xy + In.vLightmapTexCoordOffset.xy;
-    float2 lightmapTexCoord3 = lightmapTexCoord2 + In.vLightmapTexCoordOffset.xy;
-
-    Out.lightmapTexCoord1And2.z = lightmapTexCoord2.y;
-    Out.lightmapTexCoord1And2.w = lightmapTexCoord2.x;
-
-    Out.lightmapTexCoord3.xy = lightmapTexCoord3;
-    Out.lightmapTexCoord3.z = Out.baseTexCoord.x;
-    Out.lightmapTexCoord3.w = Out.baseTexCoord.y;
-#endif
-	
 #if TANGENTSPACE
 	Out.worldTangentS = worldTangentS;
 	Out.worldTangentT = worldTangentT;

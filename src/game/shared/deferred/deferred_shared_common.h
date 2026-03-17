@@ -1,7 +1,8 @@
 #ifndef DEFERRED_SHARED_COMMON
 #define DEFERRED_SHARED_COMMON
-
+#if defined CLIENT_DLL || defined (GAME_DLL)
 #include "cbase.h"
+#endif
 
 class IViewRender;
 
@@ -61,7 +62,7 @@ inline Vector quatColorToVec( const Quaternion &q )
 	v *= q.w / 255.0f;
 	return v;
 }
-
+#if defined CLIENT_DLL || defined (GAME_DLL)
 inline Vector stringColToVec( const char *str )
 {
 	float f[4] = { 0 };
@@ -70,7 +71,7 @@ inline Vector stringColToVec( const char *str )
 	v *= 1.0f / 255.0f * f[3] / 255.0f;
 	return v;
 }
-
+#endif
 inline void vecToStringCol( Vector col, char *out, int maxLen )
 {
 	float flMax = MAX( col.x, MAX( col.y, col.z ) );
@@ -134,16 +135,17 @@ const char *GetLightParamName( LIGHT_PARAM_ID id );
 
 
 #include "networkstringtabledefs.h"
-
+#if defined CLIENT_DLL || defined (GAME_DLL)
 #include "deferred/CDefLight.h"
 #include "deferred/CDefLightContainer.h"
 #include "deferred/CDefLightGlobal.h"
 
 #include "../../materialsystem/swarmshaders/deferred_global_common.h"
+#endif
 
 #ifdef GAME_DLL
 #include "deferred/deferred_server_common.h"
-#else
+#elif CLIENT_DLL
 #include "deferred/deferred_client_common.h"
 #endif
 

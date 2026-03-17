@@ -128,6 +128,25 @@ const float4x4 g_ViewInv : register(c16);
 const float4x4 g_ProjInv : register(c24);
 const float4x4 g_View : register(c34);
 const float4x4 g_Proj : register(c38);
+const float2 g_zPlanes : register(c42);
+const float aspect : register(c43);
+const float fov : register(c44);
+const float2 g_viewportOffset : register(c45);
+const float g_flthickness : register(c46);
+
+const float3 blurVars : register(c47);
+
+#define g_blurSize 2.0
+#define g_blurArea 0.05
+#define g_blurAngle 0.9
+
+const float3 ScatteringVars : register(c48);
+
+#define FIELD_OF_VIEW fov.x
+#define ASPECT_RATIO aspect.x
+
+#define g_zNear g_zPlanes.x
+#define g_zFar g_zPlanes.y
 
 
 #define g_fWriteDepthToAlpha g_vShaderControls.y
@@ -307,9 +326,11 @@ PS_OUTPUT main(const PS_INPUT In)
     float depth = tex2D(depthsampler, screenPos).r;
     
     //vReflectColor = tex2Dsrgb(ReflectSampler, vDependentTexCoords);
+
 	if(bUseSSR)
     {
-        vReflectColor.rgb += ssrComposition_simple(depth, roughness, metallic, In.vTexCoord.xy, N.rgb, ReflectSampler, In.vWorldPos.xyz, V);
+        vReflectColor = tex2D(ReflectSampler, screenPos);
+       // vReflectColor.rgb += ssrComposition_simple(roughness, metallic, screenPos, N.rgb, ReflectSampler, depthsampler, In.vWorldPos.xyzw, V);
     }
     
     float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - NdotV, 5.0);

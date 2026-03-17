@@ -40,14 +40,14 @@ public:
 	int GetAchievementCount();
 
 	CBaseAchievement *GetAchievementByID( int iAchievementID, int nUserSlot );
-	CUtlMap<int, CBaseAchievement *> &GetAchievements( int nUserSlot ) { return m_mapAchievement[nUserSlot]; }
+	CUtlMap<int, CBaseAchievement *> &GetAchievements( int nUserSlot ) { return m_mapAchievement; }
 
 	CBaseAchievement *GetAchievementByName( const char *pchName, int nUserSlot );
 
 	void UploadUserData( int nUserSlot );
 	void UserConnected( int nUserSlot );
 	void UserDisconnected( int nUserSlot );
-	bool IsUserConnected( int nUserSlot ) { return m_bUserSlotActive[nUserSlot]; }
+	bool IsUserConnected( int nUserSlot ) { return m_bUserSlotActive; }
 	void ReadAchievementsFromTitleData( int iController, int iSlot );
 	void SaveGlobalState();
 	void SaveGlobalStateIfDirty();
@@ -59,12 +59,12 @@ public:
 	void ResetAchievements();
 	void ResetAchievement( int iAchievementID );
 	void PrintAchievementStatus();
-	float GetLastClassChangeTime( int nUserSlot ) { return m_flLastClassChangeTime[nUserSlot]; }
-	float GetTeamplayStartTime( int nUserSlot ) { return m_flTeamplayStartTime[nUserSlot]; }
-	int	  GetMiniroundsCompleted( int nUserSlot ) { return m_iMiniroundsCompleted[nUserSlot]; }
+	float GetLastClassChangeTime( int nUserSlot ) { return m_flLastClassChangeTime; }
+	float GetTeamplayStartTime( int nUserSlot ) { return m_flTeamplayStartTime; }
+	int	  GetMiniroundsCompleted( int nUserSlot ) { return m_iMiniroundsCompleted; }
 	const char *GetMapName() { return m_szMap; }
 	void OnAchievementEvent( int iAchievementID, int nUserSlot );
-	void SetDirty( bool bDirty, int nUserSlot ) { m_bDirty[nUserSlot] = bDirty; }
+	void SetDirty( bool bDirty, int nUserSlot ) { m_bDirty = bDirty; }
 	bool CheckAchievementsEnabled();
 
 	// IMatchEventsSink
@@ -91,20 +91,20 @@ private:
 	void OnKillEvent( CBaseEntity *pVictim, CBaseEntity *pAttacker, CBaseEntity *pInflictor, IGameEvent *event );
 	void ResetAchievement_Internal( CBaseAchievement *pAchievement );
 
-	CUtlMap<int, CBaseAchievement *> m_mapAchievement[MAX_SPLITSCREEN_PLAYERS];			// map of all achievements
-	CUtlVector<CBaseAchievement *>	 m_vecAchievement[MAX_SPLITSCREEN_PLAYERS];			// vector of all achievements for accessing by index
-	CUtlVector<CBaseAchievement *> m_vecKillEventListeners[MAX_SPLITSCREEN_PLAYERS];	// vector of achievements that are listening for kill events
-	CUtlVector<CBaseAchievement *> m_vecMapEventListeners[MAX_SPLITSCREEN_PLAYERS];		// vector of achievements that are listening for map events
-	CUtlVector<CBaseAchievement *> m_vecComponentListeners[MAX_SPLITSCREEN_PLAYERS];	// vector of achievements that are listening for components that make up an achievement
-	CUtlVector<CBaseAchievement *>	 m_vecAchievementInOrder[MAX_SPLITSCREEN_PLAYERS];	// vector of all achievements for accessing by display order
+	CUtlMap<int, CBaseAchievement *> m_mapAchievement;			// map of all achievements
+	CUtlVector<CBaseAchievement *>	 m_vecAchievement ;			// vector of all achievements for accessing by index
+	CUtlVector<CBaseAchievement *> m_vecKillEventListeners ;	// vector of achievements that are listening for kill events
+	CUtlVector<CBaseAchievement *> m_vecMapEventListeners ;		// vector of achievements that are listening for map events
+	CUtlVector<CBaseAchievement *> m_vecComponentListeners ;	// vector of achievements that are listening for components that make up an achievement
+	CUtlVector<CBaseAchievement *>	 m_vecAchievementInOrder ;	// vector of all achievements for accessing by display order
 
-	float m_flLevelInitTime[MAX_SPLITSCREEN_PLAYERS];
-	float m_flLastClassChangeTime[MAX_SPLITSCREEN_PLAYERS];		// Time when player last changed class
-	float m_flTeamplayStartTime[MAX_SPLITSCREEN_PLAYERS];		// Time when player joined a non-spectating team.  Not updated if she switches game teams; cleared if she joins spectator
-	float m_iMiniroundsCompleted[MAX_SPLITSCREEN_PLAYERS];		// # of minirounds played since game start (for maps that have minirounds)
+	float m_flLevelInitTime ;
+	float m_flLastClassChangeTime ;		// Time when player last changed class
+	float m_flTeamplayStartTime ;		// Time when player joined a non-spectating team.  Not updated if she switches game teams; cleared if she joins spectator
+	float m_iMiniroundsCompleted ;		// # of minirounds played since game start (for maps that have minirounds)
 	char  m_szMap[MAX_PATH];										// file base of map name, cached since we access it frequently in this form
-	bool  m_bDirty[MAX_SPLITSCREEN_PLAYERS];					// do we have interesting state that needs to be saved
-	bool  m_bUserSlotActive[MAX_SPLITSCREEN_PLAYERS];
+	bool  m_bDirty ;					// do we have interesting state that needs to be saved
+	bool  m_bUserSlotActive ;
 	bool  m_bCheatsEverOn;				// have cheats ever been turned on in this level
 	float m_flTimeLastUpload;			// last time we uploaded to Steam
 	float  m_flWaitingForStoreStatsCallback;
@@ -120,8 +120,8 @@ private:
 	CUtlVector<PendingAchievementInfo_t>	m_pendingAchievementState;
 #endif
 
-	CUtlVector<int> m_AchievementsAwarded[MAX_SPLITSCREEN_PLAYERS];
-	CUtlVector<int> m_AchievementsAwardedDuringCurrentGame[MAX_SPLITSCREEN_PLAYERS];
+	CUtlVector<int> m_AchievementsAwarded;
+	CUtlVector<int> m_AchievementsAwardedDuringCurrentGame;
 	void ClearAchievementData( int nUserSlot );
 };
 

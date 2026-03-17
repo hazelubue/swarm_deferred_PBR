@@ -119,7 +119,7 @@ inline float FractionUnDucked( int msecs )
 
 #define WEAPON_NOCLIP			-1	// clip sizes set to this tell the weapon it doesn't use a clip
 
-#define	MAX_AMMO_TYPES	32		// ???
+#define	MAX_AMMO_TYPES	128		// ???
 #define MAX_AMMO_SLOTS  32		// not really slots
 
 #define HUD_PRINTNOTIFY		1
@@ -832,18 +832,33 @@ enum
 #define COMMENTARY_BUTTONS		(IN_USE)
 #endif
 
+#define TEAM_TRAIN_MAX_TEAMS			4
+#define TEAM_TRAIN_MAX_HILLS			5
+#define TEAM_TRAIN_FLOATS_PER_HILL		2
+#define TEAM_TRAIN_HILLS_ARRAY_SIZE		TEAM_TRAIN_MAX_TEAMS * TEAM_TRAIN_MAX_HILLS * TEAM_TRAIN_FLOATS_PER_HILL
+
+enum
+{
+	HILL_TYPE_NONE = 0,
+	HILL_TYPE_UPHILL,
+	HILL_TYPE_DOWNHILL,
+};
+
+#define NOINTERP_PARITY_MAX			4
+#define NOINTERP_PARITY_MAX_BITS	2
+
 bool IsHeadTrackingEnabled();
 
 // If this is defined, all of the scopeguard objects are NULL'd out to reduce overhead
 // #define SPLIT_SCREEN_STUBS
 
 
-	#define MAX_SPLITSCREEN_PLAYERS 1
+#define MAX_SPLITSCREEN_PLAYERS 1
 
 
 inline bool IsSplitScreenSupported()
 {
-	return ( MAX_SPLITSCREEN_PLAYERS > 1 ) ? true : false;
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -890,6 +905,8 @@ enum Class_T
 	CLASS_EARTH_FAUNA,
 	CLASS_HACKED_ROLLERMINE,
 	CLASS_COMBINE_HUNTER,
+	
+	NUM_AI_CLASSES,
 
 	LAST_SHARED_ENTITY_CLASS,
 };
@@ -898,5 +915,14 @@ enum Class_T
 #define FACTION_NONE				0					// Not assigned a faction.  Entities not assigned a faction will not do faction tests.
 #define LAST_SHARED_FACTION			(FACTION_NONE)
 #define NUM_SHARED_FACTIONS			(FACTION_NONE + 1)
+
+// Our Game-based shareddefs go here.
+#ifdef PORTAL
+#include "portal_shareddefs.h"
+#elif defined(HL2_DLL) || defined(HL2_CLIENT_DLL)
+#include "hl2_shareddefs.h"
+#else
+#include "my_shareddefs.h"
+#endif
 
 #endif // SHAREDDEFS_H

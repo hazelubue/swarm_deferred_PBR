@@ -37,10 +37,19 @@ enum MotionBlurMode_t
 	MOTION_BLUR_SFM = 3				// Use SFM data passed in CViewSetup structure
 };
 
+enum StereoEye_t
+{
+	STEREO_EYE_MONO = 0,
+	STEREO_EYE_LEFT = 1,
+	STEREO_EYE_RIGHT = 2,
+	STEREO_EYE_MAX = 3,
+};
+
+
 //-----------------------------------------------------------------------------
 // Purpose: Renderer setup data.  
 //-----------------------------------------------------------------------------
-abstract_class CViewSetup
+class CViewSetup
 {
 public:
 	CViewSetup()
@@ -158,5 +167,7 @@ public:
 
 	bool		m_bRenderFlashlightDepthTranslucents:1;
 };
+
+
 
 #endif // VIEW_SHARED_H

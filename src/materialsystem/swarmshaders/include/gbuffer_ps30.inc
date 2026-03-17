@@ -28,9 +28,7 @@ class gbuffer_ps30_Static_Index
 	unsigned int m_nBLENDMODULATE : 2;
 	unsigned int m_nPARALLAXOCCLUSION : 2;
 	unsigned int m_nTRANSLUCENT : 2;
-	unsigned int m_nFLOWMAP : 2;
 	unsigned int m_nDEDICATEDMRAO : 2;
-	unsigned int m_nLIGHTMAP : 2;
 #ifdef _DEBUG
 	bool m_bALPHATEST : 1;
 	bool m_bBUMPMAP : 1;
@@ -39,9 +37,7 @@ class gbuffer_ps30_Static_Index
 	bool m_bBLENDMODULATE : 1;
 	bool m_bPARALLAXOCCLUSION : 1;
 	bool m_bTRANSLUCENT : 1;
-	bool m_bFLOWMAP : 1;
 	bool m_bDEDICATEDMRAO : 1;
-	bool m_bLIGHTMAP : 1;
 #endif	// _DEBUG
 public:
 	void SetALPHATEST( int i )
@@ -107,30 +103,12 @@ public:
 #endif	// _DEBUG
 	}
 
-	void SetFLOWMAP( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nFLOWMAP = i;
-#ifdef _DEBUG
-		m_bFLOWMAP = true;
-#endif	// _DEBUG
-	}
-
 	void SetDEDICATEDMRAO( int i )
 	{
 		Assert( i >= 0 && i <= 1 );
 		m_nDEDICATEDMRAO = i;
 #ifdef _DEBUG
 		m_bDEDICATEDMRAO = true;
-#endif	// _DEBUG
-	}
-
-	void SetLIGHTMAP( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nLIGHTMAP = i;
-#ifdef _DEBUG
-		m_bLIGHTMAP = true;
 #endif	// _DEBUG
 	}
 
@@ -143,9 +121,7 @@ public:
 		m_nBLENDMODULATE = 0;
 		m_nPARALLAXOCCLUSION = 0;
 		m_nTRANSLUCENT = 0;
-		m_nFLOWMAP = 0;
 		m_nDEDICATEDMRAO = 0;
-		m_nLIGHTMAP = 0;
 #ifdef _DEBUG
 		m_bALPHATEST = false;
 		m_bBUMPMAP = false;
@@ -154,22 +130,20 @@ public:
 		m_bBLENDMODULATE = false;
 		m_bPARALLAXOCCLUSION = false;
 		m_bTRANSLUCENT = false;
-		m_bFLOWMAP = false;
 		m_bDEDICATEDMRAO = false;
-		m_bLIGHTMAP = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bALPHATEST && m_bBUMPMAP && m_bNOCULL && m_bBUMPMAP2 && m_bBLENDMODULATE && m_bPARALLAXOCCLUSION && m_bTRANSLUCENT && m_bFLOWMAP && m_bDEDICATEDMRAO && m_bLIGHTMAP );
+		Assert( m_bALPHATEST && m_bBUMPMAP && m_bNOCULL && m_bBUMPMAP2 && m_bBLENDMODULATE && m_bPARALLAXOCCLUSION && m_bTRANSLUCENT && m_bDEDICATEDMRAO );
 		AssertMsg( !( !m_nBUMPMAP2 && m_nBLENDMODULATE ), "Invalid combo combination ( !BUMPMAP2 && BLENDMODULATE )" );
 		AssertMsg( !( !m_nBUMPMAP && m_nBUMPMAP2 ), "Invalid combo combination ( !BUMPMAP && BUMPMAP2 )" );
-		return ( 1 * m_nALPHATEST ) + ( 2 * m_nBUMPMAP ) + ( 6 * m_nNOCULL ) + ( 12 * m_nBUMPMAP2 ) + ( 24 * m_nBLENDMODULATE ) + ( 48 * m_nPARALLAXOCCLUSION ) + ( 96 * m_nTRANSLUCENT ) + ( 192 * m_nFLOWMAP ) + ( 384 * m_nDEDICATEDMRAO ) + ( 768 * m_nLIGHTMAP ) + 0;
+		return ( 1 * m_nALPHATEST ) + ( 2 * m_nBUMPMAP ) + ( 6 * m_nNOCULL ) + ( 12 * m_nBUMPMAP2 ) + ( 24 * m_nBLENDMODULATE ) + ( 48 * m_nPARALLAXOCCLUSION ) + ( 96 * m_nTRANSLUCENT ) + ( 192 * m_nDEDICATEDMRAO ) + 0;
 	}
 };
 
-#define shaderStaticTest_gbuffer_ps30 psh_forgot_to_set_static_ALPHATEST + psh_forgot_to_set_static_BUMPMAP + psh_forgot_to_set_static_NOCULL + psh_forgot_to_set_static_BUMPMAP2 + psh_forgot_to_set_static_BLENDMODULATE + psh_forgot_to_set_static_PARALLAXOCCLUSION + psh_forgot_to_set_static_TRANSLUCENT + psh_forgot_to_set_static_FLOWMAP + psh_forgot_to_set_static_DEDICATEDMRAO + psh_forgot_to_set_static_LIGHTMAP
+#define shaderStaticTest_gbuffer_ps30 psh_forgot_to_set_static_ALPHATEST + psh_forgot_to_set_static_BUMPMAP + psh_forgot_to_set_static_NOCULL + psh_forgot_to_set_static_BUMPMAP2 + psh_forgot_to_set_static_BLENDMODULATE + psh_forgot_to_set_static_PARALLAXOCCLUSION + psh_forgot_to_set_static_TRANSLUCENT + psh_forgot_to_set_static_DEDICATEDMRAO
 
 
 class gbuffer_ps30_Dynamic_Index

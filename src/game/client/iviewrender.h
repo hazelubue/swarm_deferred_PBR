@@ -52,7 +52,7 @@ enum DrawFlags_t
 	DF_UNUSED5				= 0x10000,
 	DF_SAVEGAMESCREENSHOT	= 0x20000,
 	DF_CLIP_SKYBOX			= 0x40000,
-	DF_SKIP_NODRAW			= 0x80000, 
+	DF_SKIP_NODRAW			= 0x80000,
 
 	DF_SHADOW_DEPTH_MAP		= 0x100000	// Currently rendering a shadow depth map
 };
@@ -92,8 +92,6 @@ public:
 	// First argument is 3d view setup, second is for the HUD (in most cases these are ==, but in split screen the client .dll handles this differently)
 	virtual void		RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw ) = 0;
 
-	//virtual const SetOriginalViewSetup(const CViewSetup& setup) = 0;
-
 	// What are we currently rendering? Returns a combination of DF_ flags.
 	virtual int GetDrawFlags() = 0;
 
@@ -107,7 +105,7 @@ public:
 
 	virtual bool		ShouldDrawBrushModels( void ) = 0;
 
-	virtual const CViewSetup *GetPlayerViewSetup( int nSlot = -1 ) const = 0;
+	virtual const CViewSetup *GetPlayerViewSetup( ) const = 0;
 	virtual const CViewSetup *GetViewSetup( void ) const = 0;
 
 	virtual void		DisableVis( void ) = 0;
@@ -145,14 +143,10 @@ public:
 	virtual void		FreezeFrame( float flFreezeTime ) = 0;
 
 	virtual void		InitFadeData( void ) = 0;
-
 };
 
+extern IViewRender *view;
 
-extern bool g_bOriginalViewSetupValid;
-
-extern IViewRender* view;
-
-extern IViewRender* GetViewRenderInstance();
+extern IViewRender *GetViewRenderInstance();
 
 #endif // IVIEWRENDER_H

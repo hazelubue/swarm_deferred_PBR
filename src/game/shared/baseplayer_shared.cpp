@@ -77,6 +77,17 @@
 ConVar mp_usehwmmodels( "mp_usehwmmodels", "0", NULL, "Enable the use of the hw morph models. (-1 = never, 1 = always, 0 = based upon GPU)" ); // -1 = never, 0 = if hasfastvertextextures, 1 = always
 #endif
 
+static ConVar r_deferred_enable_independent("r_deferred_enable_independent", "1",
+	FCVAR_ARCHIVE, "Enable independent viewport for deferred rendering");
+static ConVar r_deferred_view_offset_x("r_deferred_view_offset_x", "0",
+	FCVAR_ARCHIVE, "X offset for independent viewport");
+static ConVar r_deferred_view_offset_y("r_deferred_view_offset_y", "0",
+	FCVAR_ARCHIVE, "Y offset for independent viewport");
+static ConVar r_deferred_view_offset_z("r_deferred_view_offset_z", "0",
+	FCVAR_ARCHIVE, "Z offset for independent viewport");
+static ConVar r_deferred_view_fov("r_deferred_view_fov", "90",
+	FCVAR_ARCHIVE, "FOV for independent viewport (0 = use current)");
+
 bool UseHWMorphModels()
 {
 #ifdef CLIENT_DLL 
@@ -518,7 +529,12 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 	bool movingalongground = ( groundspeed > 0.0001f );
 	bool moving_fast_enough =  ( speed >= velwalk );
 
-
+#ifdef PORTAL
+	// In Portal we MUST play footstep sounds even when the player is moving very slowly
+	// This is used to count the number of footsteps they take in the challenge mode
+	// -Jeep
+	moving_fast_enough = true;
+#endif
 
 	// To hear step sounds you must be either on a ladder or moving along the ground AND
 	// You must be moving fast enough
@@ -1518,6 +1534,112 @@ void CBasePlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, 
 #endif
 }
 
+void CBasePlayer::CalcViewDeferred(Vector& eyeOrigin, QAngle& eyeAngles, Vector& SSReyeOrigin, QAngle& SSReyeAngles, float& zNear, float& zFar, float& fov)
+{
+#if defined( CLIENT_DLL )
+	IClientVehicle* pVehicle;
+#else
+	IServerVehicle* pVehicle;
+#endif
+	pVehicle = GetVehicle();
+
+	if (!pVehicle)
+	{
+		if (IsObserver())
+		{
+			CalcObserverView(eyeOrigin, eyeAngles, fov);
+		}
+		else
+		{
+			CalcPlayerView(eyeOrigin, eyeAngles, fov);
+		}
+	}
+	else
+	{
+		CalcVehicleView(pVehicle, eyeOrigin, eyeAngles, zNear, zFar, fov);
+	}
+
+	/*if (m_bIndependentViewportEnabled)
+	{
+		UpdateIndependentViewport();
+	}*/
+
+#if defined( CLIENT_DLL )
+	// Set the follow bone if necessary
+	FOR_EACH_VALID_SPLITSCREEN_PLAYER(hh)
+	{
+		ACTIVE_SPLITSCREEN_PLAYER_GUARD(hh);
+
+		static ConVarRef cvFollowBoneIndexVar("cl_camera_follow_bone_index");
+
+		CStudioHdr const* pHdr = GetModelPtr();
+
+		if (pHdr &&
+			cvFollowBoneIndexVar.IsValid() &&
+			C_BasePlayer::GetLocalPlayer() == this)
+		{
+			int boneIdx = cvFollowBoneIndexVar.GetInt();
+			if (boneIdx >= -1 && boneIdx < pHdr->numbones())
+			{
+				extern Vector g_cameraFollowPos;
+				if (boneIdx == -1)
+				{
+					VectorCopy(GetRenderOrigin(), g_cameraFollowPos);
+				}
+				else if (pHdr->pBone(boneIdx)->flags & BONE_USED_BY_ANYTHING)
+				{
+					MatrixPosition(m_BoneAccessor.GetBone(boneIdx), g_cameraFollowPos);
+				}
+			}
+		}
+	}
+#endif
+}
+
+void CBasePlayer::UpdateIndependentViewport()
+{
+	if (!m_bIndependentViewportEnabled)
+		return;
+
+	CalcViewDeferred(
+		m_vecIndependentEyeOrigin,
+		m_angIndependentEyeAngles,
+		m_vecIndependentSSREyeOrigin,
+		m_angIndependentSSREyeAngles,
+		m_flIndependentZNear,
+		m_flIndependentZFar,
+		m_flIndependentFOV
+	);
+
+	//if (r_deferred_enable_independent.GetBool())
+	//{
+	//	m_vecIndependentEyeOrigin.x += r_deferred_view_offset_x.GetFloat();
+	//	m_vecIndependentEyeOrigin.y += r_deferred_view_offset_y.GetFloat();
+	//	m_vecIndependentEyeOrigin.z += r_deferred_view_offset_z.GetFloat();
+
+	//	float forcedFOV = r_deferred_view_fov.GetFloat();
+	//	if (forcedFOV > 0)
+	//	{
+	//		m_flIndependentFOV = forcedFOV;
+	//	}
+
+	//	// m_vecIndependentSSREyeOrigin = m_vecIndependentEyeOrigin + some_offset;
+	//	// m_angIndependentSSREyeAngles = m_angIndependentEyeAngles + some_angle_offset;
+	//}
+}
+
+void CBasePlayer::GetIndependentViewport(Vector& eyeOrigin, QAngle& eyeAngles,
+	Vector& SSReyeOrigin, QAngle& SSReyeAngles,
+	float& zNear, float& zFar, float& fov)
+{
+	eyeOrigin = m_vecIndependentEyeOrigin;
+	eyeAngles = m_angIndependentEyeAngles;
+	SSReyeOrigin = m_vecIndependentSSREyeOrigin;
+	SSReyeAngles = m_angIndependentSSREyeAngles;
+	zNear = m_flIndependentZNear;
+	zFar = m_flIndependentZFar;
+	fov = m_flIndependentFOV;
+}
 
 void CBasePlayer::CalcViewModelView( const Vector& eyeOrigin, const QAngle& eyeAngles)
 {

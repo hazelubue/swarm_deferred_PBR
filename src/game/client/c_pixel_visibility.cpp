@@ -456,10 +456,6 @@ void CPixelVisibilityQuery::IssueQuery( IMatRenderContext *pRenderContext, float
 		}
 	}
 
-	// In split screen we can issue these multiple times
-	Assert( m_frameIssued != gpGlobals->framecount);
-
-
 	m_frameIssued = gpGlobals->framecount;
 	m_wasQueriedThisFrame = false;
 	m_failed = false;

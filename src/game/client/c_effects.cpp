@@ -327,7 +327,7 @@ inline bool CClient_Precipitation::SimulateSnow( CPrecipitationParticle* pPartic
 void CClient_Precipitation::Simulate( float dt )
 {
 	if ( m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAIN || m_nPrecipType == PRECIPITATION_TYPE_PARTICLEASH 
-		|| m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM || PRECIPITATION_TYPE_PARTICLESNOW )
+		|| m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM || m_nPrecipType  == PRECIPITATION_TYPE_PARTICLESNOW )
 	{
 		CreateParticlePrecip();
 		return;
@@ -410,7 +410,7 @@ inline void CClient_Precipitation::RenderParticle( CPrecipitationParticle* pPart
 	Vector start, delta;
 
 	if ( m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAIN || m_nPrecipType == PRECIPITATION_TYPE_PARTICLEASH
-		|| m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM || PRECIPITATION_TYPE_PARTICLESNOW )
+		|| m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM || m_nPrecipType == PRECIPITATION_TYPE_PARTICLESNOW )
 		return;
 
 	if ( m_nPrecipType == PRECIPITATION_TYPE_ASH )
@@ -506,7 +506,7 @@ void CClient_Precipitation::Render()
 		return;
 
 	if ( m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAIN || m_nPrecipType == PRECIPITATION_TYPE_PARTICLEASH 
-		|| m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM || PRECIPITATION_TYPE_PARTICLESNOW )
+		|| m_nPrecipType == PRECIPITATION_TYPE_PARTICLERAINSTORM || m_nPrecipType == PRECIPITATION_TYPE_PARTICLESNOW )
 		return;
 
 	// Don't render in monitors or in reflections or refractions.
@@ -2041,14 +2041,14 @@ private:
 
 	bool							m_bRayParticles;
 
-	typedef struct SnowFall_t
+	typedef struct
 	{
 		PMaterialHandle			m_hMaterial;
 		CClient_Precipitation	*m_pEntity;
 		SnowFallEffect			*m_pEffect;
 		Vector					m_vecMin;
 		Vector					m_vecMax;
-	};
+	} SnowFall_t;
 
 	CUtlVector<SnowFall_t>		m_aSnow;
 	int								m_nSplitScreenPlayerSlot;

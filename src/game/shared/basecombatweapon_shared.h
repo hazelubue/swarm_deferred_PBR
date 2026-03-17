@@ -18,6 +18,14 @@
 #include "baseviewmodel_shared.h"
 #include "weapon_proficiency.h"
 
+#ifndef PORTAL
+// HACK, Should come from game specific enum...
+#define WEAPON_MAX 32   
+#else
+#include "shareddefs.h"
+#endif
+
+
 #if defined( CLIENT_DLL )
 #define CBaseCombatWeapon C_BaseCombatWeapon
 #endif
@@ -226,6 +234,12 @@ public:
 	virtual void			HandleFireOnEmpty();					// Called when they have the attack button down
 																	// but they are out of ammo. The default implementation
 																	// either reloads, switches weapons, or plays an empty sound.
+
+	float GetWeaponFOV()
+	{
+		return GetWpnData().m_flWeaponFOV;
+	}
+
 #ifdef CLIENT_DLL
 	virtual void			CreateMove( float flInputSampleTime, CUserCmd *pCmd, const QAngle &vecOldViewAngles ) {}
 #endif
@@ -578,7 +592,7 @@ private:
 	
 	// Server only
 #if !defined( CLIENT_DLL )
-
+protected:
 	// Outputs
 	COutputEvent			m_OnPlayerUse;		// Fired when the player uses the weapon.
 	COutputEvent			m_OnPlayerPickup;	// Fired when the player picks up the weapon.

@@ -2515,7 +2515,7 @@ void CNPC_CombineGunship::SelfDestruct( void )
 
 	UTIL_Remove( this );
 
-#ifndef SDK_DLL
+#ifndef INFESTED_DLL
 	// Record this so a nearby citizen can respond.
 	if ( GetCitizenResponse() )
 	{
@@ -2524,7 +2524,7 @@ void CNPC_CombineGunship::SelfDestruct( void )
 #endif
 
 #ifdef HL2_EPISODIC
-	NPCEventResponse()->TriggerEvent( "TLK_CITIZEN_RESPONSE_KILLED_GUNSHIP", false, false );
+	//NPCEventResponse()->TriggerEvent( "TLK_CITIZEN_RESPONSE_KILLED_GUNSHIP", false, false );
 #endif
 }
 
@@ -2865,7 +2865,7 @@ void CNPC_CombineGunship::TraceAttack( const CTakeDamageInfo &info, const Vector
 		// If this is from a player, record it so a nearby citizen can respond.
 		if ( info.GetAttacker()->IsPlayer() )
 		{
-#ifndef SDK_DLL
+#ifndef INFESTED_DLL
 			if ( GetCitizenResponse() )
 			{
 				GetCitizenResponse()->AddResponseTrigger( CR_PLAYER_SHOT_GUNSHIP );
@@ -2873,7 +2873,7 @@ void CNPC_CombineGunship::TraceAttack( const CTakeDamageInfo &info, const Vector
 #endif
 
 #ifdef HL2_EPISODIC
-			NPCEventResponse()->TriggerEvent( "TLK_CITIZEN_RESPONSE_SHOT_GUNSHIP", false, false );
+		//	NPCEventResponse()->TriggerEvent( "TLK_CITIZEN_RESPONSE_SHOT_GUNSHIP", false, false );
 #endif
 		}
 

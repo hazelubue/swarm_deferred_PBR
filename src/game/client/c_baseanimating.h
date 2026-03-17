@@ -606,6 +606,7 @@ private:
 	bool							m_builtRagdoll;
 	bool							m_bReceivedSequence;
 	bool							m_bIsStaticProp;
+	bool							m_bSuppressAnimSounds;
 
 	// Current animation sequence
 	int								m_nSequence;

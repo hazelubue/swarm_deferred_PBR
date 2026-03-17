@@ -476,7 +476,7 @@ void CBaseServerVehicle::SetPassenger( int nRole, CBaseCombatCharacter *pPasseng
 
 				if ( pHL2Player->FlashlightIsOn() )
 				{
-					pHL2Player->FlashlightTurnOff();
+					pHL2Player->FlashlightTurnOff( false );
 				}
 			}
 #endif

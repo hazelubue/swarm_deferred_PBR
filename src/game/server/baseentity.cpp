@@ -2351,6 +2351,12 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_INPUTFUNC( FIELD_VOID, "DisableShadow", InputDisableShadow ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "EnableShadow", InputEnableShadow ),
 
+	DEFINE_INPUTFUNC(FIELD_VOID, "DisableDraw", InputDisableDraw),
+	DEFINE_INPUTFUNC(FIELD_VOID, "EnableDraw", InputEnableDraw),
+
+	DEFINE_INPUTFUNC(FIELD_VOID, "DisableReceivingFlashlight", InputDisableReceivingFlashlight),
+	DEFINE_INPUTFUNC(FIELD_VOID, "EnableReceivingFlashlight", InputEnableReceivingFlashlight),
+
 	DEFINE_INPUTFUNC( FIELD_STRING, "AddOutput", InputAddOutput ),
 
 	DEFINE_INPUTFUNC( FIELD_STRING, "FireUser1", InputFireUser1 ),
@@ -4387,7 +4393,7 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 					{
 						Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input <NULL>: %s.%s(%s)\n", gpGlobals->curtime, GetDebugName(), szInputName, Value.String() );
 					}
-					DevMsg( 2, szBuffer );
+					DevMsg( 2, "%s", szBuffer );
 					ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 
 					if (m_debugOverlays & OVERLAY_MESSAGE_BIT)
@@ -7114,6 +7120,7 @@ bool CBaseEntity::CallScriptFunction( const char *pFunctionName, ScriptVariant_t
 	}
 
 
+	g_pScriptVM->SetValue("owninginstance", this->GetScriptInstance());
 	HSCRIPT hFunc = m_ScriptScope.LookupFunction( pFunctionName );
 
 	if( hFunc )
@@ -7434,6 +7441,34 @@ void CBaseEntity::InputDisableShadow( inputdata_t &inputdata )
 void CBaseEntity::InputEnableShadow( inputdata_t &inputdata )
 {
 	RemoveEffects( EF_NOSHADOW );
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CBaseEntity::InputDisableDraw(inputdata_t &inputdata)
+{
+	AddEffects(EF_NODRAW);
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CBaseEntity::InputEnableDraw(inputdata_t &inputdata)
+{
+	RemoveEffects(EF_NODRAW);
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CBaseEntity::InputDisableReceivingFlashlight(inputdata_t &inputdata)
+{
+	AddEffects(EF_NOFLASHLIGHT);
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CBaseEntity::InputEnableReceivingFlashlight(inputdata_t &inputdata)
+{
+	RemoveEffects(EF_NOFLASHLIGHT);
 }
 
 //-----------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 
 #include "cbase.h"
 #include "deferred/deferred_shared_common.h"
+#include "../public/deferred/def_light_t.h"
 
 #include "view_shared.h"
 #include "BSPTreeData.h"

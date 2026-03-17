@@ -22,6 +22,8 @@
 #define SF_PATH_ALTREVERSE		0x00000004
 #define SF_PATH_DISABLE_TRAIN	0x00000008
 #define SF_PATH_TELEPORT		0x00000010
+#define SF_PATH_UPHILL			0x00000020
+#define SF_PATH_DOWNHILL		0x00000040
 #define SF_PATH_ALTERNATE		0x00008000
 
 
@@ -86,6 +88,25 @@ public:
 	void		Visit();
 	bool		HasBeenVisited() const;
 
+	bool		IsUpHill(){ return (FBitSet(m_spawnflags, SF_PATH_UPHILL)) ? true : false; }
+	bool		IsDownHill(){ return (FBitSet(m_spawnflags, SF_PATH_DOWNHILL)) ? true : false; }
+	int	GetHillType()
+	{
+		int iRetVal = HILL_TYPE_NONE;
+		if (IsUpHill())
+		{
+			iRetVal = HILL_TYPE_UPHILL;
+		}
+		else if (IsDownHill())
+		{
+			iRetVal = HILL_TYPE_DOWNHILL;
+		}
+
+		return iRetVal;
+	}
+
+	bool IsDisabled(void){ return FBitSet(m_spawnflags, SF_PATH_DISABLED); }
+
 private:
 	void		Project( CPathTrack *pstart, CPathTrack *pend, Vector &origin, float dist );
 	void		SetPrevious( CPathTrack *pprevious );
@@ -94,6 +115,7 @@ private:
 	static CPathTrack *Instance( edict_t *pent );
 
 	void InputPass( inputdata_t &inputdata );
+	void InputTeleport( inputdata_t &inputdata );
 	
 	void InputToggleAlternatePath( inputdata_t &inputdata );
 	void InputEnableAlternatePath( inputdata_t &inputdata );
@@ -112,6 +134,7 @@ private:
 	TrackOrientationType_t m_eOrientationType;
 
 	COutputEvent m_OnPass;
+	COutputEvent m_OnTeleport;
 
 	static int	s_nCurrIterVal;
 	static bool s_bIsIterating;

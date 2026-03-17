@@ -415,11 +415,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 	}
 
 	g_pClientShadowMgr->SetFlashlightLightWorld( m_LightHandle, m_bLightWorld );
-
-	if ( !asw_perf_wtf.GetBool() && !m_bForceUpdate )
-	{
-		g_pClientShadowMgr->UpdateProjectedTexture( m_LightHandle, true );
-	}
+	g_pClientShadowMgr->UpdateProjectedTexture( m_LightHandle, true );
 }
 
 bool C_EnvProjectedTexture::Simulate( void )
@@ -432,11 +428,16 @@ bool C_EnvProjectedTexture::Simulate( void )
 
 bool C_EnvProjectedTexture::IsBBoxVisible( Vector vecExtentsMin, Vector vecExtentsMax )
 {
+#ifdef PORTAL2_DLL
+	// TEMP: bbox checking does not work with Portals
+	return true;
+#else
 	// Z position clamped to the min height (but must be less than the max)
 	float flVisibleBBoxMinHeight = MIN( vecExtentsMax.z - 1.0f, m_flVisibleBBoxMinHeight );
 	vecExtentsMin.z = MAX( vecExtentsMin.z, flVisibleBBoxMinHeight );
 
 	// Check if the bbox is in the view
 	return !engine->CullBox( vecExtentsMin, vecExtentsMax );
+#endif
 }
 

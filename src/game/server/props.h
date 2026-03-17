@@ -330,6 +330,8 @@ public:
 	bool				m_bStartDisabled;
 	bool				m_bUpdateAttachedChildren;	// For props with children on attachment points, update their child touches as we animate
 
+	bool				m_bSupressAnimSounds;
+
 	CNetworkVar( bool, m_bUseHitboxesForRenderBox );
 
 protected:

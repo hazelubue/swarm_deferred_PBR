@@ -150,7 +150,6 @@ public:
 	virtual CBotCmd GetLastUserCommand() = 0;
 };
 
-
 #define INTERFACEVERSION_PLAYERINFOMANAGER			"PlayerInfoManager002"
 abstract_class IPlayerInfoManager
 {

@@ -18,6 +18,10 @@ ConVar cl_light_diffuse_strength_spot("cl_light_diffuse_strength_spot", "1", FCV
 //ConVar cl_light_fresnel_strength("cl_light_fresnel_strength", "10.0", FCVAR_CHEAT);
 ConVar cl_light_Sheen_strength("cl_light_Sheen_strength", "0.01", FCVAR_CHEAT);
 
+extern ConVar r_ss_distortion;
+extern ConVar r_ss_power;
+extern ConVar r_ss_scale;
+
 //make a system that detects if mrao is defined then resort to making mrao render with dedicated texture
 //otherwise we use auto generation thus making the value for 1.86 to 10 when dedicated is detected.
 //ConVar cl_light_MRAO_green("cl_light_MRAO_green", "1.86"); // defualt for MRAO dedicated textures is 10.
@@ -193,6 +197,17 @@ void DrawPassLightPass(const lightPassParms& info, CBaseVSShader* pShader, IMate
 		{
 			CommitHalfScreenTexel(pShaderAPI, 6);
 		}
+
+		float flthickness = 0.125f;
+
+		pShaderAPI->SetPixelShaderConstant(7, &flthickness, 1);
+
+		float scatteringVars[3];
+		scatteringVars[0] = r_ss_distortion.GetFloat();
+		scatteringVars[1] = r_ss_power.GetFloat();
+		scatteringVars[2] = r_ss_scale.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(9, scatteringVars, 1);
 
 		float LightSpotBoost[1];
 		UTIL_StringToFloatArray(LightSpotBoost, 1, cl_light_specular_spot_boost.GetString());

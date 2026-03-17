@@ -19,8 +19,6 @@
 #include "datacache/imdlcache.h"
 #include "tier1/utlhash.h"
 
-
-
 #ifdef HL2_DLL
 #include "npc_playercompanion.h"
 #endif // HL2_DLL

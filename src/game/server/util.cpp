@@ -36,7 +36,10 @@
 #include "datacache/imdlcache.h"
 #include "util.h"
 
-
+#ifdef PORTAL
+#include "PortalSimulation.h"
+//#include "Portal_PhysicsEnvironmentMgr.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -418,7 +421,9 @@ void UTIL_Remove( IServerNetworkable *oldObj )
 	CBaseEntity *pBaseEnt = oldObj->GetBaseEntity();
 	if ( pBaseEnt )
 	{
-
+#ifdef PORTAL //make sure entities are in the primary physics environment for the portal mod, this code should be safe even if the entity is in neither extra environment
+		CPortalSimulator::Pre_UTIL_Remove(pBaseEnt);
+#endif
 		g_bReceivedChainedUpdateOnRemove = false;
 		pBaseEnt->UpdateOnRemove();
 
@@ -427,7 +432,9 @@ void UTIL_Remove( IServerNetworkable *oldObj )
 		// clear oldObj targetname / other flags now
 		pBaseEnt->SetName( NULL_STRING );
 
-
+#ifdef PORTAL
+		CPortalSimulator::Post_UTIL_Remove(pBaseEnt);
+#endif
 	}
 
 	gEntList.AddToDeleteList( oldObj );
@@ -467,7 +474,9 @@ void UTIL_RemoveImmediate( CBaseEntity *oldObj )
 		return;
 	}
 
-
+#ifdef PORTAL //make sure entities are in the primary physics environment for the portal mod, this code should be safe even if the entity is in neither extra environment
+	CPortalSimulator::Pre_UTIL_Remove(oldObj);
+#endif
 
 	oldObj->AddEFlags( EFL_KILLME );	// Make sure to ignore further calls into here or UTIL_Remove.
 
@@ -481,7 +490,9 @@ void UTIL_RemoveImmediate( CBaseEntity *oldObj )
 	delete oldObj;
 	g_bDisableEhandleAccess = false;
 
-
+#ifdef PORTAL
+	CPortalSimulator::Post_UTIL_Remove(oldObj);
+#endif
 }
 
 
@@ -2112,33 +2123,46 @@ void UTIL_ValidateSoundName( string_t &name, const char *defaultStr )
 //			sep - Character to use as separator. UNDONE: allow multiple separator chars
 // Output : Returns a pointer to the next token to be parsed.
 //-----------------------------------------------------------------------------
-const char *nexttoken(char *token, const char *str, char sep)
+const char *nexttoken( char* token, const char *str, char sep, size_t tokenLen )
 {
-	if ((str == NULL) || (*str == '\0'))
+	if ( ( str == NULL ) || ( *str == '\0' ) )
 	{
 		*token = '\0';
-		return(NULL);
+		return NULL;
 	}
-
+	
 	//
 	// Copy everything up to the first separator into the return buffer.
 	// Do not include separators in the return buffer.
 	//
-	while ((*str != sep) && (*str != '\0'))
+	while ( ( *str != sep ) && ( *str != '\0' ) && ( tokenLen > 1 ) )
 	{
 		*token++ = *str++;
+		--tokenLen;
 	}
-	*token = '\0';
+	
+	//
+	// If the token is too big for the return buffer, skip the rest of the token
+	//
+	while ( ( *str != sep ) && ( *str != '\0' ) )
+	{
+		str++;
+	}
+	
+	if ( tokenLen )
+	{
+		*token = '\0';
+	}
 
 	//
 	// Advance the pointer unless we hit the end of the input string.
 	//
-	if (*str == '\0')
+	if ( *str == '\0' )
 	{
-		return(str);
+		return str;
 	}
 
-	return(++str);
+	return ++str;
 }
 
 //-----------------------------------------------------------------------------

@@ -83,8 +83,6 @@ ConVar func_breakdmg_explosive( "func_breakdmg_explosive", "1.25" );
 
 ConVar sv_turbophysics( "sv_turbophysics", "0", FCVAR_REPLICATED, "Turns on turbo physics" );
 
-
-
 #ifdef HL2_EPISODIC
 	#define PROP_FLARE_LIFETIME 30.0f
 	#define PROP_FLARE_IGNITE_SUBSTRACT 5.0f
@@ -968,6 +966,7 @@ void CBreakableProp::DisableAutoFade()
 //-----------------------------------------------------------------------------
 void CBreakableProp::CopyFadeFrom( CBreakableProp *pSource )
 {
+#if !defined( PORTAL )
 	m_flDefaultFadeScale = pSource->m_flDefaultFadeScale;
 	SetGlobalFadeScale( pSource->GetGlobalFadeScale() );
 	if ( GetGlobalFadeScale() != m_flDefaultFadeScale )
@@ -980,6 +979,7 @@ void CBreakableProp::CopyFadeFrom( CBreakableProp *pSource )
 
 		SetContextThink( &CBreakableProp::RampToDefaultFadeScale, flNextThink, s_pFadeScaleThink );
 	}
+#endif
 }
 
 
@@ -1904,18 +1904,20 @@ BEGIN_DATADESC( CDynamicProp )
 	DEFINE_KEYFIELD( m_bUpdateAttachedChildren, FIELD_BOOLEAN, "updatechildren" ),
 	DEFINE_KEYFIELD( m_bDisableBoneFollowers, FIELD_BOOLEAN, "DisableBoneFollowers" ),
 	DEFINE_KEYFIELD( m_bHoldAnimation, FIELD_BOOLEAN, "HoldAnimation" ),
+	DEFINE_KEYFIELD( m_bSuppressAnimSounds, FIELD_BOOLEAN, "SuppressAnimSounds"),
 	
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_STRING,	"SetAnimation",	InputSetAnimation ),
 	DEFINE_INPUTFUNC( FIELD_STRING,	"SetAnimationNoReset",	InputSetAnimationNoReset ),
 	DEFINE_INPUTFUNC( FIELD_STRING,	"SetDefaultAnimation",	InputSetDefaultAnimation ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"TurnOn",		InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"TurnOff",		InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"Enable",		InputTurnOn ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"Disable",		InputTurnOff ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"EnableCollision",	InputEnableCollision ),
-	DEFINE_INPUTFUNC( FIELD_VOID,		"DisableCollision",	InputDisableCollision ),
-	DEFINE_INPUTFUNC( FIELD_FLOAT,		"SetPlaybackRate",	InputSetPlaybackRate ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"TurnOn",	InputTurnOn ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"TurnOff",	InputTurnOff ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"Enable",	InputTurnOn ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"Disable",	InputTurnOff ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"EnableCollision",	InputEnableCollision ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"DisableCollision",	InputDisableCollision ),
+	DEFINE_INPUTFUNC( FIELD_FLOAT,	"SetPlaybackRate",	InputSetPlaybackRate ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"BecomeRagdoll", InputBecomeRagdoll),
 
 	// Outputs
 	DEFINE_OUTPUT( m_pOutputAnimBegun, "OnAnimationBegun" ),
@@ -2196,7 +2198,10 @@ void CDynamicProp::HandleAnimEvent( animevent_t *pEvent )
 		
 		case SCRIPT_EVENT_SOUND:
 		{
-			EmitSound( pEvent->options );
+			if (!m_bSupressAnimSounds)
+			{
+				EmitSound(pEvent->options);
+			}
 			break;
 		}
 		
@@ -2527,8 +2532,6 @@ BEGIN_DATADESC( CPhysicsProp )
 	DEFINE_KEYFIELD( m_damageType, FIELD_INTEGER, "Damagetype" ),
 	DEFINE_KEYFIELD( m_iszOverrideScript, FIELD_STRING, "overridescript" ),
 
-
-
 	DEFINE_KEYFIELD( m_damageToEnableMotion, FIELD_INTEGER, "damagetoenablemotion" ), 
 	DEFINE_KEYFIELD( m_flForceToEnableMotion, FIELD_FLOAT, "forcetoenablemotion" ), 
 	DEFINE_OUTPUT( m_OnAwakened, "OnAwakened" ),
@@ -2587,10 +2590,9 @@ bool PropIsGib( CBaseEntity *pEntity )
 }
 
 CPhysicsProp::CPhysicsProp( void ) : 
-	m_bHasBeenAwakened( false ), 
-	m_fNextCheckDisableMotionContactsTime( 0 )
+	m_bHasBeenAwakened(false),
+	m_fNextCheckDisableMotionContactsTime(0)
 {
-
 }
 
 CPhysicsProp::~CPhysicsProp()

@@ -88,8 +88,6 @@ bool CDeferredManagerClient::Init()
 		bSM30 = true;
 	}
 
-	if ( bSM30 || bForceDeferred )
-	{
 		bool bGotDefShaderDll = ConnectDeferredExt();
 
 		if ( bGotDefShaderDll )
@@ -114,7 +112,7 @@ bool CDeferredManagerClient::Init()
 
 			InitializeDeferredMaterials();
 		}
-	}
+
 
 	/*if ( !m_bDefRenderingEnabled )
 	{
@@ -222,6 +220,30 @@ void CDeferredManagerClient::InitializeDeferredMaterials()
 		m_pKV_Def[ DEF_MAT_LIGHT_SPOT_WORLD ]->SetInt( "$LIGHTTYPE", DEFLIGHTTYPE_SPOT );
 		m_pKV_Def[ DEF_MAT_LIGHT_SPOT_WORLD ]->SetInt( "$WORLDPROJECTION", 1 );
 		m_pMat_Def[ DEF_MAT_LIGHT_SPOT_WORLD ] = materials->CreateMaterial( "__lightpass_spot_w", m_pKV_Def[ DEF_MAT_LIGHT_SPOT_WORLD ] );
+	}
+
+	m_pKV_Def[DEF_MAT_LIGHT_SPOT_FULLSCREEN] = new KeyValues("DEFERRED_BRUSH");
+	if (m_pKV_Def[DEF_MAT_LIGHT_SPOT_FULLSCREEN] != NULL)
+	{
+		m_pKV_Def[DEF_MAT_LIGHT_SPOT_FULLSCREEN]->SetInt("$LIGHTTYPE", DEFLIGHTTYPE_SPOT);
+	}
+
+	m_pKV_Def[DEF_MAT_LIGHT_SPOT_WORLD] = new KeyValues("DEFERRED_BRUSH");
+	if (m_pKV_Def[DEF_MAT_LIGHT_SPOT_WORLD] != NULL)
+	{
+		m_pKV_Def[DEF_MAT_LIGHT_SPOT_WORLD]->SetInt("$LIGHTTYPE", DEFLIGHTTYPE_SPOT);
+	}
+
+	m_pKV_Def[DEF_MAT_LIGHT_SPOT_FULLSCREEN] = new KeyValues("DEFERRED_MODEL");
+	if (m_pKV_Def[DEF_MAT_LIGHT_SPOT_FULLSCREEN] != NULL)
+	{
+		m_pKV_Def[DEF_MAT_LIGHT_SPOT_FULLSCREEN]->SetInt("$LIGHTTYPE", DEFLIGHTTYPE_SPOT);
+	}
+
+	m_pKV_Def[DEF_MAT_LIGHT_SPOT_WORLD] = new KeyValues("DEFERRED_MODEL");
+	if (m_pKV_Def[DEF_MAT_LIGHT_SPOT_WORLD] != NULL)
+	{
+		m_pKV_Def[DEF_MAT_LIGHT_SPOT_WORLD]->SetInt("$LIGHTTYPE", DEFLIGHTTYPE_SPOT);
 	}
 
 

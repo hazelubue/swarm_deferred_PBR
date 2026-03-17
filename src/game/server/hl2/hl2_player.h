@@ -12,6 +12,10 @@
 #include "hl2_playerlocaldata.h"
 #include "simtimer.h"
 #include "soundenvelope.h"
+#ifdef HL2_PLAYERANIMSTATE
+#include "hl2_playeranimstate.h"
+#endif
+#include "multiplayer/basenetworkedplayer.h"
 
 class CAI_Squad;
 class CPropCombineBall;
@@ -73,10 +77,10 @@ public:
 //=============================================================================
 // >> HL2_PLAYER
 //=============================================================================
-class CHL2_Player : public CBasePlayer
+class CHL2_Player : public CBaseNetworkedPlayer
 {
 public:
-	DECLARE_CLASS( CHL2_Player, CBasePlayer );
+	DECLARE_CLASS( CHL2_Player, CBaseNetworkedPlayer);
 
 	CHL2_Player();
 	~CHL2_Player( void );
@@ -104,6 +108,8 @@ public:
 	virtual void		StopLoopingSounds( void );
 	virtual void		Splash( void );
 	virtual void 		ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
+
+	virtual bool ShouldRegenerateOriginFromCellBits() const{return true;}
 
 	void				DrawDebugGeometryOverlays(void);
 
@@ -178,7 +184,9 @@ public:
 	bool IsZooming( void );
 	void CheckSuitZoom( void );
 
-
+	virtual bool				FlashlightTurnOn( bool );
+	virtual void				FlashlightTurnOff( bool );
+	virtual CBaseEntity*		GetHeldObject( void );
 
 	// Walking
 	void StartWalking( void );
@@ -225,8 +233,12 @@ public:
 	// Flashlight Device
 	void				CheckFlashlight( void );
 	int					FlashlightIsOn( void );
-	virtual bool 		FlashlightTurnOn( bool playSound = false );
-	virtual void		FlashlightTurnOff( bool playSound = false );
+	//virtual bool 		FlashlightTurnOn( bool playSound = false );
+	//virtual void		FlashlightTurnOff( bool playSound = false );
+
+	void				FirePlayerProxyOutput( const char *pszOutputName, variant_t variant, CBaseEntity *pActivator, CBaseEntity *pCaller );
+	CLogicPlayerProxy	*GetPlayerProxy( void );
+
 	bool				IsIlluminatedByFlashlight( CBaseEntity *pEntity, float *flReturnDot );
 	void				SetFlashlightPowerDrainScale( float flScale ) { m_flFlashlightPowerDrainScale = flScale; }
 
@@ -258,8 +270,8 @@ public:
 	void  HandleAdmireGlovesAnimation( void );
 	void  StartAdmireGlovesAnimation( void );
 
-	virtual void				SetActiveSpecialSuitAbility( CBaseCombatWeapon *pAbility );
-	virtual CBaseCombatWeapon	*GetActiveSpecialSuitAbility( void ) const;
+	//virtual void				SetActiveSpecialSuitAbility( CBaseCombatWeapon *pAbility );
+	//virtual CBaseCombatWeapon	*GetActiveSpecialSuitAbility( void ) const;
 	
 	void  HandleSpeedChanges( void );
 
@@ -293,7 +305,7 @@ protected:
 	virtual void		UpdateWeaponPosture( void );
 
 	virtual void		ItemPostFrame();
-	virtual void		SpecialSuitAbilityPostFrame();
+	//virtual void		SpecialSuitAbilityPostFrame();
 	virtual void		PlayUseDenySound();
 
 private:
@@ -311,6 +323,14 @@ private:
 
 	CNetworkVar( bool, m_fIsSprinting );
 	CNetworkVarForDerived( bool, m_fIsWalking );
+
+#ifdef HL2_PLAYERANIMSTATE
+	CNetworkQAngle(m_angEyeAngles);
+	CHL2PlayerAnimState*   m_PlayerAnimState;
+	void DoAnimationEvent(PlayerAnimEvent_t event, int nData);
+	virtual void SetAnimation(PLAYER_ANIM playerAnim);
+	void SetupBones(matrix3x4_t *pBoneToWorld, int boneMask);
+#endif
 
 protected:	// Jeep: Portal_Player needs access to this variable to overload PlayerUse for picking up objects through portals
 	// This player's HL2 specific data that should only be replicated to 

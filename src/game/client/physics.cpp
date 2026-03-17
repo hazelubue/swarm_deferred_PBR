@@ -196,7 +196,9 @@ void PhysicsLevelInit( void )
 {
 	physenv = physics->CreateEnvironment();
 	assert( physenv );
-
+#ifdef PORTAL
+	physenv_main = physenv;
+#endif
 	{
 	MEM_ALLOC_CREDIT();
 	g_EntityCollisionHash = physics->CreateObjectPairHash();
@@ -259,7 +261,7 @@ static CBaseEntity *FindPhysicsBlocker( IPhysicsObject *pPhysics )
 }
 
 
-ConVar cl_ragdoll_collide( "cl_ragdoll_collide", "0" );
+ConVar cl_ragdoll_collide( "cl_ragdoll_collide", "1" ); //0
 
 int CCollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject *pObj1, void *pGameData0, void *pGameData1 )
 #if _DEBUG

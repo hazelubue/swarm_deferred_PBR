@@ -19,6 +19,7 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "simtimer.h"
 #include "vprof.h"
+#include <player_mobility_defs.h>
 
 class CLogicPlayerProxy;
 
@@ -407,7 +408,24 @@ public:
 
 	// View model prediction setup
 	void					CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov );
+	void					CalcViewDeferred(Vector& eyeOrigin, QAngle& eyeAngles, Vector& ssreyeOrigin, QAngle& ssreyeAngles, float& zNear, float& zFar, float& fov);
 
+	void					UpdateIndependentViewport();
+	void					GetIndependentViewport(Vector& eyeOrigin, QAngle& eyeAngles, Vector& SSReyeOrigin,
+							QAngle& SSReyeAngles, float& zNear, float& zFar, float& fov);
+	void					EnableIndependentViewport(bool bEnable) { m_bIndependentViewportEnabled = bEnable; }
+
+	bool					IsIndependentViewportEnabled() const { return m_bIndependentViewportEnabled; }
+
+	Vector m_vecIndependentEyeOrigin;
+	QAngle m_angIndependentEyeAngles;
+	Vector m_vecIndependentSSREyeOrigin;
+	QAngle m_angIndependentSSREyeAngles;
+	float m_flIndependentZNear;
+	float m_flIndependentZFar;
+	float m_flIndependentFOV;
+	bool m_bIndependentViewportEnabled;
+public:
 	// Handle view smoothing when going up stairs
 	void					SmoothViewOnStairs( Vector& eyeOrigin );
 	virtual float			CalcRoll (const QAngle& angles, const Vector& velocity, float rollangle, float rollspeed);
@@ -607,6 +625,50 @@ public:
 	bool					HasQueuedUsercmds( void ) const;
 
 	void					AvoidPhysicsProps( CUserCmd *pCmd );
+
+	// Mobility mod
+	bool m_bLessClip = false;
+	bool m_bIsPowerSliding = false;
+	WallRunState m_nWallRunState = WALLRUN_NOT;
+	Vector m_vecWallNorm;
+	float m_flAutoViewTime; // if wallrunning, when should start adjusting the view 
+	bool m_bWallRunBumpAhead; // are we moving out from the wall anticipating a bump?
+	Vector m_vecLastWallRunPos; // Position when we ended the last wallrun
+	AirJumpState m_nAirJumpState; // Is the airjump ready, in progress, or done?
+	// Is the player allowed to jump while in the air
+	bool                CanAirJump(void)
+	{
+		return IsSuitEquipped() &&
+			m_nAirJumpState != AIRJUMP_DONE &&
+			m_nAirJumpState != AIRJUMP_NORM_JUMPING;
+	}
+	HSOUNDSCRIPTHANDLE m_hssPowerSlideSound;
+	HSOUNDSCRIPTHANDLE m_hssWallRunSound;
+
+	float m_flCoyoteTime; // When a wallrun ends or we go over a cliff, allow a window when
+	// jumping counts as a normal jump off the ground/wall, even though
+	// technically airborn. Compensating for player's perception/reflexes.
+	// This is the absolute time until which we allow the special jump
+
+	float m_flNextWallRunTime; // Some times we want to have a little cooldown for wallrunning - 
+	// mostly if a wallrun ended because it was above a doorway
+
+	CNetworkVar(float, m_flFragCookStartTime); // Time the player started cooking a frag (used to reduce 
+	// the timer when chucking)
+	CNetworkVar(int, m_nMeleeState);
+
+	// Mobility sound functions
+	/*virtual void            PlayAirjumpSound(Vector& vecOrigin);
+	virtual void            PlayPowerSlideSound(Vector& vecOrigin);
+	virtual void            StopPowerSlideSound(void);
+	virtual void            PlayWallRunSound(Vector& vecOrigin);
+	virtual void            StopWallRunSound(void);*/
+
+	float   GetLavaTime() { return m_flLavaTime; }
+	void    SetLavaTime(float flNewTime) { m_flLavaTime = flNewTime; }
+
+	Vector  GetEscapeVel() { return m_vecCornerEscapeVel; }
+	void    SetEscapeVel(Vector vecNewVel) { m_vecCornerEscapeVel = vecNewVel; }
 
 	// Run a user command. The default implementation calls ::PlayerRunCommand. In TF, this controls a vehicle if
 	// the player is in one.
@@ -1024,6 +1086,11 @@ private:
 	float					m_flDuckTime;		// how long we've been ducking
 	float					m_flDuckJumpTime;	
 
+	float                   m_flLavaTime; // Time of last lava dmg
+	float                   m_flShoveTime; // Time of last shove
+
+	Vector                  m_vecCornerEscapeVel; // Replace wishdir to escape
+
 	float					m_flSuitUpdate;					// when to play next suit update
 	int						m_rgSuitPlayList[CSUITPLAYLIST];// next sentencenum to play for suit update
 	int						m_iSuitPlayNext;				// next sentence slot for queue storage;
@@ -1089,7 +1156,6 @@ private:
 protected:
 // Not transmitted
 	float					m_flWaterJumpTime;  // used to be called teleport_time
-	int					m_nAirJumpsRemaining;
 	Vector					m_vecWaterJumpVel;
 	int						m_nImpulse;
 	float					m_flSwimSoundTime;
@@ -1264,6 +1330,8 @@ private:
 public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false ) const;	// returns the solid mask for the given player, so bots can have a more-restrictive set
 };
+
+//CBasePlayer* mv_r2;
 
 typedef CHandle<CBasePlayer> CBasePlayerHandle;
 

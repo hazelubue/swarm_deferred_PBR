@@ -188,6 +188,13 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER5, true );
 		}
 
+		pShaderShadow->EnableTexture(SHADER_SAMPLER7, true);
+		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER7, false);
+
+		pShaderShadow->EnableTexture(SHADER_SAMPLER8, true);
+		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER8, false);
+
+		
 		pShaderShadow->EnableTexture(SHADER_SAMPLER6, true);
 
 		pShaderShadow->EnableSRGBWrite( true );
@@ -274,6 +281,14 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 			pShader->BindTexture( SHADER_SAMPLER5, info.m_nRefractTintTexture, info.m_nRefractTintTextureFrame );
 		}
 
+		ITexture* pSource = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
+
+		pShader->BindTexture(SHADER_SAMPLER7, pSource);
+
+		ITexture* pDepthTexture = materials->FindTexture("_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET);
+
+		pShader->BindTexture(SHADER_SAMPLER8, pDepthTexture);
+
 		DECLARE_DYNAMIC_VERTEX_SHADER( refract_vs30 );
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING,  pShaderAPI->GetCurrentNumBones() > 0 );
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
@@ -290,10 +305,26 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 
 		int numForwardLights = pExt->GetNumActiveForwardLights();
 
+		int x, y, w, t;
+		pShaderAPI->GetCurrentViewport(x, y, w, t);
+		float fl1[4] = { 1.0f / w, 1.0f / t, 0, 0 };
+
+		pShaderAPI->SetPixelShaderConstant(15, fl1);
+
+		const Matrix_Data_t& data = GetDeferredExt()->GetCommonData();
+
+		pShaderAPI->SetPixelShaderConstant(16, data.matViewInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(20, data.matProjInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(24, data.matView.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(31, data.matProj.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(35, data.flZDists, 2);
+		pShaderAPI->SetPixelShaderConstant(36, &data.aspect, 1);
+		pShaderAPI->SetPixelShaderConstant(37, &data.fov, 1);
+
 		float forwardLightCount[4] = { (float)numForwardLights, 0, 0, 0 };
 		pShaderAPI->SetPixelShaderConstant(11, forwardLightCount);
 
-		if (pShaderAPI != NULL && numForwardLights > 0 && numForwardLights < 14)
+		if (pShaderAPI != NULL && numForwardLights > 0 && numForwardLights < 12)
 		{
 			float* pLightData = pExt->GetForwardLightData();
 			if (pLightData)
@@ -307,7 +338,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		float* pSpotlightData = pExt->GetForwardSpotlightData();
 		if (pSpotlightData)
 		{
-			pShaderAPI->SetPixelShaderConstant(31,
+			pShaderAPI->SetPixelShaderConstant(38,
 				pSpotlightData,
 				pExt->GetForwardSpotLights_NumRows());
 		}

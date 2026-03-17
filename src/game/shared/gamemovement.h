@@ -20,14 +20,18 @@
 #define CBTEXTURENAMEMAX	13			// only load first n chars of name
 
 #define GAMEMOVEMENT_DUCK_TIME				1000		// ms
-#define GAMEMOVEMENT_JUMP_TIME				510			// ms approx - based on the 21 unit height jump
+#define GAMEMOVEMENT_JUMP_TIME				2000			// ms approx - based on the 21 unit height jump
 #define GAMEMOVEMENT_JUMP_HEIGHT			21.0f		// units
 #define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS			( TIME_TO_UNDUCK_MSECS )		// ms
 #define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS_INV		( GAMEMOVEMENT_DUCK_TIME - GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS )
 
+#define WALLRUN_MAX_Z 0.5
+
 struct surfacedata_t;
 
 class CBasePlayer;
+
+//CGameMovement* plyr_r2;
 
 class CGameMovement : public IGameMovement
 {
@@ -37,7 +41,7 @@ public:
 	CGameMovement( void );
 	virtual			~CGameMovement( void );
 
-	virtual void	ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove );
+	virtual void	ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove, CGameMovement* g_pMovement);
 	virtual void	Reset( void );
 	virtual void	StartTrackPredictionErrors( CBasePlayer *pPlayer );
 	virtual void	FinishTrackPredictionErrors( CBasePlayer *pPlayer );
@@ -46,7 +50,6 @@ public:
 	virtual const Vector&	GetPlayerMaxs( bool ducked ) const;
 	virtual const Vector&	GetPlayerViewOffset( bool ducked ) const;
 	virtual void SetupMovementBounds( CMoveData *pMove );
-	virtual void PerformLurchChecks();
 
 	virtual bool		IsMovingPlayerStuck( void ) const;
 	virtual CBasePlayer *GetMovingPlayer( void ) const;
@@ -62,13 +65,17 @@ public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false, CBasePlayer *testPlayer = NULL ) const;	///< returns the solid mask for the given player, so bots can have a more-restrictive set
 	CBasePlayer		*player;
 	CMoveData *GetMoveData() { return mv; }
-
 protected:
 	// Input/Output for this movement
 	CMoveData		*mv;
+
 	
 	int				m_nOldWaterLevel;
 	float			m_flWaterEntryTime;
+
+	float			m_flTimeLastJumped;
+	float			m_nLurchTimer;
+
 	int				m_nOnLadder;
 
 	Vector			m_vecForward;
@@ -79,7 +86,7 @@ protected:
 	// Does most of the player movement logic.
 	// Returns with origin, angles, and velocity modified in place.
 	// were contacted during the move.
-	virtual void	PlayerMove(	void );
+	virtual void	PlayerMove(CGameMovement* g_pMovement, CBasePlayer* g_pPlayer);
 
 	// Set ground data, etc.
 	void			FinishMove( void );
@@ -96,10 +103,15 @@ protected:
 
 	// Handles both ground friction and water friction
 	virtual void	Friction( void );
+	// Special friction for powersliding
+	
+	void            PowerSlideFriction(void);
 
 	virtual void	AirAccelerate( Vector& wishdir, float wishspeed, float accel );
 
-	virtual void	AirMove( void );
+	virtual void	AirMove(CGameMovement* pMovement, CBasePlayer* pPlayer);
+
+	virtual void	PerformLurch();
 	
 	virtual bool	CanAccelerate();
 	virtual void	Accelerate( Vector& wishdir, float wishspeed, float accel);
@@ -110,8 +122,11 @@ protected:
 	// Try to keep a walking player on the ground when running down slopes etc
 	virtual void	StayOnGround( void );
 
+	// Check if only touching wall with head/upper body
+	void            CheckFeetCanReachWall(void);
+
 	// Handle MOVETYPE_WALK.
-	virtual void	FullWalkMove();
+	virtual void	FullWalkMove(CGameMovement* g_pMovement, CBasePlayer* pPlayer);
 
 	// Implement this if you want to know when the player collides during OnPlayerMove
 	virtual void	OnTryPlayerMoveCollision( trace_t &tr ) {}
@@ -146,7 +161,47 @@ protected:
 	void			FullNoClipMove( float factor, float maxacceleration );
 
 	// Returns true if he started a jump (ie: should he play the jump animation)?
-	virtual bool	CheckJumpButton( void );	// Overridden by each game.
+	virtual bool	CheckJumpButton();	// Overridden by each game.
+
+	// Check if player should powerslide
+	// Called when we duck or land on the ground while ducked
+	virtual void    CheckPowerSlide(void);
+
+	// End powerslide - reset the vars, stop the sound
+	virtual void    EndPowerSlide(void);
+
+	virtual void    AnticipateWallRun(void);
+
+	virtual bool    CheckForSteps(const Vector& startpos, const Vector& vel);
+
+	// Get the yaw angle between the player and the wall normal
+	virtual float   GetWallRunYaw(void);
+
+	// Check if player should start wallrunning,
+	// i.e. hit a suitable wall while airborn.
+	virtual void    CheckWallRun(Vector& vecWallNormal, trace_t& pm);
+
+	// Check if player can scramble up on top of obstacle
+	virtual void    CheckWallRunScramble(bool& steps);
+
+	// Calculate the wallrun view roll angle based on the 
+	// yaw angle between the player and the wall
+	virtual float   GetWallRunRollAngle(void);
+
+	// Handle wallrun movement
+	virtual void    WallRunMove(void);
+
+	// Handle step-like bits of the wall when wallrunning
+	// (basically step move except wallnorm instead of up)
+	virtual void	WallRunAnticipateBump(void);
+
+	// Try not to get stuck moving in to a corner that is small
+	// and we could easily step around it.
+	virtual void    WallRunEscapeCorner(Vector& wishdir);
+	virtual bool    TryEscape(Vector& posD, float rotation, Vector move);
+
+	// Handle end of wallrun - set vars, stop sound
+	virtual void    EndWallRun(void);
 
 	// Dead player flying through air., e.g.
 	virtual void    FullTossMove( void );
@@ -155,7 +210,7 @@ protected:
 	void			FullObserverMove( void );
 
 	// Handle movement when in MOVETYPE_LADDER mode.
-	virtual void	FullLadderMove();
+	virtual void	FullLadderMove(CGameMovement* pMovement);
 
 	// The basic solid body movement clip that slides along multiple planes
 	virtual int		TryPlayerMove( Vector *pFirstDest=NULL, trace_t *pFirstTrace=NULL );

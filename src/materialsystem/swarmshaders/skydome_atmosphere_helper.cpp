@@ -173,7 +173,7 @@ void InitParamsSkydome(CBaseVSShader* pShader, IMaterialVar** params, const char
 
 	if (params[info.m_nCloudNoise]->IsDefined())
 	{
-		params[info.m_nCloudNoise]->SetStringValue("shaders/noise2");
+		params[info.m_nCloudNoise]->SetStringValue("shaders/noise");
 	}
 
 	/*if (params[info.m_nCloudNoise]->IsDefined())

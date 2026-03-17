@@ -40,6 +40,7 @@ public:
 	bool GetNextKey( char *keyName, char *Value );
 
 	const char *CurrentBufferPosition( void );
+
 };
 
 const char *MapEntity_ParseToken( const char *data, char *newToken );

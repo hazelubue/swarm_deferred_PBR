@@ -39,7 +39,7 @@
 #include "xbox/xbox_console.h"
 #endif
 #include "matchmaking/imatchframework.h"
-
+#include "cam_thirdperson.h"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -52,6 +52,7 @@ static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
 
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
 ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
+ConVar cl_use_v_viewmodel_fov("cl_use_v_viewmodel_fov", "0", FCVAR_CHEAT | FCVAR_ARCHIVE, "if set to true, we will use the v_viewmodel_fov convar instead of the weapon script.");
 
 extern ConVar v_viewmodel_fov;
 
@@ -186,7 +187,7 @@ ClientModeShared::ClientModeShared()
 ClientModeShared::~ClientModeShared()
 {
 	// VGui_Shutdown() should have deleted/NULL'd
-	//Assert( !m_pViewport );
+	Assert( !m_pViewport );
 }
 
 void ClientModeShared::ReloadScheme( void )
@@ -311,18 +312,28 @@ void ClientModeShared::OverrideView( CViewSetup *pSetup )
 
 	if( ::input->CAM_IsThirdPerson() )
 	{
-		Vector cam_ofs;
+		Vector cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();
+		Vector cam_ofs_distance = g_ThirdPersonManager.GetFinalCameraOffset();
 
-		::input->CAM_GetCameraOffset( cam_ofs );
+		cam_ofs_distance *= g_ThirdPersonManager.GetDistanceFraction();
 
 		camAngles[ PITCH ] = cam_ofs[ PITCH ];
 		camAngles[ YAW ] = cam_ofs[ YAW ];
 		camAngles[ ROLL ] = 0;
 
 		Vector camForward, camRight, camUp;
-		AngleVectors( camAngles, &camForward, &camRight, &camUp );
 
-		VectorMA( pSetup->origin, -cam_ofs[ ROLL ], camForward, pSetup->origin );
+		if (g_ThirdPersonManager.IsOverridingThirdPerson() == false)
+		{
+			engine->GetViewAngles(camAngles);
+		}
+
+		// get the forward vector
+		AngleVectors(camAngles, &camForward, &camRight, &camUp);
+
+		VectorMA(pSetup->origin, -cam_ofs_distance[0], camForward, pSetup->origin);
+		VectorMA(pSetup->origin, cam_ofs_distance[1], camRight, pSetup->origin);
+		VectorMA(pSetup->origin, cam_ofs_distance[2], camUp, pSetup->origin);
 
 		static ConVarRef c_thirdpersonshoulder( "c_thirdpersonshoulder" );
 		if ( c_thirdpersonshoulder.GetBool() )
@@ -707,6 +718,9 @@ void ClientModeShared::LevelInit( const char *newmap )
 //-----------------------------------------------------------------------------
 void ClientModeShared::LevelShutdown( void )
 {
+	// Reset the third person camera so we don't crash
+	g_ThirdPersonManager.Init();
+
 	if ( m_pChatElement )
 	{
 	m_pChatElement->LevelShutdown();
@@ -787,7 +801,25 @@ void ClientModeShared::Layout( bool bForce /*= false*/)
 
 float ClientModeShared::GetViewModelFOV( void )
 {
-	return v_viewmodel_fov.GetFloat();
+	if (!cl_use_v_viewmodel_fov.GetBool())
+	{
+		float viewFov = 54.0;
+
+		//CBaseCombatWeapon *pWeapon = (CBaseCombatWeapon*)GetActiveWeapon();
+		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+		C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : NULL;;
+		if (pWeapon)
+		{
+			viewFov = pWeapon->GetWeaponFOV();
+		}
+
+		//
+		return viewFov;
+	}
+	else
+	{
+		return v_viewmodel_fov.GetFloat();
+	}
 }
 
 vgui::Panel *ClientModeShared::GetPanelFromViewport( const char *pchNamePath )

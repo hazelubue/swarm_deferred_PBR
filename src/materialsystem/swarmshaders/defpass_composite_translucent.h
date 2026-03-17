@@ -12,6 +12,8 @@ struct defParms_composite_translucent
 		bModel = false;
 	};
 
+	int lighttype;
+
 	int BUMPMAP;
 	int MRAOTEXTURE;
 
@@ -40,6 +42,7 @@ struct defParms_composite_translucent
 	int iRimlightExponent;
 	int iRimlightAlbedoScale;
 	int iRimlightTint;
+	int iThickness;
 	int iRimlightModLight;
 
 	// alpha

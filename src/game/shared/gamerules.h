@@ -175,6 +175,9 @@ public:
 
 	virtual bool InRoundRestart( void ) { return false; }
 
+	//Allow thirdperson camera.
+	virtual bool AllowThirdPersonCamera( void ) { return false; }
+
 	virtual void RegisterScriptFunctions( void ){ };
 
 	virtual void ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValues ) {} 

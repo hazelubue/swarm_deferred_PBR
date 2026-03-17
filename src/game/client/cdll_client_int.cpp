@@ -106,15 +106,13 @@
 #ifdef GAMEUI_UISYSTEM2_ENABLED
 #include "gameui.h"
 #endif
-#ifdef GAMEUI_EMBEDDED
 
-#if defined( SWARM_DLL )
-#include "swarm/gameui/swarm/basemodpanel.h"
-#elif defined( SDK_CLIENT_DLL )
-#include "sdk/gameui/sdk/basemodpanel.h"
-#else
-#error "GAMEUI_EMBEDDED"
-#endif
+#ifdef GAMEUI_EMBEDDED
+	#if !defined( INFESTED_DLL )
+	#include "gameui/basemodpanel.h"
+	#else
+	#include "swarm/gameui/swarm/basemodpanel.h"
+	#endif
 #endif
 
 #ifdef DEMOPOLISH_ENABLED
@@ -127,7 +125,9 @@
 #include "c_rumble.h"
 #include "viewpostprocess.h"
 
-
+#ifdef PORTAL
+#include "PortalRender.h"
+#endif
 
 #ifdef INFESTED_PARTICLES
 #include "c_asw_generic_emitter.h"
@@ -141,9 +141,11 @@
 #include "tier1/UtlDict.h"
 #include "keybindinglistener.h"
 
+#ifdef DEFERRED
 // @Deferred - Biohazard
 // For cookie string table
 #include "deferred/deferred_shared_common.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -240,11 +242,14 @@ INetworkStringTable *g_StringTableVguiScreen = NULL;
 INetworkStringTable *g_pStringTableMaterials = NULL;
 INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableClientSideChoreoScenes = NULL;
+INetworkStringTable *g_pStringTableCustomWeapons = NULL;
+INetworkStringTable *g_pStringTableCustomWeaponsFactory = NULL;
 
 static CGlobalVarsBase dummyvars( true );
 // So stuff that might reference gpGlobals during DLL initialization won't have a NULL pointer.
 // Once the engine calls Init on this DLL, this pointer gets assigned to the shared data in the engine
 CGlobalVarsBase *gpGlobals = &dummyvars;
+
 class CHudChat;
 class CViewRender;
 
@@ -1218,9 +1223,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	g_pcv_ThreadMode = g_pCVar->FindVar( "host_thread_mode" );
 
 
-	//filesystem->AddSearchPath("../../../steamapps/common/portal 2/portal2", "GAME");
-	//filesystem->AddSearchPath("../../../steamapps/common/left 4 dead/left4dead", "GAME");
-	//filesystem->AddSearchPath("../../../steamapps/common/left 4 dead 2/left4dead2", "GAME");
 
 
 	COM_TimestampedLog( "InitGameSystems" );
@@ -1774,8 +1776,10 @@ void ConfigureCurrentSystemLevel()
 	char szModName[32] = "swarm";
 #elif defined ( HL2_EPISODIC )
 	char szModName[32] = "ep2";
+#elif defined ( HL2 )
+	char szModName[32] = "hl2";
 #elif defined ( SDK_CLIENT_DLL )
-	char szModName[32] = "swarm";//"sdk"; // TODO, FIXME. Need other ekv files?
+	char szModName[32] = "sdk";
 #endif
 
 	UpdateSystemLevel( nCPULevel, nGPULevel, nMemLevel, nGPUMemLevel, VGui_IsSplitScreen(), szModName );
@@ -1793,6 +1797,7 @@ void ConfigureCurrentSystemLevel()
 }
 
 
+
 //-----------------------------------------------------------------------------
 // Purpose: Per level init
 //-----------------------------------------------------------------------------
@@ -1801,7 +1806,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 	// HACK: Bogus, but the logic is too complicated in the engine
 	if (g_bLevelInitialized)
 		return;
-
 	g_bLevelInitialized = true;
 
 	engine->TickProgressBar();
@@ -1905,8 +1909,10 @@ void CHLClient::ResetStringTablePointers()
 	g_pStringTableInfoPanel = NULL;
 	g_pStringTableClientSideChoreoScenes = NULL;
 
-// @Deferred - Biohazard
+#ifdef DEFERRED
+	// @Deferred - Biohazard
 	g_pStringTable_LightCookies = NULL;
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2123,6 +2129,11 @@ void OnSceneStringTableChanged( void *object, INetworkStringTable *stringTable, 
 {
 }
 
+#ifdef SMMOD
+void OnCustomWeaponsTableChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, void const *newData );
+void OnCustomWeaponsFactoryTableChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, void const *newData );
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose: Hook up any callbacks here, the table definition has been parsed but 
 //  no data has been added yet
@@ -2177,13 +2188,29 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 		// When the particle system list changes, we need to know immediately
 		g_pStringTableExtraParticleFiles->SetStringChangedCallback( NULL, OnPrecacheParticleFile );
 	}
-// @Deferred - Biohazard
-	else if ( !Q_strcasecmp( tableName, COOKIE_STRINGTBL_NAME ) )
+#ifdef SMMOD
+	else if ( !Q_strcasecmp( tableName, "CustomWeaponsAliases" ) )
 	{
-		g_pStringTable_LightCookies = networkstringtable->FindTable( tableName );
-
-		g_pStringTable_LightCookies->SetStringChangedCallback( NULL, OnCookieTableChanged );
+		g_pStringTableCustomWeapons = networkstringtable->FindTable( tableName );
+		networkstringtable->SetAllowClientSideAddString( g_pStringTableCustomWeapons, false );
+		g_pStringTableCustomWeapons->SetStringChangedCallback( NULL, OnCustomWeaponsTableChanged );
 	}
+	else if ( !Q_strcasecmp( tableName, "CustomWeaponsFactory" ) )
+	{
+		g_pStringTableCustomWeaponsFactory = networkstringtable->FindTable( tableName );
+		networkstringtable->SetAllowClientSideAddString( g_pStringTableCustomWeaponsFactory, false );
+		g_pStringTableCustomWeaponsFactory->SetStringChangedCallback( NULL, OnCustomWeaponsFactoryTableChanged );
+	}
+#endif
+#ifdef DEFERRED
+	// @Deferred - Biohazard
+	else if (!Q_strcasecmp(tableName, COOKIE_STRINGTBL_NAME))
+	{
+		g_pStringTable_LightCookies = networkstringtable->FindTable(tableName);
+
+		g_pStringTable_LightCookies->SetStringChangedCallback(NULL, OnCookieTableChanged);
+	}
+#endif
 	else
 	{
 		// Pass tablename to gamerules last if all other checks fail
@@ -2383,7 +2410,9 @@ void OnRenderStart()
 	MDLCACHE_CRITICAL_SECTION();
 	MDLCACHE_COARSE_LOCK();
 
-
+#ifdef PORTAL
+	GetPortalRender().UpdatePortalPixelVisibility(); //updating this one or two lines before querying again just isn't cutting it. Update as soon as it's cheap to do so.
+#endif
 
 	partition->SuppressLists( PARTITION_ALL_CLIENT_EDICTS, true );
 	C_BaseEntity::SetAbsQueriesValid( false );
@@ -2832,16 +2861,10 @@ void CHLClient::WriteSaveGameScreenshotOfSize( const char *pFilename, int width,
 	view->WriteSaveGameScreenshotOfSize( pFilename, width, height );
 }
 
-
 // See RenderViewInfo_t
 void CHLClient::RenderView( const CViewSetup &setup, int nClearFlags, int whatToDraw )
 {
 	VPROF("RenderView");
-
-	//CDeferredViewRender* pDeferredView = static_cast<CDeferredViewRender*>(view);
-	
-	//SetOriginalViewSetup(setup);
-
 	view->RenderView( setup, setup, nClearFlags, whatToDraw );
 }
 
@@ -2914,7 +2937,7 @@ vgui::VPANEL CHLClient::GetFullscreenClientDLLVPanel( void )
 int XBX_GetActiveUserId()
 {
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	return XBX_GetUserId( GET_ACTIVE_SPLITSCREEN_SLOT() );
+	return XBX_GetUserId( );
 }
 
 //-----------------------------------------------------------------------------

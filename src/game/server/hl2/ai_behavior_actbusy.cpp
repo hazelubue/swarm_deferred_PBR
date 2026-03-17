@@ -1172,7 +1172,7 @@ int CAI_ActBusyBehavior::SelectScheduleWhileNotBusy( int iBase )
 		{
 			if( IsCombatActBusy() )
 			{
-				if ( m_hActBusyGoal->IsCombatActBusyTeleportAllowed() && m_iNumConsecutivePathFailures >= 2 && !AI_GetSinglePlayer()->FInViewCone(GetOuter()) ) 
+				if ( m_hActBusyGoal->IsCombatActBusyTeleportAllowed() && m_iNumConsecutivePathFailures >= 2 && (AI_IsSinglePlayer() && !AI_GetSinglePlayer()->FInViewCone(GetOuter())) )
 				{
 					// Looks like I've tried several times to find a path to a valid hint node and
 					// haven't been able to. This means I'm on a patch of node graph that simply
@@ -2497,7 +2497,7 @@ void CAI_ActBusyGoal::InputForceNPCToActBusy( inputdata_t &inputdata )
 			pHintNode = dynamic_cast<CAI_Hint*>(pEntity);
 			if ( !pHintNode )
 			{
-				Msg("ai_goal_actbusy input ForceNPCToActBusy fired targeting an entity that isn't a hintnode.\n", pszParam);
+				Msg("ai_goal_actbusy input ForceNPCToActBusy fired targeting an entity that isn't a hintnode.\n");
 				return;
 			}
 

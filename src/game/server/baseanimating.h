@@ -354,8 +354,9 @@ public:
 
 	bool PrefetchSequence( int iSequence );
 
-
-
+#ifdef PORTAL
+	virtual void OnFizzled(void);
+#endif
 
 private:
 	void LockStudioHdr();
@@ -364,6 +365,8 @@ private:
 	void StudioFrameAdvanceInternal( CStudioHdr *pStudioHdr, float flInterval );
 	void InputSetLightingOriginRelative( inputdata_t &inputdata );
 	void InputSetLightingOrigin( inputdata_t &inputdata );
+
+	void InputSetModelScale(inputdata_t &inputdata);
 
 public:
 	bool CanSkipAnimation( void );
@@ -384,6 +387,8 @@ public:
 
 	// was pev->framerate
 	CNetworkVar( float, m_flPlaybackRate );
+
+	CNetworkVar( bool, m_bSuppressAnimSounds );
 
 public:
 	void InitStepHeightAdjust( void );
@@ -445,7 +450,9 @@ protected:
 public:
 	COutputEvent m_OnIgnite;
 
-
+#ifdef PORTAL
+	COutputEvent m_OnFizzled;		// Fizzled by a fizzler
+#endif
 
 private:
 	CStudioHdr			*m_pStudioHdr;

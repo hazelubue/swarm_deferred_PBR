@@ -19,6 +19,10 @@ static ConVar mat_pbr_parallaxmap("mat_pbr_parallaxmap", "1");
 static ConVar mat_pbr_force_20b("mat_pbr_force_20b", "0", FCVAR_CHEAT);
 static ConVar mat_pbr_iblIntensity("mat_pbr_iblIntensity", "1000.0", FCVAR_CHEAT);
 
+extern ConVar r_ss_distortion;
+extern ConVar r_ss_power;
+extern ConVar r_ss_scale;
+
 
 static CCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > tmpBuf;
 
@@ -76,10 +80,11 @@ void InitPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 #endif
 
 
-	if (params[info.m_nMRAO]->IsDefined())
+	/*if (params[info.m_nMRAO]->IsDefined())
 	{
 		pShader->LoadTexture(info.m_nMRAO);
-	}
+	}*/
+	//fucking crashing for some unbenounced reason. yes the gbuffer is contextualized correctly.
 }
 
 void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMaterialVar** params,
@@ -112,8 +117,8 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 	const bool useParallax = mat_pbr_parallaxmap.GetBool();
 	bool bhasMRAO = IsTextureSet(info.m_nMRAO, params);
 
-	bool bHasFlowmap = params[info.FLOWMAP]->IsTexture();
-	bool bLightmap = !bModel;
+	//bool bHasFlowmap = params[info.FLOWMAP]->IsTexture();
+	//bool bLightmap = !bModel;
 
 	SHADOW_STATE
 	{
@@ -144,10 +149,6 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 				iVFmtFlags |= VERTEX_COLOR;
 		}
 
-		if (bLightmap)
-		{
-			iTexCoordNum = 4;
-		}
 
 		pShaderShadow->EnableTexture(SHADER_SAMPLER0, true);
 		pShaderShadow->EnableSRGBRead(SHADER_SAMPLER0, false);
@@ -212,8 +213,6 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
 		SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
 		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
-		SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
-		SET_STATIC_PIXEL_SHADER_COMBO(LIGHTMAP, bLightmap);
 		SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
 
 		pShader->PI_BeginCommandBuffer();
@@ -315,6 +314,12 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 				PARM_SET(info.iLitface) ? 1.0f : 0.0f,
 				0, 0);
 
+			int x, y, w, t;
+			pShaderAPI->GetCurrentViewport(x, y, w, t);
+			float fl1[4] = { 1.0f / w, 1.0f / t, 0, 0 };
+
+			tmpBuf.SetPixelShaderConstant(13, fl1);
+
 			tmpBuf.End();
 
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_GBUFFER0, tmpBuf.Copy());
@@ -342,21 +347,13 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		LightState_t lightState;
 		pShaderAPI->GetDX9LightState(&lightState);
 
-		if (bLightmap)
-			pShaderAPI->BindStandardTexture(SHADER_SAMPLER8, TEXTURE_BLACK);
+		ITexture* pSource = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
 
-		// Brushes don't need ambient cubes or dynamic lights
-		if (bModel)
-		{
-			// Models need ambient cube for baked lighting
-			lightState.m_bAmbientLight = true;
-		}
-		else
-		{
-			// Brushes use lightmaps
-			lightState.m_bAmbientLight = false;
-			lightState.m_nNumLights = 0;
-		}
+		pShader->BindTexture(SHADER_SAMPLER8, pSource);
+
+		ITexture* pDepthTexture = materials->FindTexture("_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET);
+
+		pShader->BindTexture(SHADER_SAMPLER7, pDepthTexture);
 
 		if (bModel && bFastVTex)
 		{
@@ -395,83 +392,43 @@ void DrawPassGBuffer(const defParms_gBuffer0& info, CBaseVSShader* pShader, IMat
 		UTIL_StringToFloatArray(flParallaxSamples, 1, mat_pbr_parallaxmap_quality.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_10, flParallaxSamples);
 
-		float c5[4] = { params[info.REFLECTAMOUNT]->GetFloatValue(), params[info.REFLECTAMOUNT]->GetFloatValue(),
-				params[info.REFRACTAMOUNT]->GetFloatValue(), params[info.REFRACTAMOUNT]->GetFloatValue() };
-		pShaderAPI->SetPixelShaderConstant(35, c5, 1);
-
-		float fogColorConstant[4];
-
-		params[info.FOGCOLOR]->GetVecValue(fogColorConstant, 3);
-		fogColorConstant[3] = 0.0f;
-
-		fogColorConstant[0] = SrgbGammaToLinear(fogColorConstant[0]);
-		fogColorConstant[1] = SrgbGammaToLinear(fogColorConstant[1]);
-		fogColorConstant[2] = SrgbGammaToLinear(fogColorConstant[2]);
-		pShaderAPI->SetPixelShaderConstant(36, fogColorConstant, 1);
-
-		if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER)
-		{
-			// Need to multiply by 4 in linear space since we premultiplied into
-			// the render target by .25 to get overbright data in the reflection render target.
-			float gammaReflectTint[3];
-			params[info.REFLECTTINT]->GetVecValue(gammaReflectTint, 3);
-			float linearReflectTint[4];
-			linearReflectTint[0] = GammaToLinear(gammaReflectTint[0]) * 4.0f;
-			linearReflectTint[1] = GammaToLinear(gammaReflectTint[1]) * 4.0f;
-			linearReflectTint[2] = GammaToLinear(gammaReflectTint[2]) * 4.0f;
-			linearReflectTint[3] = params[info.WATERBLENDFACTOR]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(34, linearReflectTint, 1);
-		}
-		else
-		{
-			pShader->SetPixelShaderConstantGammaToLinear(34, info.REFLECTTINT, info.WATERBLENDFACTOR);
-		}
-
-		float c7[4] =
-		{
-			params[info.FOGSTART]->GetFloatValue(),
-			params[info.FOGEND]->GetFloatValue() - params[info.FOGSTART]->GetFloatValue(),
-			1.0f,
-			0.0f
-		};
-		if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER)
-		{
-			// water overbright factor
-			c7[2] = 4.0;
-		}
-		pShaderAPI->SetPixelShaderConstant(37, c7, 1);
-
 		float vTimeConst[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		float flTime = pShaderAPI->CurrentTime();
 		vTimeConst[0] = flTime;
 		//vTimeConst[0] -= ( float )( ( int )( vTimeConst[0] / 1000.0f ) ) * 1000.0f;
-		pShaderAPI->SetPixelShaderConstant(38, vTimeConst, 1);
+		pShaderAPI->SetPixelShaderConstant(12, vTimeConst, 1);
 
-		if (bHasFlowmap)
-		{
-			pShader->BindTexture(SHADER_SAMPLER6, info.FLOWMAP, info.FLOWMAPFRAME);
-			pShader->BindTexture(SHADER_SAMPLER7, info.FLOW_NOISE_TEXTURE);
+		// Data passed from viewrender cpu side.
+		const Matrix_Data_t& data = GetDeferredExt()->GetCommonData();
 
-			float vFlowConst1[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			vFlowConst1[0] = 1.0f / params[info.FLOW_WORLDUVSCALE]->GetFloatValue();
-			vFlowConst1[1] = 1.0f / params[info.FLOW_NORMALUVSCALE]->GetFloatValue();
-			vFlowConst1[2] = params[info.FLOW_BUMPSTRENGTH]->GetFloatValue();
-			vFlowConst1[3] = params[info.COLOR_FLOW_DISPLACEBYNORMALSTRENGTH]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(13, vFlowConst1, 1);
+		pShaderAPI->SetPixelShaderConstant(16, data.matViewInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(20, data.matProjInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(24, data.matView.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(31, data.matProj.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(38, data.matStaticView.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(42, data.matStaticViewInv.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(35, data.flZDists, 2);
+		pShaderAPI->SetPixelShaderConstant(36, &data.aspect, 1);
+		pShaderAPI->SetPixelShaderConstant(37, &data.fov, 1);
 
-			float vFlowConst2[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			vFlowConst2[0] = params[info.FLOW_TIMEINTERVALINSECONDS]->GetFloatValue();
-			vFlowConst2[1] = params[info.FLOW_UVSCROLLDISTANCE]->GetFloatValue();
-			vFlowConst2[2] = params[info.FLOW_NOISE_SCALE]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(14, vFlowConst2, 1);
+		float viewportOffset[2];
+		viewportOffset[0] = data.viewportOffsetX;
+		viewportOffset[1] = data.viewportOffsetY;
 
-			float vColorFlowConst1[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			vColorFlowConst1[0] = 1.0f / params[info.COLOR_FLOW_UVSCALE]->GetFloatValue();
-			vColorFlowConst1[1] = params[info.COLOR_FLOW_TIMEINTERVALINSECONDS]->GetFloatValue();
-			vColorFlowConst1[2] = params[info.COLOR_FLOW_UVSCROLLDISTANCE]->GetFloatValue();
-			vColorFlowConst1[3] = params[info.COLOR_FLOW_LERPEXP]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(26, vColorFlowConst1, 1);
-		}
+		pShaderAPI->SetPixelShaderConstant(38, viewportOffset, 1);
+
+		// end data passed from viewrender.
+
+		float flthickness = 0.125f;
+
+		pShaderAPI->SetPixelShaderConstant(39, &flthickness, 1);
+
+		float scatteringVars[3];
+		scatteringVars[0] = r_ss_distortion.GetFloat();
+		scatteringVars[1] = r_ss_power.GetFloat();
+		scatteringVars[2] = r_ss_scale.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(41, scatteringVars, 1);
 
 		float vPos[4] = { 0,0,0,0 };
 		pShaderAPI->GetWorldSpaceCameraPosition(vPos);

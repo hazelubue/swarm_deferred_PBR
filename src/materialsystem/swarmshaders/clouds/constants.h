@@ -1,23 +1,36 @@
 #if !defined INCLUDE_SKY_CLOUDS_CONSTANTS
 #define INCLUDE_SKY_CLOUDS_CONSTANTS
 
-#include "/include/sky/atmosphere.glsl"
 
-const float clouds_cumulus_radius          = planet_radius + CLOUDS_CUMULUS_ALTITUDE;
-const float clouds_cumulus_thickness       = CLOUDS_CUMULUS_ALTITUDE * CLOUDS_CUMULUS_THICKNESS;
-const float clouds_cumulus_top_radius      = clouds_cumulus_radius + clouds_cumulus_thickness;
+// ====================================
+// Cloud System Constants
+// ====================================
 
-const float clouds_altocumulus_radius      = planet_radius + CLOUDS_ALTOCUMULUS_ALTITUDE;
-const float clouds_altocumulus_thickness   = CLOUDS_ALTOCUMULUS_ALTITUDE * CLOUDS_ALTOCUMULUS_THICKNESS;
-const float clouds_altocumulus_top_radius  = clouds_altocumulus_radius + clouds_altocumulus_thickness;
+static const float clouds_cumulus_radius = 6371000.0 + 1500.0;
+static const float clouds_cumulus_top_radius = 6371000.0 + 3500.0;
+static const float clouds_cumulus_thickness = 2000.0;
+static const float clouds_cumulus_congestus_distance = 50000.0;
+static const float clouds_altocumulus_radius = 6371000.0 + 4000.0;
 
-const float clouds_cirrus_radius           = planet_radius + CLOUDS_CIRRUS_ALTITUDE;
-const float clouds_cirrus_thickness        = CLOUDS_CIRRUS_ALTITUDE * CLOUDS_ALTOCUMULUS_THICKNESS;
-const float clouds_cirrus_top_radius       = clouds_cirrus_radius + clouds_cirrus_thickness;
-const float clouds_cirrus_extinction_coeff = 0.15;
-const float clouds_cirrus_scattering_coeff = clouds_cirrus_extinction_coeff;
+static float world_age = 0.0;
+static float3 cameraPosition = float3(0, 0, 0);
+static const float CLOUDS_SCALE = 1.0;
+static const float CLOUDS_CUMULUS_WIND_ANGLE = 45.0;
+static const float CLOUDS_CUMULUS_WIND_SPEED = 10.0;
+static const int CLOUDS_CUMULUS_PRIMARY_STEPS_H = 16;
+static const int CLOUDS_CUMULUS_PRIMARY_STEPS_Z = 24;
+static const int CLOUDS_CUMULUS_LIGHTING_STEPS = 3;
+static const int CLOUDS_CUMULUS_AMBIENT_STEPS = 2;
 
-const float clouds_noctilucent_altitude    = 80000.0;
-const float clouds_noctilucent_radius      = planet_radius + clouds_noctilucent_altitude;
+static const float CLOUDS_CUMULUS_SIZE = 1.0;
+
+// Global cloud parameters
+static CloudParams clouds_params;
+//static float3 sun_dir;
+//static float3 moon_dir;
+//static float3 sun_color;
+//static float3 moon_color;
+//static float3 sky_color;
+//static float3 sunlight_color;
 
 #endif // INCLUDE_SKY_CLOUDS_CONSTANTS

@@ -94,7 +94,7 @@ public:
 
 	virtual		void		CAM_Think( void );
 	virtual		int			CAM_IsThirdPerson( int nSlot = -1 );
-	virtual		void		CAM_GetCameraOffset( Vector& ofs );
+//	virtual		void		CAM_GetCameraOffset( Vector& ofs );
 	virtual		void		CAM_ToThirdPerson(void);
 	virtual		void		CAM_ToFirstPerson(void);
 	virtual		void		CAM_ToThirdPersonShoulder(void);
@@ -240,7 +240,7 @@ protected:
 			// Is the 3rd person camera using the mouse?
 			m_fCameraInterceptingMouse = 0;
 			// Are we in 3rd person view?
-			m_fCameraInThirdPerson = true;
+			m_fCameraInThirdPerson = 0;
 			// Should we move view along with mouse?
 			m_fCameraMovingWithMouse = 0;
 			// What is the current camera offset from the view origin?

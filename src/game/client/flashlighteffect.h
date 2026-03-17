@@ -18,7 +18,6 @@ class CFlashlightEffect
 public:
 
 	CFlashlightEffect(int nEntIndex = 0, const char *pszTextureName = NULL, float flFov = 0.0f, float flFarZ = 0.0f, float flLinearAtten = 0.0f );
-	// @Deferred - Biohazard
 	virtual ~CFlashlightEffect();
 
 	void UpdateLight( int nEntIdx, const Vector &vecPos, const Vector &vecDir, const Vector &vecRight, const Vector &vecUp, float flFov, 
@@ -47,7 +46,7 @@ public:
 protected:
 
 	// @Deferred - Biohazard
-	virtual void UpdateLightProjection( FlashlightState_t &state );
+	virtual void UpdateLightProjection(FlashlightState_t &state);
 
 	bool UpdateDefaultFlashlightState(	FlashlightState_t& state, const Vector &vecPos, const Vector &vecDir, const Vector &vecRight,
 										const Vector &vecUp, bool castsShadows, bool bTracePlayers = true );
@@ -115,7 +114,7 @@ public:
 								m_bFlashlightOn( false ), m_nFXComputeFrame( -1 ), m_bFlashlightOverride( false ) {}
 
 	// @Deferred - Biohazard
-	void TurnOnFlashlight( int nEntIndex = 0, const char *pszTextureName = NULL, float flFov = 0.0f, float flFarZ = 0.0f, float flLinearAtten = 0.0f );
+	void TurnOnFlashlight(int nEntIndex = 0, const char *pszTextureName = NULL, float flFov = 0.0f, float flFarZ = 0.0f, float flLinearAtten = 0.0f);
 
 	void TurnOffFlashlight( bool bForce = false )
 	{

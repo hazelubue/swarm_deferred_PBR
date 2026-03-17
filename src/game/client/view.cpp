@@ -62,17 +62,12 @@
 #define USE_MONITORS
 #endif
 
-
-
-
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-#include <deferred/viewrender_deferred.h>
 
 void ToolFramework_AdjustEngineViewport(int& x, int& y, int& width, int& height);
 bool ToolFramework_SetupEngineView(Vector& origin, QAngle& angles, float& fov);
 bool ToolFramework_SetupEngineMicrophone(Vector& origin, QAngle& angles);
-
 
 extern ConVar default_fov;
 extern bool g_bRenderingScreenshot;
@@ -93,29 +88,30 @@ ConVar zoom_sensitivity_ratio("zoom_sensitivity_ratio", "1.0", 0, "Additional mo
 
 // Each MOD implements GetViewRenderInstance() and provides either a default object or a subclassed object!!!
 IViewRender* view = NULL;	// set in cldll_client_init.cpp if no mod creates their own
-CDeferredViewRender* m_OriginalViewSetup = NULL;
-//static CViewSetup* m_OriginalViewSetup = NULL;
 #if _DEBUG
 bool g_bRenderingCameraView = false;
 #endif
 
-static Vector g_vecRenderOrigin[MAX_SPLITSCREEN_PLAYERS];
-static QAngle g_vecRenderAngles[MAX_SPLITSCREEN_PLAYERS];
-static Vector g_vecPrevRenderOrigin[MAX_SPLITSCREEN_PLAYERS];	// Last frame's render origin
-static QAngle g_vecPrevRenderAngles[MAX_SPLITSCREEN_PLAYERS]; // Last frame's render angles
-static Vector g_vecVForward[MAX_SPLITSCREEN_PLAYERS], g_vecVRight[MAX_SPLITSCREEN_PLAYERS], g_vecVUp[MAX_SPLITSCREEN_PLAYERS];
-static VMatrix g_matCamInverse[MAX_SPLITSCREEN_PLAYERS];
+// These are the vectors for the "main" view - the one the player is looking down.
+static Vector g_vecRenderOrigin(0, 0, 0);
+static QAngle g_vecRenderAngles(0, 0, 0);
+
+extern Vector g_vecRenderOriginStatic;
+extern QAngle g_vecRenderAnglesStatic;
+
+static Vector g_vecPrevRenderOrigin(0, 0, 0);	// Last frame's render origin
+static QAngle g_vecPrevRenderAngles(0, 0, 0); // Last frame's render angles
+static Vector g_vecVForward(0, 0, 0), g_vecVRight(0, 0, 0), g_vecVUp(0, 0, 0);
+static VMatrix g_matCamInverse;
 
 extern ConVar cl_forwardspeed;
 
 static ConVar v_centermove("v_centermove", "0.15");
 static ConVar v_centerspeed("v_centerspeed", "500");
 
-
 // 54 degrees approximates a 35mm camera - we determined that this makes the viewmodels
 // and motions look the most natural.
 ConVar v_viewmodel_fov("viewmodel_fov", "72", FCVAR_CHEAT);
-
 
 static ConVar mat_viewportscale("mat_viewportscale", "1.0", FCVAR_CHEAT, "Scale down the main viewport (to reduce GPU impact on CPU profiling)",
 	true, (1.0f / 640.0f), true, 1.0f);
@@ -161,27 +157,29 @@ static void CalcDemoViewOverride(Vector& origin, QAngle& angles)
 	angles = s_DemoAngle;
 }
 
-
-CViewSetup& CViewRender::GetView(int nSlot /*= -1*/)
+// Selects the relevant member variable to update. You could do it manually, but...
+// We always set up the MONO eye, even when doing stereo, and it's set up to be mid-way between the left and right,
+// so if you don't really care about L/R (e.g. culling, sound, etc), just use MONO.
+CViewSetup& CViewRender::GetView(StereoEye_t eEye)
 {
-	Assert(m_bAllowViewAccess);
-	if (nSlot == -1)
+	if (eEye == STEREO_EYE_MONO)
 	{
-		ASSERT_LOCAL_PLAYER_RESOLVABLE();
-		return m_UserView[GET_ACTIVE_SPLITSCREEN_SLOT()];
+		return m_View;
 	}
-	return m_UserView[nSlot];
+	else if (eEye == STEREO_EYE_RIGHT)
+	{
+		return m_ViewRight;
+	}
+	else
+	{
+		Assert(eEye == STEREO_EYE_LEFT);
+		return m_ViewLeft;
+	}
 }
 
-const CViewSetup& CViewRender::GetView(int nSlot /*= -1*/) const
+const CViewSetup& CViewRender::GetView(StereoEye_t eEye) const
 {
-	Assert(m_bAllowViewAccess);
-	if (nSlot == -1)
-	{
-		ASSERT_LOCAL_PLAYER_RESOLVABLE();
-		return m_UserView[GET_ACTIVE_SPLITSCREEN_SLOT()];
-	}
-	return m_UserView[nSlot];
+	return (const_cast<CViewRender*>(this))->GetView(eEye);
 }
 
 //-----------------------------------------------------------------------------
@@ -189,42 +187,42 @@ const CViewSetup& CViewRender::GetView(int nSlot /*= -1*/) const
 //-----------------------------------------------------------------------------
 const Vector& MainViewOrigin(int nSlot)
 {
-	return g_vecRenderOrigin[nSlot];
+	return g_vecRenderOrigin;
 }
 
 const QAngle& MainViewAngles(int nSlot)
 {
-	return g_vecRenderAngles[nSlot];
+	return g_vecRenderAngles;
 }
 
 const Vector& MainViewForward(int nSlot)
 {
-	return g_vecVForward[nSlot];
+	return g_vecVForward;
 }
 
 const Vector& MainViewRight(int nSlot)
 {
-	return g_vecVRight[nSlot];
+	return g_vecVRight;
 }
 
 const Vector& MainViewUp(int nSlot)
 {
-	return g_vecVUp[nSlot];
+	return g_vecVUp;
 }
 
 const VMatrix& MainWorldToViewMatrix(int nSlot)
 {
-	return g_matCamInverse[nSlot];
+	return g_matCamInverse;
 }
 
 const Vector& PrevMainViewOrigin(int nSlot)
 {
-	return g_vecPrevRenderOrigin[nSlot];
+	return g_vecPrevRenderOrigin;
 }
 
 const QAngle& PrevMainViewAngles(int nSlot)
 {
-	return g_vecPrevRenderAngles[nSlot];
+	return g_vecPrevRenderAngles;
 }
 
 //-----------------------------------------------------------------------------
@@ -249,7 +247,6 @@ void ComputeCameraVariables(const Vector& vecOrigin, const QAngle& vecAngles,
 	(*pMatCamInverse)[3][3] = 1.0F;
 }
 
-
 bool R_CullSphere(
 	VPlane const* pPlanes,
 	int nPlanes,
@@ -262,7 +259,6 @@ bool R_CullSphere(
 
 	return false;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -296,20 +292,27 @@ void CViewRender::Init(void)
 	extern CMaterialReference g_material_WriteZ;
 	g_material_WriteZ.Init("engine/writez", TEXTURE_GROUP_OTHER);
 
-	for (int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i)
-	{
-		g_vecRenderOrigin[i].Init();
-		g_vecRenderAngles[i].Init();
-		g_vecPrevRenderOrigin[i].Init();
-		g_vecPrevRenderAngles[i].Init();
-		g_vecVForward[i].Init();
-		g_vecVRight[i].Init();
-		g_vecVUp[i].Init();
-		g_matCamInverse[i].Identity();
-	}
+	// Initialize view vectors
+	g_vecRenderOrigin.Init();
+	g_vecRenderAngles.Init();
+	g_vecPrevRenderOrigin.Init();
+	g_vecPrevRenderAngles.Init();
+	g_vecVForward.Init();
+	g_vecVRight.Init();
+	g_vecVUp.Init();
+	g_matCamInverse.Identity();
 
 	g_pScreenSpaceEffects->EnableScreenSpaceEffect("ssr");
+	m_SkydomeMaterial.Init("shaders/skydome", TEXTURE_GROUP_MODEL);
+
+	//ResetCascadeDelay();
 }
+
+//void CViewRender::ResetCascadeDelay()
+//{
+//	for (int i = 0; i < SHADOW_NUM_CASCADES; i++)
+//		m_flRenderDelay[i] = 0;
+//}
 
 CMaterialReference& CViewRender::GetWhite()
 {
@@ -327,11 +330,8 @@ void CViewRender::LevelInit(void)
 	m_BuildWorldListsNumber = 0;
 	m_BuildRenderableListsNumber = 0;
 
-	for (int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i)
-	{
-		m_FreezeParams[i].m_bTakeFreezeFrame = false;
-		m_FreezeParams[i].m_flFreezeFrameUntil = 0;
-	}
+	//m_FreezeParams.m_bTakeFreezeFrame = false;
+	//m_FreezeParams.m_flFreezeFrameUntil = 0;
 
 	// Clear our overlay materials
 	m_ScreenOverlayMaterial.Init(NULL);
@@ -365,11 +365,9 @@ void CViewRender::Shutdown(void)
 	tempents->Shutdown();
 }
 
-
 //-----------------------------------------------------------------------------
 // Returns the worldlists build number
 //-----------------------------------------------------------------------------
-
 int CViewRender::BuildWorldListsNumber(void) const
 {
 	return m_BuildWorldListsNumber;
@@ -448,7 +446,7 @@ void CViewRender::DriftPitch(void)
 	}
 
 	// How far off are we
-	delta = prediction->GetIdealPitch(player->GetSplitScreenPlayerSlot()) - player->GetAbsAngles()[PITCH];
+	delta = prediction->GetIdealPitch(0) - player->GetAbsAngles()[PITCH];
 	if (!delta)
 	{
 		m_PitchDrift.pitchvel = 0;
@@ -486,78 +484,67 @@ void CViewRender::DriftPitch(void)
 void CViewRender::OnRenderStart()
 {
 	VPROF_("CViewRender::OnRenderStart", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0);
-	IterateRemoteSplitScreenViewSlots_Push(true);
-	FOR_EACH_VALID_SPLITSCREEN_PLAYER(hh)
+
+	// This will fill in the m_UserView slot
+	SetUpView();
+
+	// Adjust mouse sensitivity based upon the current FOV
+	C_BasePlayer* player = C_BasePlayer::GetLocalPlayer();
+	if (player)
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI(hh);
+		default_fov.SetValue(player->m_iDefaultFOV);
 
-		// This will fill in one of the m_UserView[ hh ] slots
-		SetUpView();
+		// Update our FOV, including any zooms going on
+		int iDefaultFOV = default_fov.GetInt();
+		int	localFOV = player->GetFOV();
+		int min_fov = player->GetMinFOV();
 
-		// Adjust mouse sensitivity based upon the current FOV
-		C_BasePlayer* player = C_BasePlayer::GetLocalPlayer();
-		if (player)
-		{
-			default_fov.SetValue(player->m_iDefaultFOV);
+		// Don't let it go too low
+		localFOV = MAX(min_fov, localFOV);
 
-			//Update our FOV, including any zooms going on
-			int iDefaultFOV = default_fov.GetInt();
-			int	localFOV = player->GetFOV();
-			int min_fov = player->GetMinFOV();
-
-			// Don't let it go too low
-			localFOV = MAX(min_fov, localFOV);
-
-			GetHud().m_flFOVSensitivityAdjust = 1.0f;
+		GetHud().m_flFOVSensitivityAdjust = 1.0f;
 #ifndef _XBOX
-			if (GetHud().m_flMouseSensitivityFactor)
+		if (GetHud().m_flMouseSensitivityFactor)
+		{
+			GetHud().m_flMouseSensitivity = sensitivity.GetFloat() * GetHud().m_flMouseSensitivityFactor;
+		}
+		else
+#endif
+		{
+			// No override, don't use huge sensitivity
+			if (localFOV == iDefaultFOV)
 			{
-				GetHud().m_flMouseSensitivity = sensitivity.GetFloat() * GetHud().m_flMouseSensitivityFactor;
+#ifndef _XBOX
+				// reset to saved sensitivity
+				GetHud().m_flMouseSensitivity = 0;
+#endif
 			}
 			else
-#endif
 			{
-				// No override, don't use huge sensitivity
-				if (localFOV == iDefaultFOV)
+				// Set a new sensitivity that is proportional to the change from the FOV default and scaled
+				//  by a separate compensating factor
+				if (iDefaultFOV == 0)
 				{
-#ifndef _XBOX
-					// reset to saved sensitivity
-					GetHud().m_flMouseSensitivity = 0;
-#endif
+					Assert(0); // would divide by zero, something is broken with iDefaultFOV
+					iDefaultFOV = 1;
 				}
-				else
-				{
-					// Set a new sensitivity that is proportional to the change from the FOV default and scaled
-					//  by a separate compensating factor
-					if (iDefaultFOV == 0)
-					{
-						Assert(0); // would divide by zero, something is broken with iDefatulFOV
-						iDefaultFOV = 1;
-					}
-					GetHud().m_flFOVSensitivityAdjust =
-						((float)localFOV / (float)iDefaultFOV) * // linear fov downscale
-						zoom_sensitivity_ratio.GetFloat(); // sensitivity scale factor
+				GetHud().m_flFOVSensitivityAdjust =
+					((float)localFOV / (float)iDefaultFOV) * // linear fov downscale
+					zoom_sensitivity_ratio.GetFloat(); // sensitivity scale factor
 #ifndef _XBOX
-					GetHud().m_flMouseSensitivity = GetHud().m_flFOVSensitivityAdjust * sensitivity.GetFloat(); // regular sensitivity
+				GetHud().m_flMouseSensitivity = GetHud().m_flFOVSensitivityAdjust * sensitivity.GetFloat(); // regular sensitivity
 #endif
-				}
 			}
 		}
 	}
 
 	// Setup the frustum cache for this frame.
 	m_bAllowViewAccess = true;
-	FOR_EACH_VALID_SPLITSCREEN_PLAYER(iSlot)
-	{
-		const CViewSetup& view = GetView(iSlot);
-		FrustumCache()->Add(&view, iSlot);
-	}
+	const CViewSetup& view = GetView(STEREO_EYE_MONO);
+	FrustumCache()->Add(&view, 0);
 	FrustumCache()->SetUpdated();
 	m_bAllowViewAccess = false;
-
-	IterateRemoteSplitScreenViewSlots_Pop();
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -568,24 +555,14 @@ const CViewSetup* CViewRender::GetViewSetup(void) const
 	return &m_CurrentView;
 }
 
-const CViewSetup* CViewRender::GetDeferredViewSetup(CViewSetup* setup) const
-{
-	return setup;
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : const CViewSetup
 //-----------------------------------------------------------------------------
-const CViewSetup* CViewRender::GetPlayerViewSetup(int nSlot /*= -1*/) const
+const CViewSetup* CViewRender::GetPlayerViewSetup(void) const
 {
-	// NOTE:  This code path doesn't require m_bAllowViewAccess == true!!!
-	if (nSlot == -1)
-	{
-		ASSERT_LOCAL_PLAYER_RESOLVABLE();
-		return &m_UserView[GET_ACTIVE_SPLITSCREEN_SLOT()];
-	}
-	return &m_UserView[nSlot];
+	const CViewSetup& viewEye = GetView(STEREO_EYE_MONO);
+	return &viewEye;
 }
 
 //-----------------------------------------------------------------------------
@@ -597,8 +574,8 @@ void CViewRender::DisableVis(void)
 }
 
 #ifdef DBGFLAG_ASSERT
-static Vector s_DbgSetupOrigin[MAX_SPLITSCREEN_PLAYERS];
-static QAngle s_DbgSetupAngles[MAX_SPLITSCREEN_PLAYERS];
+static Vector s_DbgSetupOrigin;
+static QAngle s_DbgSetupAngles;
 #endif
 
 //-----------------------------------------------------------------------------
@@ -635,52 +612,57 @@ float CViewRender::GetZFar()
 	return farZ;
 }
 
-
-//-----------------------------------------------------------------------------
-// Sets up the view parameters
-//-----------------------------------------------------------------------------
 void CViewRender::SetUpView()
 {
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
+	VPROF("CViewRender::SetUpViews");
 
-	m_bAllowViewAccess = true;
-	VPROF("CViewRender::SetUpView");
 	// Initialize view structure with default values
 	float farZ = GetZFar();
 
-	CViewSetup& view = GetView();
 
-	view.zFar = farZ;
-	view.zFarViewmodel = farZ;
+	// Set up the mono/middle view.
+	CViewSetup& viewEye = m_View;
+
+	viewEye.zFar = farZ;
+	viewEye.zFarViewmodel = farZ;
 	// UNDONE: Make this farther out? 
 	//  closest point of approach seems to be view center to top of crouched box
-	view.zNear = GetZNear();
-	view.zNearViewmodel = 1;
-	view.fov = default_fov.GetFloat();
+	viewEye.zNear = GetZNear();
+	viewEye.zNearViewmodel = 1;
+	viewEye.fov = default_fov.GetFloat();
 
-	view.m_bOrtho = false;
+	viewEye.m_bOrtho = false;
+	//viewEye.m_bViewToProjectionOverride = false;
+	//viewEye.m_eStereoEye = STEREO_EYE_MONO;
+
+	CViewSetup& viewStatic = m_View;
+
+	viewStatic.zFar = farZ;
+	viewStatic.zFarViewmodel = farZ;
+	viewStatic.zNear = GetZNear();
+	viewStatic.zNearViewmodel = 1;
+	viewStatic.fov = default_fov.GetFloat();
+
+	viewStatic.m_bOrtho = false;
 
 	// Enable spatial partition access to edicts
-	partition->SuppressLists(PARTITION_ALL_CLIENT_EDICTS, false);
+	::partition->SuppressLists(PARTITION_ALL_CLIENT_EDICTS, false);
 
 	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
 
-	bool bNoViewEnt = false;
-	if (pPlayer == NULL)
-	{
-		pPlayer = GetSplitScreenViewPlayer(nSlot);
-		bNoViewEnt = true;
-	}
+	// You in-view weapon aim.
+	bool bCalcViewModelView = false;
+	Vector ViewModelOrigin;
+	QAngle ViewModelAngles;
 
-	if (g_bEngineIsHLTV)
+	if (engine->IsHLTV())
 	{
-		HLTVCamera()->CalcView(view.origin, view.angles, view.fov);
+		HLTVCamera()->CalcView(viewEye.origin, viewEye.angles, viewEye.fov);
 	}
 #if defined( REPLAY_ENABLED )
-	else if (engine->IsReplay())
+	else if (g_pEngineClientReplay->IsPlayingReplayDemo())
 	{
-		ReplayCamera()->CalcView(view.origin, view.angles, view.fov);
+		ReplayCamera()->CalcView(viewEye.origin, viewEye.angles, viewEye.fov);
 	}
 #endif
 	else
@@ -689,90 +671,117 @@ void CViewRender::SetUpView()
 		// FIXME: What happens when there's no player?
 		if (pPlayer)
 		{
-			pPlayer->CalcView(view.origin, view.angles, view.zNear, view.zFar, view.fov);
+			pPlayer->CalcView(viewEye.origin, viewEye.angles, viewEye.zNear, viewEye.zFar, viewEye.fov);
 
-			// If we are looking through another entities eyes, then override the angles/origin for GetView()
+			// If we are looking through another entities eyes, then override the angles/origin for view
 			int viewentity = render->GetViewEntity();
 
-			if (!bNoViewEnt && !g_nKillCamMode && (pPlayer->entindex() != viewentity))
+			if (!g_nKillCamMode && (pPlayer->entindex() != viewentity))
 			{
 				C_BaseEntity* ve = cl_entitylist->GetEnt(viewentity);
 				if (ve)
 				{
-					VectorCopy(ve->GetAbsOrigin(), view.origin);
-					VectorCopy(ve->GetAbsAngles(), view.angles);
+					VectorCopy(ve->GetAbsOrigin(), viewEye.origin);
+					VectorCopy(ve->GetAbsAngles(), viewEye.angles);
 				}
 			}
 
-			pPlayer->CalcViewModelView(view.origin, view.angles);
-
-			// Is this the proper place for this code?
-			if (cl_camera_follow_bone_index.GetInt() >= -1 && input->CAM_IsThirdPerson())
-			{
-				VectorCopy(g_cameraFollowPos, view.origin);
-			}
+			// There is a viewmodel.
+			bCalcViewModelView = true;
+			ViewModelOrigin = viewEye.origin;
+			ViewModelAngles = viewEye.angles;
+		}
+		else
+		{
+			viewStatic.origin.Init();
+			viewStatic.angles.Init();
+			viewEye.origin.Init();
+			viewEye.angles.Init();
 		}
 
 		// Even if the engine is paused need to override the view
 		// for keeping the camera control during pause.
-		GetClientMode()->OverrideView(&GetView());
+		GetClientMode()->OverrideView(&viewEye);
 	}
 
 	// give the toolsystem a chance to override the view
-	ToolFramework_SetupEngineView(view.origin, view.angles, view.fov);
+	ToolFramework_SetupEngineView(viewEye.origin, viewEye.angles, viewEye.fov);
 
 	if (engine->IsPlayingDemo())
 	{
 		if (cl_demoviewoverride.GetFloat() > 0.0f)
 		{
-			// Retreive view angles from engine ( could have been set in IN_AdjustAngles above )
-			CalcDemoViewOverride(view.origin, view.angles);
+			// Retrieve view angles from engine (could have been set in IN_AdjustAngles above)
+			CalcDemoViewOverride(viewEye.origin, viewEye.angles);
 		}
 		else
 		{
-			s_DemoView = view.origin;
-			s_DemoAngle = view.angles;
+			s_DemoView = viewEye.origin;
+			s_DemoAngle = viewEye.angles;
 		}
 	}
 
+	// Find the offset our current FOV is from the default value
+	float fDefaultFov = default_fov.GetFloat();
+	float flFOVOffsetmain = fDefaultFov - viewEye.fov;
+	float flFOVOffsetstatic = fDefaultFov - viewStatic.fov;
+
+	// Adjust the viewmodel's FOV to move with any FOV offsets on the viewer's end
+	viewEye.fovViewmodel = GetClientMode()->GetViewModelFOV() - flFOVOffsetmain;
+	viewStatic.fovViewmodel = GetClientMode()->GetViewModelFOV() - flFOVOffsetstatic;
+
+	// left and right stereo views should default to being the same as the mono/middle view
+	m_ViewLeft = m_View;
+	m_ViewRight = m_View;
+	//m_ViewLeft.m_eStereoEye = STEREO_EYE_LEFT;
+	//m_ViewRight.m_eStereoEye = STEREO_EYE_RIGHT;
+
+	if (bCalcViewModelView)
+	{
+		Assert(pPlayer != NULL);
+		pPlayer->CalcViewModelView(ViewModelOrigin, ViewModelAngles);
+	}
+
 	// Disable spatial partition access
-	partition->SuppressLists(PARTITION_ALL_CLIENT_EDICTS, true);
+	::partition->SuppressLists(PARTITION_ALL_CLIENT_EDICTS, true);
 
-	//Find the offset our current FOV is from the default value
-	float flFOVOffset = default_fov.GetFloat() - view.fov;
-
-	//Adjust the viewmodel's FOV to move with any FOV offsets on the viewer's end
-	view.fovViewmodel = GetClientMode()->GetViewModelFOV() - flFOVOffset;
+	// Enable access to all model bones
+	C_BaseAnimating::PopBoneAccess("OnRenderStart->CViewRender::SetUpView"); // pops the (true, false) bone access set in OnRenderStart
+	C_BaseAnimating::PushAllowBoneAccess(true, true, "CViewRender::SetUpView->OnRenderEnd"); // pop is in OnRenderEnd()
 
 	// Compute the world->main camera transform
-	ComputeCameraVariables(view.origin, view.angles,
-		&g_vecVForward[nSlot], &g_vecVRight[nSlot], &g_vecVUp[nSlot], &g_matCamInverse[nSlot]);
+	// This is only done for the main "middle-eye" view, not for the various other views.
+	ComputeCameraVariables(viewEye.origin, viewEye.angles,
+		&g_vecVForward, &g_vecVRight, &g_vecVUp, &g_matCamInverse);
 
 	// set up the hearing origin...
 	AudioState_t audioState;
-	audioState.m_Origin = view.origin;
-	audioState.m_Angles = view.angles;
-	audioState.m_bIsUnderwater = pPlayer && pPlayer->AudioStateIsUnderwater(view.origin);
+	audioState.m_Origin = viewEye.origin;
+	audioState.m_Angles = viewEye.angles;
+	audioState.m_bIsUnderwater = pPlayer && pPlayer->AudioStateIsUnderwater(viewEye.origin);
 
 	ToolFramework_SetupAudioState(audioState);
 
-	view.origin = audioState.m_Origin;
-	view.angles = audioState.m_Angles;
+	// TomF: I wonder when the audio tools modify this, if ever...
+	Assert(viewEye.origin == audioState.m_Origin);
+	Assert(viewEye.angles == audioState.m_Angles);
+	viewEye.origin = audioState.m_Origin;
+	viewEye.angles = audioState.m_Angles;
 
-	GetClientMode()->OverrideAudioState(&audioState);
 	engine->SetAudioState(audioState);
 
-	g_vecPrevRenderOrigin[nSlot] = g_vecRenderOrigin[nSlot];
-	g_vecPrevRenderAngles[nSlot] = g_vecRenderAngles[nSlot];
-	g_vecRenderOrigin[nSlot] = view.origin;
-	g_vecRenderAngles[nSlot] = view.angles;
+	g_vecPrevRenderOrigin = g_vecRenderOrigin;
+	g_vecPrevRenderAngles = g_vecRenderAngles;
+	g_vecRenderOrigin = viewEye.origin;
+	g_vecRenderAngles = viewEye.angles;
+
+	g_vecRenderOriginStatic = viewStatic.origin;
+	g_vecRenderAnglesStatic = viewStatic.angles;
 
 #ifdef DBGFLAG_ASSERT
-	s_DbgSetupOrigin[nSlot] = view.origin;
-	s_DbgSetupAngles[nSlot] = view.angles;
+	s_DbgSetupOrigin = viewEye.origin;
+	s_DbgSetupAngles = viewEye.angles;
 #endif
-
-	m_bAllowViewAccess = false;
 }
 
 void CViewRender::WriteSaveGameScreenshotOfSize(const char* pFilename, int width, int height)
@@ -791,12 +800,12 @@ void CViewRender::WriteSaveGameScreenshotOfSize(const char* pFilename, int width
 	pRenderContext->PushRenderTargetAndViewport(NULL, 0, 0, width, height);
 
 	// render out to the backbuffer
-	CViewSetup viewSetup = GetView();
+	CViewSetup viewSetup = GetView(STEREO_EYE_MONO);
 	viewSetup.x = 0;
 	viewSetup.y = 0;
 	viewSetup.width = width;
 	viewSetup.height = height;
-	viewSetup.fov = ScaleFOVByWidthRatio(GetView().fov, ((float)width / (float)height) / (4.0f / 3.0f));
+	viewSetup.fov = ScaleFOVByWidthRatio(GetView(STEREO_EYE_MONO).fov, ((float)width / (float)height) / (4.0f / 3.0f));
 	viewSetup.m_bRenderToSubrectOfLargerScreen = true;
 
 	// draw out the scene
@@ -849,7 +858,6 @@ void CViewRender::WriteSaveGameScreenshot(const char* pFilename)
 	WriteSaveGameScreenshotOfSize(pFilename, SAVEGAME_SCREENSHOT_WIDTH, SAVEGAME_SCREENSHOT_HEIGHT);
 }
 
-
 float ScaleFOVByWidthRatio(float fovDegrees, float ratio)
 {
 	float halfAngleRadians = fovDegrees * (0.5f * M_PI / 180.0f);
@@ -867,29 +875,29 @@ void CViewRender::SetUpOverView()
 {
 	static int oldCRC = 0;
 
-	GetView().m_bOrtho = true;
+	GetView(STEREO_EYE_MONO).m_bOrtho = true;
 
-	float aspect = (float)GetView().width / (float)GetView().height;
+	float aspect = (float)GetView(STEREO_EYE_MONO).width / (float)GetView(STEREO_EYE_MONO).height;
 
 	int size_y = 1024.0f * cl_leveloverview.GetFloat(); // scale factor, 1024 = OVERVIEW_MAP_SIZE
 	int	size_x = size_y * aspect;	// standard screen aspect 
 
-	GetView().origin.x -= size_x / 2;
-	GetView().origin.y += size_y / 2;
+	GetView(STEREO_EYE_MONO).origin.x -= size_x / 2;
+	GetView(STEREO_EYE_MONO).origin.y += size_y / 2;
 
-	GetView().m_OrthoLeft = 0;
-	GetView().m_OrthoTop = -size_y;
-	GetView().m_OrthoRight = size_x;
-	GetView().m_OrthoBottom = 0;
+	GetView(STEREO_EYE_MONO).m_OrthoLeft = 0;
+	GetView(STEREO_EYE_MONO).m_OrthoTop = -size_y;
+	GetView(STEREO_EYE_MONO).m_OrthoRight = size_x;
+	GetView(STEREO_EYE_MONO).m_OrthoBottom = 0;
 
-	GetView().angles = QAngle(90, 90, 0);
+	GetView(STEREO_EYE_MONO).angles = QAngle(90, 90, 0);
 
 	// simple movement detector, show position if moved
-	int newCRC = GetView().origin.x + GetView().origin.y + GetView().origin.z;
+	int newCRC = GetView(STEREO_EYE_MONO).origin.x + GetView(STEREO_EYE_MONO).origin.y + GetView(STEREO_EYE_MONO).origin.z;
 	if (newCRC != oldCRC)
 	{
 		Msg("Overview: scale %.2f, pos_x %.0f, pos_y %.0f\n", cl_leveloverview.GetFloat(),
-			GetView().origin.x, GetView().origin.y);
+			GetView(STEREO_EYE_MONO).origin.x, GetView(STEREO_EYE_MONO).origin.y);
 		oldCRC = newCRC;
 	}
 
@@ -897,27 +905,6 @@ void CViewRender::SetUpOverView()
 	pRenderContext->ClearColor4ub(0, 255, 0, 255);
 
 	// render->DrawTopView( true );
-}
-
-//void SetOriginalViewSetup(const CViewSetup& setup)
-//{
-//	if (!m_OriginalViewSetup)
-//	{
-//		// Allocate it on first use
-//		m_OriginalViewSetup = new CViewSetup();
-//	}
-//	*m_OriginalViewSetup = setup;
-//	g_bOriginalViewSetupValid = true;
-//}
-
-void CViewRender::GetOriginalViewSetup(const CViewSetup& setup)
-{
-	CDeferredViewRender* pDeferredView = static_cast<CDeferredViewRender*>(m_OriginalViewSetup);
-
-	if (pDeferredView)
-	{
-		pDeferredView->ProcessGlobalMatrixData(setup);
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -928,6 +915,9 @@ ConVar ss_debug_draw_player("ss_debug_draw_player", "-1", FCVAR_CHEAT | FCVAR_DE
 void CViewRender::Render(vrect_t* rect)
 {
 	VPROF_BUDGET("CViewRender::Render", "CViewRender::Render");
+
+	int fullWidth = rect->width;
+	int fullHeight = rect->height;
 
 	m_bAllowViewAccess = true;
 
@@ -945,24 +935,37 @@ void CViewRender::Render(vrect_t* rect)
 
 	vrect_t engineRect = *rect;
 
-	// The tool framework wants to adjust the entire 3d viewport, not the per-split screen one from below
+	// The tool framework wants to adjust the entire 3d viewport
 	ToolFramework_AdjustEngineViewport(engineRect.x, engineRect.y, engineRect.width, engineRect.height);
 
-	IterateRemoteSplitScreenViewSlots_Push(true);
-	FOR_EACH_VALID_SPLITSCREEN_PLAYER(hh)
+	// Single player rendering (split-screen removed)
 	{
-		ACTIVE_SPLITSCREEN_PLAYER_GUARD_VGUI(hh);
+		CViewSetup& view = GetView(STEREO_EYE_MONO);
 
-		CViewSetup& view = GetView(hh);
+		m_FullScreenView.origin = view.origin;
+		m_FullScreenView.angles = view.angles;
+		m_FullScreenView.x = 0;
+		m_FullScreenView.y = 0;
+		m_FullScreenView.width = fullWidth;
+		m_FullScreenView.height = fullHeight;
+		m_FullScreenView.m_flAspectRatio = (float)fullWidth / (float)fullHeight;
 
 		float engineAspectRatio = engine->GetScreenAspectRatio(view.width, view.height);
 
-		Assert(s_DbgSetupOrigin[hh] == view.origin);
-		Assert(s_DbgSetupAngles[hh] == view.angles);
+#ifdef DBGFLAG_ASSERT
+		// Check that the view hasn't changed since setup
+		Assert(s_DbgSetupOrigin == view.origin);
+		Assert(s_DbgSetupAngles == view.angles);
+#endif
 
-		// Using this API gives us a chance to "inset" the 3d views as needed for splitscreen
+		// Get the main view bounds
 		int insetX, insetY;
-		VGui_GetEngineRenderBounds(hh, view.x, view.y, view.width, view.height, insetX, insetY);
+		VGui_GetEngineRenderBounds(0, view.x, view.y, view.width, view.height, insetX, insetY);
+
+		view.x *= flViewportScale;
+		view.y *= flViewportScale;
+		view.width *= flViewportScale;
+		view.height *= flViewportScale;
 
 		float aspectRatio = engineAspectRatio * 0.75f;	 // / (4/3)
 		view.fov = ScaleFOVByWidthRatio(view.fov, aspectRatio);
@@ -997,7 +1000,7 @@ void CViewRender::Render(vrect_t* rect)
 			nClearFlags |= VIEW_CLEAR_COLOR;
 		}
 
-		// Determine if we should draw view model ( client mode override )
+		// Determine if we should draw view model (client mode override)
 		bool drawViewModel = GetClientMode()->ShouldDrawViewModel();
 		// Apply any player specific overrides
 		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
@@ -1025,37 +1028,19 @@ void CViewRender::Render(vrect_t* rect)
 			flags |= RENDERVIEW_DRAWVIEWMODEL;
 		}
 
-		// This is the hook for per-split screen player views
-		C_BaseEntity::PreRenderEntities(hh);
+		// This is the hook for rendering entities
+		C_BaseEntity::PreRenderEntities(0);
 
-		if ((ss_debug_draw_player.GetInt() < 0) || (hh == ss_debug_draw_player.GetInt()))
+		if (ss_debug_draw_player.GetInt() <= 0 || ss_debug_draw_player.GetInt() == 0)
 		{
 			CViewSetup hudViewSetup;
-			VGui_GetHudBounds(hh, hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height);
+			VGui_GetHudBounds(0, hudViewSetup.x, hudViewSetup.y, hudViewSetup.width, hudViewSetup.height);
 
-			//if (m_OriginalViewSetup)
-			//{
-			//	SetOriginalViewSetup(*m_OriginalViewSetup);
-			//}
-			//else
-			//{
-			//	// Initialize it if it's NULL
-			//	static CViewSetup s_OriginalViewSetup;
-			//	m_OriginalViewSetup = &s_OriginalViewSetup;
-			//	SetOriginalViewSetup(*m_OriginalViewSetup);
-			//}
-
-			if (m_OriginalViewSetup)
-			{
-				GetOriginalViewSetup(view);
-			}
-
-			RenderView(view, hudViewSetup, nClearFlags, flags);			
+			RenderView(view, hudViewSetup, nClearFlags, flags);
 		}
 
 		GetClientMode()->PostRender();
 	}
-	IterateRemoteSplitScreenViewSlots_Pop();
 
 	engine->EngineStats_EndFrame();
 
@@ -1065,9 +1050,6 @@ void CViewRender::Render(vrect_t* rect)
 #endif
 
 	// Render the new-style embedded UI
-	// TODO: when embedded UI will be used for HUD, we will need it to maintain
-	// a separate screen for HUD and a separate screen stack for pause menu & main menu.
-	// for now only render embedded UI in pause menu & main menu
 #if defined( GAMEUI_UISYSTEM2_ENABLED ) && 0
 	BaseModUI::CBaseModPanel* pBaseModPanel = BaseModUI::CBaseModPanel::GetSingletonPtr();
 	// render the new-style embedded UI only if base mod panel is not visible (game-hud)
@@ -1101,8 +1083,6 @@ void CViewRender::Render(vrect_t* rect)
 		render->Push2DView(view2d, 0, NULL, GetFrustum());
 		render->VGui_Paint(PAINT_UIPANELS);
 		{
-			// The engine here is trying to access CurrentView() etc. which is bogus
-			ACTIVE_SPLITSCREEN_PLAYER_GUARD(0);
 			render->PopView(GetFrustum());
 		}
 	}
@@ -1112,9 +1092,8 @@ void CViewRender::Render(vrect_t* rect)
 
 static void GetPos(const CCommand& args, Vector& vecOrigin, QAngle& angles)
 {
-	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-	vecOrigin = MainViewOrigin(nSlot);
-	angles = MainViewAngles(nSlot);
+	vecOrigin = MainViewOrigin(0);
+	angles = MainViewAngles(0);
 
 #ifdef INFESTED_DLL
 	C_ASW_Marine* pMarine = C_ASW_Marine::GetLocalMarine();

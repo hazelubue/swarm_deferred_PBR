@@ -47,6 +47,10 @@ BEGIN_DATADESC( CSprite )
 	DEFINE_KEYFIELD( m_flSpriteScale, FIELD_FLOAT, "scale" ),
 	DEFINE_KEYFIELD( m_flSpriteFramerate, FIELD_FLOAT, "framerate" ),
 	DEFINE_KEYFIELD( m_flFrame, FIELD_FLOAT, "frame" ),
+#ifdef PORTAL
+	DEFINE_FIELD(m_bDrawInMainRender, FIELD_BOOLEAN),
+	DEFINE_FIELD(m_bDrawInPortalRender, FIELD_BOOLEAN),
+#endif
 
 	DEFINE_KEYFIELD( m_flHDRColorScale, FIELD_FLOAT, "HDRColorScale" ),
 

@@ -386,9 +386,9 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 			pDeferredContext->SetCommands(CDeferredPerMaterialContextData::DEFSTAGE_COMPOSITE, tmpBuf.Copy());
 		}
 
-		ITexture* pSource = materials->FindTexture("_rt_fullframefb", TEXTURE_GROUP_RENDER_TARGET);
+		//ITexture* pSource = materials->FindTexture("_rt_reflectionCopy", TEXTURE_GROUP_RENDER_TARGET);
 
-		pShader->BindTexture(SHADER_SAMPLER12, pSource);
+		pShader->BindTexture(SHADER_SAMPLER12, GetDeferredExt()->GetTexture_WaterNormals());
 		//pShader->BindTexture(SHADER_SAMPLER13, GetDeferredExt()->GetTexture_Depth());
 
 		////setup matrix data.
@@ -398,6 +398,28 @@ void DrawPassComposite(const defParms_composite& info, CBaseVSShader* pShader, I
 		pShaderAPI->SetPixelShaderConstant(24, data.matProjInv.Base(), 4);
 		pShaderAPI->SetPixelShaderConstant(34, data.matView.Base(), 4);
 		pShaderAPI->SetPixelShaderConstant(38, data.matProj.Base(), 4);
+		pShaderAPI->SetPixelShaderConstant(42, data.flZDists, 2);
+		pShaderAPI->SetPixelShaderConstant(43, &data.aspect, 1);
+		pShaderAPI->SetPixelShaderConstant(44, &data.fov, 1);
+
+		float viewportOffset[2];
+		viewportOffset[0] = data.viewportOffsetX;
+		viewportOffset[1] = data.viewportOffsetY;
+
+		pShaderAPI->SetPixelShaderConstant(45, viewportOffset, 1);
+
+		// end data passed from viewrender.
+
+		float flthickness = 0.0f;//info.iThickness;
+
+		pShaderAPI->SetPixelShaderConstant(46, &flthickness, 1);
+
+		float scatteringVars[3];
+		//scatteringVars[0] = r_ss_distortion.GetFloat();
+		//scatteringVars[1] = r_ss_power.GetFloat();
+		//scatteringVars[2] = r_ss_scale.GetFloat();
+
+		pShaderAPI->SetPixelShaderConstant(48, scatteringVars, 1);
 
 		const bool bUseSSR = r_ssr_opaque_pass.GetBool();
 

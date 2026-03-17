@@ -62,7 +62,7 @@ private:
 LINK_ENTITY_TO_CLASS(sunlight_shadow_control, CSunlightShadowControl);
 
 BEGIN_DATADESC( CSunlightShadowControl )
-
+	DEFINE_FIELD(m_shadowDirection, FIELD_VECTOR),	//DM- vec update pos for save files
 	DEFINE_KEYFIELD( m_bEnabled,		FIELD_BOOLEAN, "enabled" ),
 	DEFINE_KEYFIELD( m_bStartDisabled,	FIELD_BOOLEAN, "StartDisabled" ),
 	DEFINE_AUTO_ARRAY_KEYFIELD( m_TextureName, FIELD_CHARACTER, "texturename" ),

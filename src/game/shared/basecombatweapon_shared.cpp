@@ -28,9 +28,9 @@
 #include "tier0/memdbgon.h"
 
 // The minimum time a hud hint for a weapon should be on screen. If we switch away before
-// this, then teh hud hint counter will be deremented so the hint will be shown again, as
+// this, then the hud hint counter will be decremented so the hint will be shown again, as
 // if it had never been seen. The total display time for a hud hint is specified in client
-// script HudAnimations.txt (which I can't read here). 
+// script HudAnimations.txt (which can't be read here). 
 #define MIN_HUDHINT_DISPLAY_TIME 7.0f
 
 #define HIDEWEAPON_THINK_CONTEXT			"BaseCombatWeapon_HideThink"
@@ -955,8 +955,8 @@ void CBaseCombatWeapon::Equip( CBaseCombatCharacter *pOwner )
 void CBaseCombatWeapon::SetActivity( Activity act, float duration ) 
 { 
 	//Adrian: Oh man...
-#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ) || defined( SDK_DLL ) )
-	SetModel( GetWorldModel() );
+#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
+	SetModel(GetWorldModel());
 #endif
 	
 	int sequence = SelectWeightedSequence( act ); 
@@ -966,8 +966,8 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 		sequence = SelectWeightedSequence( ACT_VM_IDLE );
 
 	//Adrian: Oh man again...
-#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ) || defined( SDK_DLL ) )
-	SetModel( GetViewModel() );
+#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
+	SetModel(GetViewModel());
 #endif
 
 	if ( sequence != ACTIVITY_NOT_AVAILABLE )

@@ -5,7 +5,7 @@
 #include "deferred_includes.h"
 
 #include "include/gbuffer_vs30.inc"
-#include "include/gbuffer_translucent_ps30.inc"
+#include "include/gbuffer_ps30.inc"
 #include "shaderapi\ishaderapi.h"
 #include "tier0/memdbgon.h"
 
@@ -119,7 +119,7 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 	const bool useParallax = mat_pbr_parallaxmap.GetBool();
 	bool bhasMRAO = IsTextureSet(info.m_nMRAO, params);
 
-	bool bHasFlowmap = params[info.FLOWMAP]->IsTexture();
+	//bool bHasFlowmap = params[info.FLOWMAP]->IsTexture();
 
 	//bool bHasCubemap = PARM_TEX(info.Envmap);
 
@@ -220,7 +220,7 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 		SET_STATIC_VERTEX_SHADER_COMBO(TREESWAY, nTreeSwayMode);
 		SET_STATIC_VERTEX_SHADER(gbuffer_vs30);
 
-		DECLARE_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		DECLARE_STATIC_PIXEL_SHADER(gbuffer_ps30);
 		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP2, bBumpmap2);
 		SET_STATIC_PIXEL_SHADER_COMBO(ALPHATEST, bAlphatest);
 		SET_STATIC_PIXEL_SHADER_COMBO(BUMPMAP, bBumpmap ? bSSBump ? 2 : 1 : 0);
@@ -229,9 +229,9 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 		SET_STATIC_PIXEL_SHADER_COMBO(DEDICATEDMRAO, bhasMRAO ? 1 : 0);
 		SET_STATIC_PIXEL_SHADER_COMBO(PARALLAXOCCLUSION, useParallax);
 		SET_STATIC_PIXEL_SHADER_COMBO(TRANSLUCENT, bTranslucent);
-		SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
+		//SET_STATIC_PIXEL_SHADER_COMBO(FLOWMAP, bHasFlowmap);
 		//SET_STATIC_PIXEL_SAHDER_COMBO(WATER, bWater);
-		SET_STATIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		SET_STATIC_PIXEL_SHADER(gbuffer_ps30);
 	}
 
 		DYNAMIC_STATE
@@ -344,8 +344,8 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 		SET_DYNAMIC_PIXEL_SHADER(gbuffer_defshading_ps30);
 #else
-		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
-		SET_DYNAMIC_PIXEL_SHADER(gbuffer_translucent_ps30);
+		DECLARE_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
+		SET_DYNAMIC_PIXEL_SHADER(gbuffer_ps30);
 #endif
 
 		if (bModel && bFastVTex)
@@ -392,84 +392,6 @@ void DrawPassGBuffer_translucent(const defParms_gBuffer_translucent& info, CBase
 		float flParallaxSamples[1];
 		UTIL_StringToFloatArray(flParallaxSamples, 1, mat_pbr_parallaxmap_quality.GetString());
 		pShaderAPI->SetPixelShaderConstant(PSREG_CONSTANT_10, flParallaxSamples);
-
-		float c5[4] = { params[info.REFLECTAMOUNT]->GetFloatValue(), params[info.REFLECTAMOUNT]->GetFloatValue(),
-				params[info.REFRACTAMOUNT]->GetFloatValue(), params[info.REFRACTAMOUNT]->GetFloatValue() };
-		pShaderAPI->SetPixelShaderConstant(35, c5, 1);
-
-		float fogColorConstant[4];
-
-		params[info.FOGCOLOR]->GetVecValue(fogColorConstant, 3);
-		fogColorConstant[3] = 0.0f;
-
-		fogColorConstant[0] = SrgbGammaToLinear(fogColorConstant[0]);
-		fogColorConstant[1] = SrgbGammaToLinear(fogColorConstant[1]);
-		fogColorConstant[2] = SrgbGammaToLinear(fogColorConstant[2]);
-		pShaderAPI->SetPixelShaderConstant(36, fogColorConstant, 1);
-
-		if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER)
-		{
-			// Need to multiply by 4 in linear space since we premultiplied into
-			// the render target by .25 to get overbright data in the reflection render target.
-			float gammaReflectTint[3];
-			params[info.REFLECTTINT]->GetVecValue(gammaReflectTint, 3);
-			float linearReflectTint[4];
-			linearReflectTint[0] = GammaToLinear(gammaReflectTint[0]) * 4.0f;
-			linearReflectTint[1] = GammaToLinear(gammaReflectTint[1]) * 4.0f;
-			linearReflectTint[2] = GammaToLinear(gammaReflectTint[2]) * 4.0f;
-			linearReflectTint[3] = params[info.WATERBLENDFACTOR]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(34, linearReflectTint, 1);
-		}
-		else
-		{
-			pShader->SetPixelShaderConstantGammaToLinear(34, info.REFLECTTINT, info.WATERBLENDFACTOR);
-		}
-
-		float c7[4] =
-		{
-			params[info.FOGSTART]->GetFloatValue(),
-			params[info.FOGEND]->GetFloatValue() - params[info.FOGSTART]->GetFloatValue(),
-			1.0f,
-			0.0f
-		};
-		if (g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER)
-		{
-			// water overbright factor
-			c7[2] = 4.0;
-		}
-		pShaderAPI->SetPixelShaderConstant(37, c7, 1);
-
-		float vTimeConst[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		float flTime = pShaderAPI->CurrentTime();
-		vTimeConst[0] = flTime;
-		//vTimeConst[0] -= ( float )( ( int )( vTimeConst[0] / 1000.0f ) ) * 1000.0f;
-		pShaderAPI->SetPixelShaderConstant(38, vTimeConst, 1);
-
-		if (bHasFlowmap)
-		{
-			pShader->BindTexture(SHADER_SAMPLER6, info.FLOWMAP, info.FLOWMAPFRAME);
-			pShader->BindTexture(SHADER_SAMPLER7, info.FLOW_NOISE_TEXTURE);
-
-			float vFlowConst1[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			vFlowConst1[0] = 1.0f / params[info.FLOW_WORLDUVSCALE]->GetFloatValue();
-			vFlowConst1[1] = 1.0f / params[info.FLOW_NORMALUVSCALE]->GetFloatValue();
-			vFlowConst1[2] = params[info.FLOW_BUMPSTRENGTH]->GetFloatValue();
-			vFlowConst1[3] = params[info.COLOR_FLOW_DISPLACEBYNORMALSTRENGTH]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(13, vFlowConst1, 1);
-
-			float vFlowConst2[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			vFlowConst2[0] = params[info.FLOW_TIMEINTERVALINSECONDS]->GetFloatValue();
-			vFlowConst2[1] = params[info.FLOW_UVSCROLLDISTANCE]->GetFloatValue();
-			vFlowConst2[2] = params[info.FLOW_NOISE_SCALE]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(14, vFlowConst2, 1);
-
-			float vColorFlowConst1[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			vColorFlowConst1[0] = 1.0f / params[info.COLOR_FLOW_UVSCALE]->GetFloatValue();
-			vColorFlowConst1[1] = params[info.COLOR_FLOW_TIMEINTERVALINSECONDS]->GetFloatValue();
-			vColorFlowConst1[2] = params[info.COLOR_FLOW_UVSCROLLDISTANCE]->GetFloatValue();
-			vColorFlowConst1[3] = params[info.COLOR_FLOW_LERPEXP]->GetFloatValue();
-			pShaderAPI->SetPixelShaderConstant(26, vColorFlowConst1, 1);
-		}
 
 		float vPos[4] = { 0,0,0,0 };
 		pShaderAPI->GetWorldSpaceCameraPosition(vPos);

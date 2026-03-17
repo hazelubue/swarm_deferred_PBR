@@ -189,10 +189,6 @@ SHADER_DRAW
 
 	CDeferredPerMaterialContextData* pDefContext = reinterpret_cast<CDeferredPerMaterialContextData*>(*pContextDataPtr);
 
-	Assert(pShaderAPI == NULL ||
-		iDeferredRenderStage != DEFERRED_RENDER_STAGE_INVALID);
-
-
 		
 			defParms_screenspace parms_compositePBR;
 			SetupParamsSSR(parms_compositePBR);

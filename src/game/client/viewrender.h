@@ -16,7 +16,7 @@
 #include "iviewrender.h"
 #include "view_shared.h"
 
-
+//#include "deferred/deferred_shared_common.h"
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
@@ -319,7 +319,7 @@ public:
 	virtual void	Init( void );
 	virtual void	Shutdown( void );
 
-	const CViewSetup *GetPlayerViewSetup( int nSlot = -1 ) const;
+	const CViewSetup *GetPlayerViewSetup( ) const;
 
 	virtual void	StartPitchDrift( void );
 	virtual void	StopPitchDrift( void );
@@ -338,9 +338,16 @@ public:
 
 	virtual void	InitFadeData( void );
 
+	//void	DrawLightShadowView(const CViewSetup& view, int iDesiredShadowmap, def_light_t* l);
+	void	ResetCascadeDelay();
+
+	CMaterialReference	m_SkydomeMaterial;
+
 	//virtual const CViewSetup& GetOriginalViewSetup();
 
 protected:
+
+	CViewSetup m_FullScreenView;
 	// Sets up the view parameters
 	void			SetUpView();
 
@@ -353,8 +360,19 @@ protected:
 
 	// This stores all of the view setup parameters that the engine needs to know about
 
-	CViewSetup				&GetView( int nSlot = -1 );
-	const CViewSetup		&GetView( int nSlot = -1 ) const;
+	CViewSetup				&GetView(StereoEye_t eEye);
+	const CViewSetup		&GetView(StereoEye_t eEye) const;
+
+
+	StereoEye_t		GetFirstEye() const;
+	StereoEye_t		GetLastEye() const;
+
+
+	// This stores all of the view setup parameters that the engine needs to know about.
+	// Best way to pick the right one is with ::GetView(), rather than directly.
+	CViewSetup		m_View;         // mono <- in stereo mode, this will be between the two eyes and is the "main" view.
+	CViewSetup		m_ViewLeft;     // left (unused for mono)
+	CViewSetup		m_ViewRight;    // right (unused for mono)
 
 	CViewSetup		m_UserView[ MAX_SPLITSCREEN_PLAYERS ];
 	bool			m_bAllowViewAccess;
@@ -365,7 +383,16 @@ protected:
 	virtual void	PreViewDrawScene( const CViewSetup &view ) {}
 	virtual void	PostViewDrawScene( const CViewSetup &view ) {}
 
+	//void ProcessDeferredGlobals(const CViewSetup& view);
+	//void ProcessGlobalMatrixData(const CViewSetup& view);
 
+	void			ViewDrawComposite(const CViewSetup& view, bool& bDrew3dSkybox, SkyboxVisibility_t& nSkyboxVisible,
+					int nClearFlags, view_id_t viewID, bool bDrawViewModel);
+
+	void			DrawSky(const CViewSetup& view);
+
+	void			DrawSkyboxComposite(const CViewSetup& view, const bool& bDrew3dSkybox);
+	void			DrawWorldComposite(const CViewSetup& view, int nClearFlags, bool bDrawSkybox);
 
 public:
 					CViewRender();
@@ -379,7 +406,7 @@ public:
 
 	// Render functions
 	virtual	void	Render( vrect_t *rect );
-	//virtual void	RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw );
+	virtual void	RenderView( const CViewSetup &view, const CViewSetup &hudViewSetup, int nClearFlags, int whatToDraw );
 	virtual void	RenderPlayerSprites();
 	virtual void	Render2DEffectsPreHUD( const CViewSetup &view );
 	virtual void	Render2DEffectsPostHUD( const CViewSetup &view );
@@ -551,6 +578,16 @@ protected:
 
 	CON_COMMAND_MEMBER_F( CViewRender, "screenfademinsize", OnScreenFadeMinSize, "Modify global screen fade min size in pixels", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 	CON_COMMAND_MEMBER_F( CViewRender, "screenfademaxsize", OnScreenFadeMaxSize, "Modify global screen fade max size in pixels", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+
+	//VMatrix GetViewProjMatrix(const CViewSetup& viewSetup);
+	//VMatrix GetViewMatrix(const Vector& pos, const QAngle& ang);
+	//VMatrix GetProjMatrix(const CViewSetup& viewSetup);
+
+	//void PerformLighting(const CViewSetup& view);
+
+	//void RenderCascadedShadows(const CViewSetup& view);
+
+	//float m_flRenderDelay[SHADOW_NUM_CASCADES];
 };
 
 #endif // VIEWRENDER_H

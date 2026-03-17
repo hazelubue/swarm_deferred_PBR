@@ -32,8 +32,9 @@
 
 // =================== ROOM SOUND FX ==========================================
 
-
-
+#ifdef PORTAL
+#include "portal_gamerules.h"
+#endif // PORTAL
 
 // ==================== SENTENCE GROUPS, UTILITY FUNCTIONS  ======================================
 

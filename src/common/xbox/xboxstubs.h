@@ -304,8 +304,8 @@ FORCEINLINE bool			XBX_IsAudioLocalized() { return false; }
 FORCEINLINE const char		*XBX_GetNextSupportedLanguage( const char *pLanguage, bool *pbHasAudio ) { return NULL; }
 FORCEINLINE bool			XBX_IsRestrictiveLanguage() { return false; }
 
-FORCEINLINE int				XBX_GetUserId( int nSlot ) { return nSlot; }
-FORCEINLINE void			XBX_SetUserId( int nSlot, int idx ) {}
+FORCEINLINE int				XBX_GetUserId( ) { return false; }
+FORCEINLINE void			XBX_SetUserId(int idx ) {}
 
 
 #define XCONTENT_MAX_DISPLAYNAME_LENGTH	128

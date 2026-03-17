@@ -56,6 +56,48 @@ float4 g_CloudParams : register(c28);
 #define SUN_DIR			normalize(g_SunPos.xyz)
 
 #define STEPS			int(g_WindSpeed.a)
+
+#define eps 0.0001
+#define degree 0.0174533
+#define rcp_pi 0.31831
+#define isotropic_phase 0.07957747
+#define PI 3.1415926
+
+// Cirrus Cloud Parameters
+#define clouds_cirrus_size 1
+#define clouds_cirrus_wind_angle 90
+#define clouds_cirrus_wind_speed 40
+#define clouds_cirrus_curl_strength 0.8
+#define clouds_cirrus_density_static 0.5
+#define clouds_cirrus_thickness 12
+#define clouds_cirrus_lighting_steps 6
+#define clouds_cirrus_extinction_coeff 0.1
+#define clouds_cirrus_scattering_coeff 0.5
+
+#define clouds_cirrus_radius 6371000.0 + 1500.0
+#define clouds_cirrus_top_radius 6371000.0 + 3500.0
+
+// cirrocumulus cloud parameters
+#define clouds_cirrocumulus_size 128.0
+#define clouds_cirrocumulus_curl_strength 0.3
+#define clouds_cirrocumulus_density 0.3
+#define clouds_cirrocumulus_detail_strength 0.5
+
+#define CLOUDS_CUMULUS_CONGESTUS_ALTITUDE 400 * degree
+#define CLOUDS_CUMULUS_CONGESTUS_SIZE 1.0
+#define CLOUDS_CUMULUS_CONGESTUS_THICKNESS 32
+#define CLOUDS_CUMULUS_CONGESTUS_COVERAGE 1.0
+
+#define CLOUDS_CUMULUS_CONGESTUS_DETAIL_STRENGTH 1.0
+
+#define CLOUDS_CUMULUS_CONGESTUS_PRIMARY_STEPS 16
+#define CLOUDS_CUMULUS_CONGESTUS_LIGHTING_STEPS 6
+#define CLOUDS_CUMULUS_CONGESTUS_AMBIENT_STEPS 2
+
+
+
+#define clouds_noctilucent_radius 6371000.0 + 1500.0
+
 /******************************************************************************/
 
 //uniformly distributed, normalized rand, [0, 1)
@@ -161,14 +203,17 @@ struct CloudParams
     float cumulus_congestus_blend;
 };
 
-//#include "reimaginedClouds.h"
-//#include "clouds/altocumulus.h"
-//#include "clouds/cumulus_congestus.h"
-//#include "clouds/cirrus.h"
-//#include "clouds/noctilucent.h"
 
-#include "clouds/clouds.h"
-#include "clouds/reimaginedClouds_old.h"
+#include "clouds/utility/phase_functions.h"
+#include "clouds/constants.h"
+#include "clouds/atmosphere/atmosphere.h"
+#include "clouds/common.h"
+//#include "clouds/parameters.h"
+#include "clouds/cirrus.h"
+#include "clouds/noctilucent.h"
+#include "clouds/cumulus_congestus.h"
+#include "clouds/compositeClouds.h"
+
 
 struct PS_INPUT
 {
@@ -187,16 +232,6 @@ struct PS_OUTPUT
 PS_OUTPUT main(PS_INPUT i)
 {
     PS_OUTPUT o;
-
-    //clouds_params.l0_coverage = g_CloudCoverage.xy;
-    //clouds_params.l0_cumulus_stratus_blend = g_CloudCoverage.z;
-    //clouds_params.l0_altitude_scale = g_CloudCoverage.w;
-    //clouds_params.l0_detail_weights = g_CloudCoverage2.xy;
-    //clouds_params.l0_edge_sharpening = g_CloudCoverage2.zw;
-    //clouds_params.l0_scattering_coeff = g_CloudParams.x;
-    //clouds_params.l0_extinction_coeff = g_CloudParams.y;
-    //clouds_params.l0_shadow = g_CloudParams.z;
-    //clouds_params.cumulus_congestus_blend = g_CloudParams.w;
         
     // Perez coefficients.
     float3 A = g_perezCoeff[0].xyz;
@@ -207,6 +242,7 @@ PS_OUTPUT main(PS_INPUT i)
 
     float3 direction = normalize(i.modelPos.xyz);
     float3 rayDir = normalize(float3(i.modelPos.x, i.modelPos.z, i.modelPos.y));
+   // float3 rayDir = normalize(float3(i.modelPos.x, i.modelPos.y, i.modelPos.z));
     float3 lightDir = normalize(g_SunPos.xyz);
     float rotationAngle = g_Time;
     
@@ -247,40 +283,42 @@ PS_OUTPUT main(PS_INPUT i)
  
     float cloudLinearDepth = 0.0;
     
-    float3 clouds_topLayer = GetVolumetricClouds(10.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), noisetex, 1).rgb;
-    float3 clouds_bottomLayer = GetVolumetricClouds(5.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), noisetex, 0).rgb;
+    //float3 clouds_topLayer = GetVolumetricClouds(10.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), noisetex, 1).rgb;
+    //float3 clouds_bottomLayer = GetVolumetricClouds(5.0, 1000.0, cloudLinearDepth, 1.0, 1.0, (float3) 0, rayDir, 1000.0, dot(rayDir, SUN_DIR), rayDir.y, n4rand_ss(i.projPos.xy), lerp(skyColor, coloredSun, starColor), noisetex, 0).rgb;
 
-    //float distance_to_terrain = -1.0;
-    
-    //float3 air_viewer_pos = float3(g_cameraPos.x, planet_radius + g_cameraPos.y, g_cameraPos.z);
     float3 clear_sky = skyColor + coloredSun;
     
-    //cameraPosition = g_cameraPos;
-    //world_age = g_Time;
-    //sun_dir = normalize(g_SunPos.xyz);
+    float distance_to_terrain = -1.0;
+    float3 air_viewer_pos = float3(g_cameraPos.x, planet_radius + g_cameraPos.y, g_cameraPos.z);
+    
+    cameraPosition = g_cameraPos;
+    world_age = g_Time;
+    float3 sun_dir = normalize(g_SunPos.xyz);
     //moon_dir = normalize(g_SunPos.xyz);
     //sun_color = sunColor;
     //moon_color = sunColor;
     //sky_color = skyColor;
     //sunlight_color = sunColor;
-    
-    //CloudsResult cumulus_result = draw_cumulus_clouds(
-    //    air_viewer_pos,
-    //    rayDir,
-    //    clear_sky,
-    //    distance_to_terrain,
-    //    dither
-    //);
 
-    //float3 clouds_cumulus = cumulus_result.scattering.rgb;
-    //float cloud_transmittance = cumulus_result.transmittance;
+    CloudsResult result = draw_clouds(
+    air_viewer_pos,
+    rayDir,
+    sun_dir,
+    sunColor,
+    clear_sky,
+    distance_to_terrain,
+    dither);
+
+    float3 clouds_color = result.scattering.rgb; // Cloud color contribution
+    float cloud_transmittance = result.transmittance; // Transmittance value
+    //float distance = cirrus_result.distance_to_sphere; // Distance to cloud
     
-    float3 finalSky = clear_sky + clouds_bottomLayer + clouds_topLayer;
+    float3 final_color = clear_sky + clouds_color * (1.0 - cloud_transmittance);
     
 #if !STARFIELD_ENABLED
-    float3 color = finalSky;
+    float3 color = final_color;
 #else
-    float3 color = finalSky + starColor;
+    float3 color = final_color + starColor;
 #endif
     
     o.vColor_0 = float4(color.rgb, 1.0);

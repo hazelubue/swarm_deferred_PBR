@@ -9,6 +9,10 @@
 #include "ambientgeneric.h"
 #include "engine/IEngineSound.h"
 
+#ifdef PORTAL
+#include "portal_gamerules.h"
+#endif // PORTAL
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -354,6 +358,24 @@ void CAmbientGeneric::Activate( void )
 			}
 		}
 	}
+
+#ifdef PORTAL
+	// This is the only way we can silence the radio sound from the first room without touching them map -- jdw
+/*	if (PortalGameRules() && PortalGameRules()->ShouldRemoveRadio())
+	{
+		if (V_strcmp(STRING(gpGlobals->mapname), "testchmb_a_00") == 0 ||
+			V_strcmp(STRING(gpGlobals->mapname), "testchmb_a_11") == 0 ||
+			V_strcmp(STRING(gpGlobals->mapname), "testchmb_a_14") == 0)
+		{
+			if (V_strcmp(STRING(GetEntityName()), "radio_sound") == 0)
+			{
+				UTIL_Remove(this);
+				return;
+			}
+		}
+	}*/
+
+#endif // PORTAL
 
 	// If active start the sound
 	if ( m_fActive )
@@ -749,11 +771,18 @@ void CAmbientGeneric::SendSound( SoundFlags_t flags)
 		{
 			UTIL_EmitAmbientSound(pSoundSource->GetSoundSourceIndex(), pSoundSource->GetAbsOrigin(), szSoundFile, 
 				0, SNDLVL_NONE, flags, 0);
+			m_fActive = false; //DM - unstoppable looping sounds merged from the VDC
 		}
 		else
 		{
 			UTIL_EmitAmbientSound(pSoundSource->GetSoundSourceIndex(), pSoundSource->GetAbsOrigin(), szSoundFile, 
 				(m_dpv.vol * 0.01), m_iSoundLevel, flags, m_dpv.pitch);
+
+			//VDC fix - Only mark active if this is a looping sound.  If not looping, each trigger will cause the sound to play.  
+			//If the sound is still playing from a previous trigger press, it will be shut off and then restarted.
+
+			if (m_fLooping)
+				m_fActive = true;
 		}
 	}	
 	else
@@ -763,6 +792,7 @@ void CAmbientGeneric::SendSound( SoundFlags_t flags)
 		{
 			UTIL_EmitAmbientSound(m_nSoundSourceEntIndex, GetAbsOrigin(), szSoundFile, 
 				0, SNDLVL_NONE, flags, 0);
+			m_fActive = false; //VDC
 		}
 	}
 }

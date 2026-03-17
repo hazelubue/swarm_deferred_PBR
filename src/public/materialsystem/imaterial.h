@@ -15,6 +15,7 @@
 
 #include "bitmap/imageformat.h"
 #include "materialsystem/imaterialsystem.h"
+#include "materialsystem/imaterialproxy.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations

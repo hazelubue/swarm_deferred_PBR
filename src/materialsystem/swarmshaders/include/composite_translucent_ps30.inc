@@ -8,8 +8,6 @@
 // $RIMLIGHT && !$READNORMAL
 // !$RIMLIGHT && $RIMLIGHTMODULATELIGHT
 // !$BASETEXTURE2 && !$MULTIBLEND && $BLENDMODULATE
-// $MODEL && $BASETEXTURE2
-// $MODEL && $MULTIBLEND
 // $BASETEXTURE2 && $MULTIBLEND
 // $ENVMAPMASK && $MULTIBLEND
 // $SELFILLUM_MASK && $MULTIBLEND
@@ -48,6 +46,7 @@ class composite_translucent_ps30_Static_Index
 	unsigned int m_nSELFILLUM : 2;
 	unsigned int m_nSELFILLUM_MASK : 2;
 	unsigned int m_nSELFILLUM_ENVMAP_ALPHA : 2;
+	unsigned int m_nTRANSLUCENT : 2;
 #ifdef _DEBUG
 	bool m_bREADNORMAL : 1;
 	bool m_bPHONGFRESNEL : 1;
@@ -60,6 +59,7 @@ class composite_translucent_ps30_Static_Index
 	bool m_bSELFILLUM : 1;
 	bool m_bSELFILLUM_MASK : 1;
 	bool m_bSELFILLUM_ENVMAP_ALPHA : 1;
+	bool m_bTRANSLUCENT : 1;
 #endif	// _DEBUG
 public:
 	void SetREADNORMAL( int i )
@@ -161,6 +161,15 @@ public:
 #endif	// _DEBUG
 	}
 
+	void SetTRANSLUCENT( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nTRANSLUCENT = i;
+#ifdef _DEBUG
+		m_bTRANSLUCENT = true;
+#endif	// _DEBUG
+	}
+
 	composite_translucent_ps30_Static_Index( IShaderShadow* pShaderShadow, IMaterialVar** params )
 	{
 		m_nREADNORMAL = 0;
@@ -174,6 +183,7 @@ public:
 		m_nSELFILLUM = 0;
 		m_nSELFILLUM_MASK = 0;
 		m_nSELFILLUM_ENVMAP_ALPHA = 0;
+		m_nTRANSLUCENT = 0;
 #ifdef _DEBUG
 		m_bREADNORMAL = false;
 		m_bPHONGFRESNEL = false;
@@ -186,12 +196,14 @@ public:
 		m_bSELFILLUM = false;
 		m_bSELFILLUM_MASK = false;
 		m_bSELFILLUM_ENVMAP_ALPHA = false;
+		m_bTRANSLUCENT = false;
 #endif	// _DEBUG
 	}
 
 	int GetIndex() const
 	{
-		Assert( m_bREADNORMAL && m_bPHONGFRESNEL && m_bNOCULL && m_bENVMAP && m_bENVMAPMASK && m_bENVMAPFRESNEL && m_bALPHATEST && m_bBASETEXTURE2 && m_bSELFILLUM && m_bSELFILLUM_MASK && m_bSELFILLUM_ENVMAP_ALPHA );
+		Assert( m_bREADNORMAL && m_bPHONGFRESNEL && m_bNOCULL && m_bENVMAP && m_bENVMAPMASK && m_bENVMAPFRESNEL && m_bALPHATEST && m_bBASETEXTURE2 && m_bSELFILLUM && m_bSELFILLUM_MASK && m_bSELFILLUM_ENVMAP_ALPHA && m_bTRANSLUCENT );
+		AssertMsg( !( m_nALPHATEST && m_nTRANSLUCENT ), "Invalid combo combination ( ALPHATEST && TRANSLUCENT )" );
 		AssertMsg( !( !m_nENVMAP && m_nENVMAPFRESNEL ), "Invalid combo combination ( !ENVMAP && ENVMAPFRESNEL )" );
 		AssertMsg( !( !m_nENVMAP && m_nENVMAPMASK ), "Invalid combo combination ( !ENVMAP && ENVMAPMASK )" );
 		AssertMsg( !( m_nENVMAP && !m_nREADNORMAL ), "Invalid combo combination ( ENVMAP && !READNORMAL )" );
@@ -202,11 +214,11 @@ public:
 		AssertMsg( !( m_nSELFILLUM_MASK && m_nSELFILLUM_ENVMAP_ALPHA ), "Invalid combo combination ( SELFILLUM_MASK && SELFILLUM_ENVMAP_ALPHA )" );
 		AssertMsg( !( m_nSELFILLUM_MASK && m_nENVMAPMASK ), "Invalid combo combination ( SELFILLUM_MASK && ENVMAPMASK )" );
 		AssertMsg( !( m_nSELFILLUM_ENVMAP_ALPHA && !m_nENVMAPMASK ), "Invalid combo combination ( SELFILLUM_ENVMAP_ALPHA && !ENVMAPMASK )" );
-		return ( 2 * m_nREADNORMAL ) + ( 4 * m_nPHONGFRESNEL ) + ( 8 * m_nNOCULL ) + ( 16 * m_nENVMAP ) + ( 32 * m_nENVMAPMASK ) + ( 64 * m_nENVMAPFRESNEL ) + ( 128 * m_nALPHATEST ) + ( 256 * m_nBASETEXTURE2 ) + ( 512 * m_nSELFILLUM ) + ( 1024 * m_nSELFILLUM_MASK ) + ( 2048 * m_nSELFILLUM_ENVMAP_ALPHA ) + 0;
+		return ( 2 * m_nREADNORMAL ) + ( 4 * m_nPHONGFRESNEL ) + ( 8 * m_nNOCULL ) + ( 16 * m_nENVMAP ) + ( 32 * m_nENVMAPMASK ) + ( 64 * m_nENVMAPFRESNEL ) + ( 128 * m_nALPHATEST ) + ( 256 * m_nBASETEXTURE2 ) + ( 512 * m_nSELFILLUM ) + ( 1024 * m_nSELFILLUM_MASK ) + ( 2048 * m_nSELFILLUM_ENVMAP_ALPHA ) + ( 4096 * m_nTRANSLUCENT ) + 0;
 	}
 };
 
-#define shaderStaticTest_composite_translucent_ps30 psh_forgot_to_set_static_READNORMAL + psh_forgot_to_set_static_PHONGFRESNEL + psh_forgot_to_set_static_NOCULL + psh_forgot_to_set_static_ENVMAP + psh_forgot_to_set_static_ENVMAPMASK + psh_forgot_to_set_static_ENVMAPFRESNEL + psh_forgot_to_set_static_ALPHATEST + psh_forgot_to_set_static_BASETEXTURE2 + psh_forgot_to_set_static_SELFILLUM + psh_forgot_to_set_static_SELFILLUM_MASK + psh_forgot_to_set_static_SELFILLUM_ENVMAP_ALPHA
+#define shaderStaticTest_composite_translucent_ps30 psh_forgot_to_set_static_READNORMAL + psh_forgot_to_set_static_PHONGFRESNEL + psh_forgot_to_set_static_NOCULL + psh_forgot_to_set_static_ENVMAP + psh_forgot_to_set_static_ENVMAPMASK + psh_forgot_to_set_static_ENVMAPFRESNEL + psh_forgot_to_set_static_ALPHATEST + psh_forgot_to_set_static_BASETEXTURE2 + psh_forgot_to_set_static_SELFILLUM + psh_forgot_to_set_static_SELFILLUM_MASK + psh_forgot_to_set_static_SELFILLUM_ENVMAP_ALPHA + psh_forgot_to_set_static_TRANSLUCENT
 
 
 class composite_translucent_ps30_Dynamic_Index

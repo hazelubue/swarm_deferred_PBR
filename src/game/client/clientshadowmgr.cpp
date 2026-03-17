@@ -115,7 +115,7 @@ static ConVar r_flashlightmodels( "r_flashlightmodels", "1" );
 static ConVar r_shadowrendertotexture( "r_shadowrendertotexture", "0" );
 static ConVar r_shadow_lightpos_lerptime( "r_shadow_lightpos_lerptime", "0.5" );
 static ConVar r_shadowfromworldlights_debug( "r_shadowfromworldlights_debug", "0", FCVAR_CHEAT );
-static ConVar r_shadowfromanyworldlight( "r_shadowfromanyworldlight", "0", FCVAR_CHEAT );
+static ConVar r_shadowfromanyworldlight( "r_shadowfromanyworldlight", "1", FCVAR_CHEAT );
 static ConVar r_shadow_shortenfactor( "r_shadow_shortenfactor", "2" , 0, "Makes shadows cast from local lights shorter" );
 
 static void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldValue );
@@ -133,15 +133,15 @@ static ConVar r_shadow_debug_spew( "r_shadow_debug_spew", "0", FCVAR_CHEAT );
 ConVar r_flashlightdepthtexture( "r_flashlightdepthtexture", "1" );
 
 #if defined( _X360 )
-ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "512" );
+ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "720" );
 #else
-ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "2048" );
+ConVar r_flashlightdepthreshigh( "r_flashlightdepthreshigh", "4096" ); //8192
 #endif
 
 #if defined( _X360 )
-ConVar r_flashlightdepthres( "r_flashlightdepthres", "512" );
+ConVar r_flashlightdepthres( "r_flashlightdepthres", "720" );
 #else
-ConVar r_flashlightdepthres( "r_flashlightdepthres", "1024" );
+ConVar r_flashlightdepthres("r_flashlightdepthres", "4096", FCVAR_ARCHIVE, "Flashlight depth resolution");
 #endif
 
 #if defined( _X360 )
@@ -1395,16 +1395,9 @@ int CVisibleShadowList::FindShadows( const CViewSetup *pView, int nLeafCount, Wo
 // sniff the command line parameters, etc. to determine how many shadow rt's and their dimensions
 void CClientShadowMgr::CalculateRenderTargetsAndSizes( void )
 {
-	bool bTools = CommandLine()->CheckParm( "-tools" ) != NULL;
-		
 	m_nDepthTextureResolution = r_flashlightdepthres.GetInt();
 	m_nDepthTextureResolutionHigh = r_flashlightdepthreshigh.GetInt();
-	if ( bTools )									// Higher resolution shadow maps in tools mode
-	{
-		char defaultRes[] = "2048";
-		m_nDepthTextureResolution = atoi( CommandLine()->ParmValue( "-sfm_shadowmapres", defaultRes ) );
-	}
-	m_nMaxDepthTextureShadows = bTools ? MAX_DEPTH_TEXTURE_SHADOWS_TOOLS : MAX_DEPTH_TEXTURE_SHADOWS;	// Just one shadow depth texture in games, more in tools
+	m_nMaxDepthTextureShadows = 10;
 }
 //-----------------------------------------------------------------------------
 // Constructor
@@ -1582,10 +1575,10 @@ void CClientShadowMgr::InitRenderTargets()
 		}
 
 		// Shadow may be resized during allocation (due to resolution constraints etc)
-		m_nDepthTextureResolution = m_DepthTextureCache[ m_nLowResStart ]->GetActualWidth();
+		//m_nDepthTextureResolution = m_DepthTextureCache[ m_nLowResStart ]->GetActualWidth();
 		r_flashlightdepthres.SetValue( m_nDepthTextureResolution );
 
-		m_nDepthTextureResolutionHigh = m_DepthTextureCache[ 0 ]->GetActualWidth();
+		//m_nDepthTextureResolutionHigh = m_DepthTextureCache[ 0 ]->GetActualWidth();
 		r_flashlightdepthreshigh.SetValue( m_nDepthTextureResolutionHigh );
 	}
 	InitDeferredShadows();
@@ -1647,7 +1640,7 @@ void CClientShadowMgr::InitDepthTextureShadows()
 		m_DummyColorTexture.InitRenderTargetTexture( 1, 1, RT_SIZE_OFFSCREEN, IMAGE_FORMAT_BGR565, MATERIAL_RT_DEPTH_SHARED, false, "_rt_ShadowDummy" );
 		m_DummyColorTexture.InitRenderTargetSurface( m_nDepthTextureResolution, m_nDepthTextureResolution, IMAGE_FORMAT_BGR565, false );
 #else
-		m_DummyColorTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_OFFSCREEN, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
+		m_DummyColorTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, RT_SIZE_NO_CHANGE, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy");
 #endif
 
 		// Create some number of depth-stencil textures
@@ -1669,7 +1662,7 @@ void CClientShadowMgr::InitDepthTextureShadows()
 			depthTex.InitRenderTargetTexture( nTextureResolution, nTextureResolution, RT_SIZE_OFFSCREEN, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
 			depthTex.InitRenderTargetSurface( 1, 1, dstFormat, false );
 #else
-			depthTex.InitRenderTarget( nTextureResolution, nTextureResolution, RT_SIZE_OFFSCREEN, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
+			depthTex.InitRenderTarget( nTextureResolution, nTextureResolution, RT_SIZE_NO_CHANGE, dstFormat, MATERIAL_RT_DEPTH_ONLY, false, strRTName);
 #endif
 
 			m_DepthTextureCache.AddToTail( depthTex );
@@ -5420,18 +5413,6 @@ int CClientShadowMgr::BuildActiveShadowDepthList( const CViewSetup &viewSetup, i
 		// Bail if this flashlight doesn't want shadows
 		if ( !flashlightState.m_bEnableShadows )
 			continue;
-
-		// Calculate an AABB around the shadow frustum
-		Vector vecAbsMins, vecAbsMaxs;
-		CalculateAABBFromProjectionMatrix( shadow.m_WorldToShadow, &vecAbsMins, &vecAbsMaxs );
-
-		// FIXME: Could do other sorts of culling here, such as frustum-frustum test, distance etc.
-		// If it's not in the view frustum, move on
-		if ( !flashlightState.m_bOrtho && viewFrustum.CullBox( vecAbsMins, vecAbsMaxs ) )
-		{
-			shadowmgr->SetFlashlightDepthTexture( shadow.m_ShadowHandle, NULL, 0 );
-			continue;
-		}
 
 		if ( nActiveDepthShadowCount >= nMaxDepthShadows )
 		{

@@ -1,0 +1,18 @@
+[vpc crc file version 2]
+8209bbc3 D:\projects\deferred\src_enhanced\devtools\bin\vpc.exe
+_Nc_VS2013/vpcgame:hl2_template_
+e094e518 client_hl2_template.vpc
+17fa82d0 ..\..\game\client\client_hl2_base.vpc
+a34d320e ..\..\game\client\client_base.vpc
+9a02405f ..\..\vpc_scripts\source_dll_base.vpc
+d752cf80 ..\..\vpc_scripts\platform_dirs.vpc
+6c4a5ff1 ..\..\vpc_scripts\source_base.vpc
+9a41fed7 ..\..\vpc_scripts\source_dll_win32_base.vpc
+486b766d ..\..\vpc_scripts\version.vpc
+846102f0 ..\..\vpc_scripts\loadaddress.vpc
+ad5b937a ..\..\vpc_scripts\source_dll_win32_debug.vpc
+78346de4 ..\..\vpc_scripts\source_dll_win32_release.vpc
+ca0b8332 ..\..\vpc_scripts\source_win32_base.vpc
+49651204 ..\..\vpc_scripts\source_video_base.vpc
+a109b797 ..\..\game\client\client_deferred_base.vpc
+30bf2216 ..\..\vpc_scripts\definitions\win32_2010.def

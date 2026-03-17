@@ -25,6 +25,8 @@
 #include "c_env_fog_controller.h"
 #include "C_PostProcessController.h"
 #include "C_ColorCorrection.h"
+#include "../game/shared/player_mobility_defs.h"
+#include <baseplayer_shared.h>
 
 class C_BaseCombatWeapon;
 class C_BaseViewModel;
@@ -63,6 +65,7 @@ enum PlayerRenderMode_t
 
 
 bool IsInFreezeCam( void );
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Base Player class
@@ -105,8 +108,15 @@ public:
 
 	// View model prediction setup
 	virtual void		CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov );
+	virtual void		CalcViewDeferred(Vector& eyeOrigin, QAngle& eyeAngles, Vector& SSReyeOrigin, QAngle& SSReyeAngles, float& zNear, float& zFar, float& fov);
 	virtual void		CalcViewModelView( const Vector& eyeOrigin, const QAngle& eyeAngles);
 	
+	virtual void				UpdateIndependentViewport();
+	virtual void				GetIndependentViewport(Vector& eyeOrigin, QAngle& eyeAngles, Vector& SSReyeOrigin,
+						QAngle& SSReyeAngles, float& zNear, float& zFar, float& fov);
+	virtual void				EnableIndependentViewport(bool bEnable) { m_bIndependentViewportEnabled = bEnable; }
+
+	bool				IsIndependentViewportEnabled() const { return m_bIndependentViewportEnabled; }
 
 	// Handle view smoothing when going up stairs
 	void				SmoothViewOnStairs( Vector& eyeOrigin );
@@ -218,6 +228,7 @@ public:
 	{
 		return false;
 	}
+
 
 	// Makes sure s_pLocalPlayer is properly initialized
 	void						CheckForLocalPlayer( int nSplitScreenSlot );
@@ -371,6 +382,16 @@ public:
 
 	virtual void UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity  );
 	virtual void PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool force );
+	// Mobility sound functions
+	/*virtual void PlayAirjumpSound(Vector& vecOrigin);
+	virtual void PlayPowerSlideSound(Vector& vecOrigin);
+	virtual void StopPowerSlideSound(void);
+	virtual void PlayWallRunSound(Vector& vecOrigin);
+	virtual void StopWallRunSound(void);*/
+	virtual void DeriveMaxSpeed(void) {};
+
+	Vector  GetEscapeVel() { return m_vecCornerEscapeVel; }
+	void    SetEscapeVel(Vector vecNewYaw) { m_vecCornerEscapeVel = vecNewYaw; }
 	virtual surfacedata_t * GetFootstepSurface( const Vector &origin, const char *surfaceName );
 	virtual void GetStepSoundVelocities( float *velwalk, float *velrun );
 	virtual void SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalking );
@@ -420,6 +441,19 @@ public:
 
 	virtual void			OnAchievementAchieved( int iAchievement ) {}
 
+	virtual bool			CanUseFirstPersonCommand(void){ return true; }
+
+private:
+
+	Vector m_vecIndependentEyeOrigin;
+	QAngle m_angIndependentEyeAngles;
+	Vector m_vecIndependentSSREyeOrigin;
+	QAngle m_angIndependentSSREyeAngles;
+	float m_flIndependentZNear;
+	float m_flIndependentZFar;
+	float m_flIndependentFOV;
+	bool m_bIndependentViewportEnabled;
+
 protected:
 	fogparams_t				m_CurrentFog;
 	EHANDLE					m_hOldFogController;
@@ -444,7 +478,7 @@ public:
 
 public:
 	int m_StuckLast;
-	
+	float m_flFragCookStartTime; // needed by HUD
 	// Data for only the local player
 	CNetworkVarEmbedded( CPlayerLocalData, m_Local );
 
@@ -464,6 +498,38 @@ public:
 	int						m_afButtonPressed;
 	int						m_afButtonReleased;
 	int						m_nButtons;
+
+
+	// Mobility mod
+	bool m_bLessClip = false;
+	bool m_bIsPowerSliding = false;
+	WallRunState m_nWallRunState = WALLRUN_NOT;
+	Vector m_vecWallNorm;
+	float m_flAutoViewTime; // if wallrunning, when should start adjusting the view 
+	bool m_bWallRunBumpAhead; // are we moving out from the wall anticipating a bump?
+	Vector m_vecLastWallRunPos; // Position when we ended the last wallrun
+	AirJumpState m_nAirJumpState; // Is the airjump ready, in progress, or done?
+	// Is the player allowed to jump while in the air
+	bool                CanAirJump(void)
+	{
+		return IsSuitEquipped() &&
+			m_nAirJumpState != AIRJUMP_DONE &&
+			m_nAirJumpState != AIRJUMP_NORM_JUMPING;
+	}
+	HSOUNDSCRIPTHANDLE m_hssPowerSlideSound;
+	HSOUNDSCRIPTHANDLE m_hssWallRunSound;
+
+	float m_flCoyoteTime; // When a wallrun ends or we go over a cliff, allow a window when
+	// jumping counts as a normal jump off the ground/wall, even though
+	// technically airborn. Compensating for player's perception/reflexes.
+	// This is the absolute time until which we allow the special jump
+
+	float m_flNextWallRunTime; // Sometimes we want to have a little cooldown for wallrunning - 
+	// mostly if a wallrun ended because it was above a doorway
+
+	Vector m_vecCornerEscapeVel;
+
+	PlayerMeleeState m_nMeleeState;
 protected:
 	int						m_nImpulse;
 	CNetworkVar( int, m_ladderSurfaceProps );
@@ -472,15 +538,12 @@ public:
 	float					m_flFOVTime;		// starting time of the FOV zoom
 private:
 	float					m_flWaterJumpTime;  // used to be called teleport_time
-	int						m_nAirJumpsRemaining;  // Track remaining air jumps
-
 	float					m_flSwimSoundTime;
 protected:
 	float					m_flStepSoundTime;
 	float					m_surfaceFriction;
 private:
 	CNetworkVector( m_vecLadderNormal );
-	
 
 // FTYPEDESC_INSENDTABLE STUFF (end)
 public:
@@ -530,8 +593,6 @@ public:
 	float			m_flConstraintWidth;
 	float			m_flConstraintSpeedFactor;
 	bool			m_bConstraintPastRadius;
-
-
 
 protected:
 
@@ -599,7 +660,7 @@ private:
 
 
 	// Player flashlight dynamic light pointers
-	bool			m_bFlashlightEnabled[ MAX_SPLITSCREEN_PLAYERS ];
+	bool			m_bFlashlightEnabled;
 
 #if !defined( NO_ENTITY_PREDICTION )
 	CUtlVector< CHandle< C_BaseEntity > > m_SimulatedByThisPlayer;
@@ -704,8 +765,6 @@ public:
 	
 	const fogplayerparams_t& GetPlayerFog() const { return m_PlayerFog; }
 
-
-
 private:
 	friend class CMoveHelperClient;
 
@@ -715,6 +774,8 @@ private:
 	// fog params
 	fogplayerparams_t		m_PlayerFog;
 };
+
+//C_BasePlayer* mv_r2;
 
 EXTERN_RECV_TABLE(DT_BasePlayer);
 

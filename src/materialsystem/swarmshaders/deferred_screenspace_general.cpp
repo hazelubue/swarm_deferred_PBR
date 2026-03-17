@@ -305,7 +305,7 @@ void DrawPassScreenspace(const defParms_screenspace& info, CBaseVSShader* pShade
 		pShaderAPI->SetPixelShaderConstant(16, data.matView.Base(), 4);
 		pShaderAPI->SetPixelShaderConstant(20, data.matProj.Base(), 4);
 		pShaderAPI->SetPixelShaderConstant(24, data.flZDists, 1);
-		pShaderAPI->SetPixelShaderConstant(42, data.matLockedViewProjInv.Base(), 4);
+		//pShaderAPI->SetPixelShaderConstant(42, data.matLockedViewProjInv.Base(), 4);
 		
 
 		pShaderAPI->SetVertexShaderIndex(0);

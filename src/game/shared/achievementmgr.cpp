@@ -86,18 +86,16 @@ CAchievementMgr::CAchievementMgr() : CAutoGameSystemPerFrame( "CAchievementMgr" 
 m_CallbackUserStatsStored( this, &CAchievementMgr::Steam_OnUserStatsStored )
 #endif
 {
-	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
-	{
-		SetDefLessFunc( m_mapAchievement[i] );
-		m_flLastClassChangeTime[i] = 0;
-		m_flTeamplayStartTime[i] = 0;
-		m_iMiniroundsCompleted[i] = 0;
-		m_bDirty[i] = false;
+	
+		SetDefLessFunc( m_mapAchievement);
+		m_flLastClassChangeTime = 0;
+		m_flTeamplayStartTime = 0;
+		m_iMiniroundsCompleted = 0;
+		m_bDirty = false;
 
-		m_AchievementsAwarded[i].RemoveAll();
-		m_AchievementsAwardedDuringCurrentGame[i].RemoveAll();
-		m_bUserSlotActive[i] = false;
-	}
+		m_AchievementsAwarded.RemoveAll();
+		m_AchievementsAwardedDuringCurrentGame.RemoveAll();
+		m_bUserSlotActive = false;
 
 	m_szMap[0] = 0;
 	m_bCheatsEverOn = false;
@@ -179,7 +177,7 @@ void CAchievementMgr::PostInit()
 			const char *pGameDirFilter = pAchievement->m_pGameDirFilter;
 			if ( !pGameDirFilter || ( 0 == Q_strcmp( pGameDir, pGameDirFilter ) ) )
 			{
-				m_mapAchievement[i].Insert( pAchievement->GetAchievementID(), pAchievement );
+				m_mapAchievement.Insert( pAchievement->GetAchievementID(), pAchievement );
 			}
 			else
 			{
@@ -194,15 +192,15 @@ void CAchievementMgr::PostInit()
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		// Add each of the achievements to a CUtlVector ordered by achievement ID
-		FOR_EACH_MAP( m_mapAchievement[i], iter )
+		FOR_EACH_MAP( m_mapAchievement, iter )
 		{
-			m_vecAchievement[i].AddToTail( m_mapAchievement[i][iter] );
+			m_vecAchievement.AddToTail( m_mapAchievement[iter] );
 		}
-		m_vecAchievement[i].Sort( AchievementIDCompare );
+		m_vecAchievement.Sort( AchievementIDCompare );
 
 		// Create the vector of achievements in display order
-		m_vecAchievementInOrder[i].AddVectorToTail( m_vecAchievement[i] );
-		m_vecAchievementInOrder[i].Sort( AchievementOrderCompare );
+		m_vecAchievementInOrder.AddVectorToTail( m_vecAchievement );
+		m_vecAchievementInOrder.Sort( AchievementOrderCompare );
 
 		// Clear the progress and achieved data for each splitscreen player
 		ClearAchievementData( i );
@@ -224,18 +222,18 @@ void CAchievementMgr::Shutdown()
 
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
-		FOR_EACH_MAP( m_mapAchievement[i], iter )
+		FOR_EACH_MAP( m_mapAchievement, iter )
 		{
-			delete m_mapAchievement[i][iter];
+			delete m_mapAchievement[iter];
 		}
-		m_mapAchievement[i].RemoveAll();
-		m_vecAchievement[i].RemoveAll();
-		m_vecAchievementInOrder[i].RemoveAll();
-		m_vecKillEventListeners[i].RemoveAll();
-		m_vecMapEventListeners[i].RemoveAll();
-		m_vecComponentListeners[i].RemoveAll();
-		m_AchievementsAwarded[i].RemoveAll();
-		m_AchievementsAwardedDuringCurrentGame[i].RemoveAll();
+		m_mapAchievement.RemoveAll();
+		m_vecAchievement.RemoveAll();
+		m_vecAchievementInOrder.RemoveAll();
+		m_vecKillEventListeners.RemoveAll();
+		m_vecMapEventListeners.RemoveAll();
+		m_vecComponentListeners.RemoveAll();
+		m_AchievementsAwarded.RemoveAll();
+		m_AchievementsAwardedDuringCurrentGame.RemoveAll();
 	}
 
 	g_pMatchFramework->GetEventsSubscription()->Unsubscribe( this );
@@ -345,15 +343,15 @@ void CAchievementMgr::LevelInitPreEntity()
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		// clear list of achievements listening for events
-		m_vecKillEventListeners[i].RemoveAll();
-		m_vecMapEventListeners[i].RemoveAll();
-		m_vecComponentListeners[i].RemoveAll();
+		m_vecKillEventListeners.RemoveAll();
+		m_vecMapEventListeners.RemoveAll();
+		m_vecComponentListeners.RemoveAll();
 
-		m_AchievementsAwarded[i].RemoveAll();
+		m_AchievementsAwarded.RemoveAll();
 
-		m_flLastClassChangeTime[i] = 0;
-		m_flTeamplayStartTime[i] = 0;
-		m_iMiniroundsCompleted[i] = 0;
+		m_flLastClassChangeTime = 0;
+		m_flTeamplayStartTime = 0;
+		m_iMiniroundsCompleted = 0;
 	}
 
 	// client and server have map names available in different forms (full path on client, just file base name on server), 
@@ -377,12 +375,12 @@ void CAchievementMgr::LevelInitPreEntity()
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		// Don't bother listening if a slot is not active
-		if ( m_bUserSlotActive[i] )
+		if ( m_bUserSlotActive )
 		{
 			// look through all achievements, see which ones we want to have listen for events
-			FOR_EACH_MAP( m_mapAchievement[i], iAchievement )
+			FOR_EACH_MAP( m_mapAchievement, iAchievement )
 			{
-				CBaseAchievement *pAchievement = m_mapAchievement[i][iAchievement];
+				CBaseAchievement *pAchievement = m_mapAchievement[iAchievement];
 
 				// if the achievement only applies to a specific map, and it's not the current map, skip it
 				const char *pMapNameFilter = pAchievement->m_pMapNameFilter;
@@ -392,24 +390,24 @@ void CAchievementMgr::LevelInitPreEntity()
 				// if the achievement needs kill events, add it as a listener
 				if ( pAchievement->GetFlags() & ACH_LISTEN_KILL_EVENTS )
 				{
-					m_vecKillEventListeners[i].AddToTail( pAchievement );
+					m_vecKillEventListeners.AddToTail( pAchievement );
 				}
 				// if the achievement needs map events, add it as a listener
 				if ( pAchievement->GetFlags() & ACH_LISTEN_MAP_EVENTS )
 				{
-					m_vecMapEventListeners[i].AddToTail( pAchievement );
+					m_vecMapEventListeners.AddToTail( pAchievement );
 				}
 				// if the achievement needs map events, add it as a listener
 				if ( pAchievement->GetFlags() & ACH_LISTEN_COMPONENT_EVENTS )
 				{
-					m_vecComponentListeners[i].AddToTail( pAchievement );
+					m_vecComponentListeners.AddToTail( pAchievement );
 				}
 				if ( pAchievement->IsActive() )
 				{
 					pAchievement->ListenForEvents();
 				}
 			}
-			m_flLevelInitTime[i] = gpGlobals->curtime;
+			m_flLevelInitTime = gpGlobals->curtime;
 		}
 	}
 }
@@ -423,9 +421,9 @@ void CAchievementMgr::LevelShutdownPreEntity()
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		// make all achievements stop listening for events 
-		FOR_EACH_MAP( m_mapAchievement[i], iAchievement )
+		FOR_EACH_MAP( m_mapAchievement, iAchievement )
 		{
-			CBaseAchievement *pAchievement = m_mapAchievement[i][iAchievement];
+			CBaseAchievement *pAchievement = m_mapAchievement[iAchievement];
 			pAchievement->StopListeningForAllEvents();
 		}
 	}
@@ -443,10 +441,10 @@ void CAchievementMgr::LevelShutdownPreEntity()
 //-----------------------------------------------------------------------------
 CBaseAchievement *CAchievementMgr::GetAchievementByID( int iAchievementID, int nUserSlot )
 {
-	int iAchievement = m_mapAchievement[nUserSlot].Find( iAchievementID );
-	if ( iAchievement != m_mapAchievement[nUserSlot].InvalidIndex() )
+	int iAchievement = m_mapAchievement.Find( iAchievementID );
+	if ( iAchievement != m_mapAchievement.InvalidIndex() )
 	{
-		return m_mapAchievement[nUserSlot][iAchievement];
+		return m_mapAchievement[iAchievement];
 	}
 	return NULL;
 }
@@ -459,9 +457,9 @@ CBaseAchievement *CAchievementMgr::GetAchievementByID( int iAchievementID, int n
 CBaseAchievement *CAchievementMgr::GetAchievementByName( const char *pchName, int nUserSlot )
 {
 	VPROF("GetAchievementByName");
-	FOR_EACH_MAP_FAST( m_mapAchievement[nUserSlot], i )
+	FOR_EACH_MAP_FAST( m_mapAchievement, i )
 	{
-		CBaseAchievement *pAchievement = m_mapAchievement[nUserSlot][i];
+		CBaseAchievement *pAchievement = m_mapAchievement[i];
 		if ( pAchievement && 0 == ( Q_stricmp( pchName, pAchievement->GetName() ) ) )
 			return pAchievement;
 	}
@@ -486,7 +484,7 @@ bool CAchievementMgr::HasAchieved( const char *pchName, int nUserSlot )
 //-----------------------------------------------------------------------------
 void CAchievementMgr::UserDisconnected( int nUserSlot )
 {
-	m_bUserSlotActive[nUserSlot] = false;
+	m_bUserSlotActive = false;
 
 	ClearAchievementData( nUserSlot );
 }
@@ -502,9 +500,9 @@ void CAchievementMgr::ReadAchievementsFromTitleData( int iController, int iSlot 
 		return;
 
 	// Set the incremental achievement progress and components
-	for ( int i=0; i<m_vecAchievement[iSlot].Count(); ++i )
+	for ( int i=0; i<m_vecAchievement.Count(); ++i )
 	{
-		CBaseAchievement *pAchievement = m_vecAchievement[iSlot][i];
+		CBaseAchievement *pAchievement = m_vecAchievement[i];
 		if ( pAchievement )
 		{
 			pAchievement->ReadProgress( pPlayer );
@@ -542,7 +540,7 @@ void CAchievementMgr::UserConnected( int nUserSlot )
 			steamapicontext->SteamUserStats()->RequestCurrentStats();
 		}
 
-		m_bUserSlotActive[STEAM_PLAYER_SLOT] = true;
+		m_bUserSlotActive = true;
 
 	}
 	else if ( IsX360() )
@@ -687,7 +685,7 @@ void CAchievementMgr::SaveGlobalState( )
 		}
 		matchmaking->UpdatePlayerData2( 0, achievementTitleData, TitleData2::CONTENTTYPE_ACHIEVEMENTS );
 #endif
-		m_bDirty[0] = false;
+		m_bDirty = false;
 	}
 	else if ( IsX360() )
 	{
@@ -769,7 +767,7 @@ void CAchievementMgr::AwardAchievement( int iAchievementID, int nUserSlot )
 	}
 
 	// save state at next good opportunity.  (Don't do it immediately, may hitch at bad time.)
-	m_bDirty[nUserSlot] = true;	
+	m_bDirty = true;	
 
 	if ( IsPC() )
 	{		
@@ -783,7 +781,7 @@ void CAchievementMgr::AwardAchievement( int iAchievementID, int nUserSlot )
 			{
 				// upload achievement to steam
 				UploadUserData( nUserSlot );
-				m_AchievementsAwarded[nUserSlot].AddToTail( iAchievementID );
+				m_AchievementsAwarded.AddToTail( iAchievementID );
 			}
 		}
 
@@ -806,7 +804,7 @@ void CAchievementMgr::AwardAchievement( int iAchievementID, int nUserSlot )
 	SaveGlobalStateIfDirty();
 
 	// Add this one to the list of achievements earned during current session
-	m_AchievementsAwardedDuringCurrentGame[nUserSlot].AddToTail( iAchievementID );
+	m_AchievementsAwardedDuringCurrentGame.AddToTail( iAchievementID );
 #endif // CLIENT_DLL
 }
 
@@ -845,9 +843,9 @@ void CAchievementMgr::PreRestoreSavedGame()
 {
 	for ( int j = 0; j < MAX_SPLITSCREEN_PLAYERS; ++j )
 	{
-		FOR_EACH_MAP( m_mapAchievement[j], i )
+		FOR_EACH_MAP( m_mapAchievement, i )
 		{
-			m_mapAchievement[j][i]->PreRestoreSavedGame();
+			m_mapAchievement[i]->PreRestoreSavedGame();
 		}
 	}
 }
@@ -857,13 +855,10 @@ void CAchievementMgr::PreRestoreSavedGame()
 //-----------------------------------------------------------------------------
 void CAchievementMgr::PostRestoreSavedGame()
 {
-	for ( int j = 0; j < MAX_SPLITSCREEN_PLAYERS; ++j )
+	/*FOR_EACH_MAP( m_mapAchievement, i )
 	{
-		FOR_EACH_MAP( m_mapAchievement[j], i )
-		{
-			m_mapAchievement[j][i]->PostRestoreSavedGame();
-		}
-	}
+		m_mapAchievement->PostRestoreSavedGame();
+	}*/
 }
 
 extern bool IsInCommentaryMode( void );
@@ -1159,9 +1154,9 @@ void CAchievementMgr::ResetAchievements()
 		return;
 	}
 
-	FOR_EACH_MAP( m_mapAchievement[STEAM_PLAYER_SLOT], i )
+	FOR_EACH_MAP( m_mapAchievement, i )
 	{
-		CBaseAchievement *pAchievement = m_mapAchievement[STEAM_PLAYER_SLOT][i];
+		CBaseAchievement *pAchievement = m_mapAchievement[i];
 		ResetAchievement_Internal( pAchievement );
 	}
 	UploadUserData( STEAM_PLAYER_SLOT );
@@ -1208,9 +1203,9 @@ void CAchievementMgr::PrintAchievementStatus()
 
 	Msg( "%42s %-20s %s\n", "Name:", "Status:", "Point value:" );
 	int iTotalAchievements = 0, iTotalPoints = 0;
-	FOR_EACH_MAP( m_mapAchievement[STEAM_PLAYER_SLOT], i )
+	FOR_EACH_MAP( m_mapAchievement, i )
 	{
-		CBaseAchievement *pAchievement = m_mapAchievement[STEAM_PLAYER_SLOT][i];
+		CBaseAchievement *pAchievement = m_mapAchievement[i];
 
 		Msg( "%42s ", pAchievement->GetName() );	
 
@@ -1278,7 +1273,7 @@ void CAchievementMgr::FireGameEvent( IGameEvent *event )
 	else if ( 0 == Q_strcmp( name, "localplayer_changeclass" ) )
 	{
 		// keep track of when the player last changed class
-		m_flLastClassChangeTime[nSplitScreenPlayer] =  gpGlobals->curtime;
+		m_flLastClassChangeTime =  gpGlobals->curtime;
 	}
 	else if ( 0 == Q_strcmp( name, "localplayer_changeteam" ) )
 	{
@@ -1289,16 +1284,16 @@ void CAchievementMgr::FireGameEvent( IGameEvent *event )
 			int iTeam = pLocalPlayer->GetTeamNumber();
 			if ( iTeam > TEAM_SPECTATOR )
 			{
-				if ( 0 == m_flTeamplayStartTime[nSplitScreenPlayer] )
+				if ( 0 == m_flTeamplayStartTime )
 				{
 					// player transitioned from no/spectator team to a game team, mark the time
-					m_flTeamplayStartTime[nSplitScreenPlayer] = gpGlobals->curtime;
+					m_flTeamplayStartTime = gpGlobals->curtime;
 				}				
 			}
 			else
 			{
 				// player transitioned to no/spectator team, clear the teamplay start time
-				m_flTeamplayStartTime[nSplitScreenPlayer] = 0;
+				m_flTeamplayStartTime = 0;
 			}			
 		}		
 	}
@@ -1307,7 +1302,7 @@ void CAchievementMgr::FireGameEvent( IGameEvent *event )
 		if ( event->GetBool( "full_reset" ) )
 		{
 			// we're starting a full round, clear miniround count
-			m_iMiniroundsCompleted[nSplitScreenPlayer] = 0;
+			m_iMiniroundsCompleted = 0;
 		}
 	}
 	else if ( 0 == Q_strcmp( name, "teamplay_round_win" ) )
@@ -1315,14 +1310,14 @@ void CAchievementMgr::FireGameEvent( IGameEvent *event )
 		if ( false == event->GetBool( "full_round", true ) )
 		{
 			// we just finished a miniround but the round is continuing, increment miniround count
-			m_iMiniroundsCompleted[nSplitScreenPlayer]++;
+			m_iMiniroundsCompleted++;
 		}
 	}
 	else if ( 0 == Q_strcmp( name, "player_stats_updated" ) )
 	{
-		FOR_EACH_MAP( m_mapAchievement[nSplitScreenPlayer], i )
+		FOR_EACH_MAP( m_mapAchievement, i )
 		{
-			CBaseAchievement *pAchievement = m_mapAchievement[nSplitScreenPlayer][i];
+			CBaseAchievement *pAchievement = m_mapAchievement[i];
 			pAchievement->OnPlayerStatsUpdate();
 		}
 	}
@@ -1386,9 +1381,9 @@ void CAchievementMgr::OnKillEvent( CBaseEntity *pVictim, CBaseEntity *pAttacker,
 	for ( int j = 0; j < MAX_SPLITSCREEN_PLAYERS; ++j )
 	{
 		// look through all the kill event listeners and notify any achievements whose filters we pass
-		FOR_EACH_VEC( m_vecKillEventListeners[j], iAchievement )
+		FOR_EACH_VEC( m_vecKillEventListeners, iAchievement )
 		{
-			CBaseAchievement *pAchievement = m_vecKillEventListeners[j][iAchievement];
+			CBaseAchievement *pAchievement = m_vecKillEventListeners[iAchievement];
 
 			if ( !pAchievement->IsActive() )
 				continue;
@@ -1453,9 +1448,9 @@ void CAchievementMgr::OnMapEvent( const char *pchEventName, int nUserSlot )
 		return;
 
 	// see if this event matches the prefix for an achievement component
-	FOR_EACH_VEC( m_vecComponentListeners[nUserSlot], iAchievement )
+	FOR_EACH_VEC( m_vecComponentListeners, iAchievement )
 	{
-		CBaseAchievement *pAchievement = m_vecComponentListeners[nUserSlot][iAchievement];
+		CBaseAchievement *pAchievement = m_vecComponentListeners[iAchievement];
 		Assert( pAchievement->m_pszComponentPrefix );
 		if ( 0 == Q_strncmp( pchEventName, pAchievement->m_pszComponentPrefix, pAchievement->m_iComponentPrefixLen ) )
 		{
@@ -1466,9 +1461,9 @@ void CAchievementMgr::OnMapEvent( const char *pchEventName, int nUserSlot )
 	}
 
 	// look through all the map event listeners
-	FOR_EACH_VEC( m_vecMapEventListeners[nUserSlot], iAchievement )
+	FOR_EACH_VEC( m_vecMapEventListeners, iAchievement )
 	{
-		CBaseAchievement *pAchievement = m_vecMapEventListeners[nUserSlot][iAchievement];
+		CBaseAchievement *pAchievement = m_vecMapEventListeners[iAchievement];
 		pAchievement->OnMapEvent( pchEventName );
 	}
 }
@@ -1480,8 +1475,8 @@ void CAchievementMgr::OnMapEvent( const char *pchEventName, int nUserSlot )
 //-----------------------------------------------------------------------------
 IAchievement* CAchievementMgr::GetAchievementByIndex( int index, int nUserSlot )
 {
-	Assert( m_vecAchievement[nUserSlot].IsValidIndex(index) );
-	return (IAchievement*)m_vecAchievement[nUserSlot][index];
+	Assert( m_vecAchievement.IsValidIndex(index) );
+	return (IAchievement*)m_vecAchievement[index];
 }
 
 
@@ -1492,8 +1487,8 @@ IAchievement* CAchievementMgr::GetAchievementByIndex( int index, int nUserSlot )
 //-----------------------------------------------------------------------------
 IAchievement* CAchievementMgr::GetAchievementByDisplayOrder( int orderIndex, int nUserSlot )
 {
-	Assert( m_vecAchievementInOrder[nUserSlot].IsValidIndex(orderIndex) );
-	return (IAchievement*)m_vecAchievementInOrder[nUserSlot][orderIndex];
+	Assert( m_vecAchievementInOrder.IsValidIndex(orderIndex) );
+	return (IAchievement*)m_vecAchievementInOrder[orderIndex];
 }
 
 
@@ -1504,7 +1499,7 @@ IAchievement* CAchievementMgr::GetAchievementByDisplayOrder( int orderIndex, int
 //-----------------------------------------------------------------------------
 int CAchievementMgr::GetAchievementCount()
 {
-	return m_vecAchievement[SINGLE_PLAYER_SLOT].Count();
+	return m_vecAchievement.Count();
 }
 
 //-----------------------------------------------------------------------------
@@ -1561,9 +1556,9 @@ void CAchievementMgr::Steam_OnUserStatsReceived( UserStatsReceived_t *pUserStats
 	}
 
 	// run through the achievements and set their achieved state according to Steam data
-	for ( int i = 0; i < m_vecAchievement[STEAM_PLAYER_SLOT].Count(); ++i )
+	for ( int i = 0; i < m_vecAchievement.Count(); ++i )
 	{
-		CBaseAchievement *pAchievement = m_vecAchievement[STEAM_PLAYER_SLOT][i];
+		CBaseAchievement *pAchievement = m_vecAchievement[i];
 #ifndef INFESTED_DLL
 		char szFieldName[64];
 #endif
@@ -1660,7 +1655,7 @@ void CAchievementMgr::Steam_OnUserStatsStored( UserStatsStored_t *pUserStatsStor
 
 	else
 	{
-		if ( m_AchievementsAwarded[STEAM_PLAYER_SLOT].Count() > 0 )
+		if ( m_AchievementsAwarded.Count() > 0 )
 		{
 #ifndef GAME_DLL
 			// send a message to the server about our achievement
@@ -1673,18 +1668,18 @@ void CAchievementMgr::Steam_OnUserStatsStored( UserStatsStored_t *pUserStatsStor
 					int iPlayerID = pLocalPlayer->GetUserID();
 					unsigned short mask = UTIL_GetAchievementEventMask();
 
-					Q_snprintf( cmd, sizeof( cmd ), "achievement_earned %d %d", m_AchievementsAwarded[STEAM_PLAYER_SLOT][0] ^ mask, ( iPlayerID ^ m_AchievementsAwarded[STEAM_PLAYER_SLOT][0] ) ^ mask );
+					Q_snprintf( cmd, sizeof( cmd ), "achievement_earned %d %d", m_AchievementsAwarded[0] ^ mask, ( iPlayerID ^ m_AchievementsAwarded[0] ) ^ mask );
 					engine->ClientCmd_Unrestricted( cmd );
 				}
 			}
 #endif			
-			m_AchievementsAwarded[STEAM_PLAYER_SLOT].Remove( 0 );
+			m_AchievementsAwarded.Remove( 0 );
 		}
 
 		// for each achievement that has not been achieved
-		FOR_EACH_MAP( m_mapAchievement[STEAM_PLAYER_SLOT], iAchievement )
+		FOR_EACH_MAP( m_mapAchievement, iAchievement )
 		{
-			CBaseAchievement *pAchievement = m_mapAchievement[STEAM_PLAYER_SLOT][iAchievement];
+			CBaseAchievement *pAchievement = m_mapAchievement[iAchievement];
 
 			if ( !pAchievement->IsAchieved() )
 			{
@@ -1913,7 +1908,7 @@ const CUtlVector<int>& CAchievementMgr::GetAchievedDuringCurrentGame( int nPlaye
 //-----------------------------------------------------------------------------
 void CAchievementMgr::ResetAchievedDuringCurrentGame( int nPlayerSlot )
 {
-	m_AchievementsAwardedDuringCurrentGame[nPlayerSlot].RemoveAll();
+	m_AchievementsAwardedDuringCurrentGame.RemoveAll();
 }
 
 //-----------------------------------------------------------------------------
@@ -1921,9 +1916,9 @@ void CAchievementMgr::ResetAchievedDuringCurrentGame( int nPlayerSlot )
 //-----------------------------------------------------------------------------
 void CAchievementMgr::ClearAchievementData( int nUserSlot )
 {
-	FOR_EACH_VEC( m_vecAchievement[nUserSlot], i )
+	FOR_EACH_VEC( m_vecAchievement, i )
 	{
-		m_mapAchievement[nUserSlot][i]->ClearAchievementData();
+		m_mapAchievement[i]->ClearAchievementData();
 	}
 }
 

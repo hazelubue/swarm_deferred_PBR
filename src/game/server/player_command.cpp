@@ -411,7 +411,7 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	{
 		VPROF( "g_pGameMovement->ProcessMovement()" );
 		Assert( g_pGameMovement );
-		g_pGameMovement->ProcessMovement( player, g_pMoveData );
+		g_pGameMovement->ProcessMovement( player, g_pMoveData, NULL );
 	}
 	else
 	{

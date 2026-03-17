@@ -26,22 +26,6 @@ void AddReleaseFunc( void )
 		materials->AddReleaseFunc( ReleaseRenderTargets );
 	}
 }
-//=============================================================================
-// Deppth Texture creation
-//=============================================================================
-ITexture* GetDepthTexture()
-{
-	static CTextureReference s_pDepthTexture;
-
-	if (!s_pDepthTexture)
-	{
-		s_pDepthTexture.Init(
-			materials->FindTexture("_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET)
-		);
-	}
-
-	return s_pDepthTexture;
-}
 
 //=============================================================================
 // Power of Two Frame Buffer Texture
@@ -137,37 +121,6 @@ ITexture *GetFullFrameFrameBufferTexture( int textureIndex )
 	return s_pFullFrameFrameBufferTexture[textureIndex];
 }
 
-static CTextureReference s_pReflectionCopyTexture;
-ITexture* GetReflectionCopyTexture(void)
-{
-	if (!s_pReflectionCopyTexture)
-	{
-		ITexture* pFullFrameFB = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
-		if (pFullFrameFB)
-		{
-			int width = pFullFrameFB->GetActualWidth();
-			int height = pFullFrameFB->GetActualHeight();
-			ImageFormat format = pFullFrameFB->GetImageFormat();
-
-			// Create the render target
-			materials->CreateNamedRenderTargetTextureEx(
-				"_rt_ReflectionCopy",
-				width, height,
-				RT_SIZE_NO_CHANGE,
-				format,
-				MATERIAL_RT_DEPTH_NONE,
-				TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT,
-				CREATERENDERTARGETFLAGS_HDR
-			);
-		}
-
-		s_pReflectionCopyTexture.Init(materials->FindTexture("_rt_ReflectionCopy", TEXTURE_GROUP_RENDER_TARGET));
-		Assert(!IsErrorTexture(s_pReflectionCopyTexture));
-		AddReleaseFunc();
-	}
-
-	return s_pReflectionCopyTexture;
-}
 
 //=============================================================================
 // Water reflection
@@ -302,7 +255,6 @@ void ReleaseRenderTargets( int nChangeFlags )
 	s_pQuarterSizedFB0.Shutdown();
 	s_pQuarterSizedFB1.Shutdown();
 	s_pFullFrameDepthTexture.Shutdown();
-	s_pReflectionCopyTexture.Shutdown();
 
 	for (int i=0; i<MAX_FB_TEXTURES; ++i)
 	{

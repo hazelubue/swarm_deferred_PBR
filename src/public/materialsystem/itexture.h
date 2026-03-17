@@ -92,6 +92,8 @@ public:
 
 	// Uses for stats. . .get the approximate size of the texture in it's current format.
 	virtual int GetApproximateVidMemBytes( void ) const = 0;
+	//virtual int *GetApproximateVidMemBytesPointed(void) const { return GetApproximateVidMemBytes(); }
+
 
 	// Returns true if the texture data couldn't be loaded.
 	virtual bool IsError() const = 0;

@@ -528,7 +528,7 @@ CAI_Node *CAI_Network::AddNode( const Vector &origin, float yaw )
 
 	if (m_iNumNodes >= MAX_NODES)
 	{
-		DevMsg( "ERROR: too many nodes in map, deleting last node.\n", MAX_NODES );
+		DevMsg( "ERROR: too many nodes in map, deleting last node.\n" );
 		m_iNumNodes--;
 	}
 

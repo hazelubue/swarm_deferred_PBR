@@ -3,7 +3,7 @@
 #include "deferred/deferred_shared_common.h"
 #include "CollisionUtils.h"
 
-#include "viewrender.h"
+//#include "viewrender.h"
 #include "view_shared.h"
 #include "engine/IVDebugOverlay.h"
 #include "tier0/fasttimer.h"
@@ -390,7 +390,7 @@ FORCEINLINE int CLightingManager::WriteLight( def_light_t *l, float *pfl4 )
 
 	const int iFloatSize = sizeof( float );
 
-	Vector colDiffuse = l->col_diffuse * flMasterFade;
+	Vector colDiffuse = l->col_diffuse;
 	Vector colAmbient = l->col_ambient * flMasterFade;
 
 	switch ( l->iLighttype )
@@ -415,7 +415,7 @@ FORCEINLINE int CLightingManager::WriteLight( def_light_t *l, float *pfl4 )
 
 			Q_memcpy( pfl4, colAmbient.Base(), iFloatSize * 3 );
 			pfl4 += 3;
-
+			*pfl4 = 0.0f;
 			if ( bAdvanced )
 			{
 				*pfl4 = l->flShadowFade;
@@ -455,6 +455,8 @@ FORCEINLINE int CLightingManager::WriteLight( def_light_t *l, float *pfl4 )
 
 			Q_memcpy( pfl4, l->backDir.Base(), iFloatSize * 3 );
 			pfl4 += 3;
+
+			*pfl4 = 1.0f; // SPOT
 
 			*pfl4 = l->flSpotCone_Inner;
 			pfl4++;
@@ -605,6 +607,9 @@ void CLightingManager::RenderLights( const CViewSetup &view, CDeferredViewRender
 				d.a, d.b,
 				d.c, d.d );
 			delete [] pflTrash;
+
+			//GetDeferredExt()->FillDeferredLightTexture();
+
 		};
 	};
 
@@ -1144,4 +1149,28 @@ void CLightingManager::CommitForwardSpotLightsToExtension()
 		// Clear forward lights if none available
 		GetDeferredExt()->CommitForwardSpotLightData(NULL, 0);
 	}
+}
+
+void CLightingManager::CommitLightDataTexture()
+{
+	//GetDeferredExt()->FillDeferredLightTexture();
+}
+
+uint8 CLightingManager::LightType()
+{
+	// fuck you architecture
+	def_light_t* l = new def_light_t(true);
+
+	const uint8 type = l->iLighttype;
+
+	return GetDeferredExt()->LightType(type);
+
+}
+
+void CLightingManager::IndexTextureData()
+{
+	// fuck you architecture
+	def_light_t* l = new def_light_t(true);
+
+	GetDeferredExt()->IndexTextureData(l);
 }

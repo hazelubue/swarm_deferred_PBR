@@ -1776,6 +1776,18 @@ bool C_BaseEntity::GetShadowCastDistance( float *pDistance, ShadowType_t shadowT
 	return false;
 }
 
+void C_BaseEntity::OnDisableShadowDepthRenderingChanged()
+{
+	bool bIsShadowDepthRenderingDisabled = IsEffectActive(EF_NOSHADOWDEPTH);
+	g_pClientLeafSystem->DisableShadowDepthRendering(m_hRender, bIsShadowDepthRenderingDisabled);
+}
+
+void C_BaseEntity::OnShadowDepthRenderingCacheableStateChanged()
+{
+	bool bIsShadowDepthRenderingCacheDisabled = IsEffectActive(EF_SHADOWDEPTH_NOCACHE);
+	g_pClientLeafSystem->DisableShadowDepthCaching(m_hRender, bIsShadowDepthRenderingCacheDisabled);
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1785,7 +1797,7 @@ C_BaseEntity *C_BaseEntity::GetShadowUseOtherEntity( void ) const
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: EF_SHADOWDEPTH_NOCACHE
 //-----------------------------------------------------------------------------
 void C_BaseEntity::SetShadowUseOtherEntity( C_BaseEntity *pEntity )
 {
@@ -1821,7 +1833,7 @@ bool C_BaseEntity::ShouldReceiveProjectedTextures( int flags )
 {
 	Assert( flags & SHADOW_FLAGS_PROJECTED_TEXTURE_TYPE_MASK );
 
-	if ( IsEffectActive( EF_NODRAW ) )
+	if (IsEffectActive( EF_NODRAW ) || IsEffectActive( EF_NOFLASHLIGHT ) )
 		 return false;
 
 	if( ( flags & ( SHADOW_FLAGS_FLASHLIGHT | SHADOW_FLAGS_SIMPLE_PROJECTION ) ) != 0 )
@@ -6061,8 +6073,11 @@ void C_BaseEntity::AddToEntityList( entity_list_ids_t listId )
 
 void C_BaseEntity::RemoveFromEntityList( entity_list_ids_t listId )
 {
+#ifndef PORTAL
 	Assert( s_nSuppressChanges != listId );
-	Assert( listId < NUM_ENTITY_LISTS );
+#endif
+	Assert(listId < NUM_ENTITY_LISTS);
+
 	if ( m_ListEntry[listId] != 0xFFFF )
 	{
 		g_EntityLists[listId].Remove( m_ListEntry[listId] );
@@ -6185,12 +6200,20 @@ void C_BaseEntity::SimulateEntities()
 
 	if ( !report_cliententitysim.GetBool() )
 	{
-		int iNext;
+		int iNext = 0;
 		for ( int iCur = g_EntityLists[ENTITY_LIST_SIMULATE].Head(); iCur != g_EntityLists[ENTITY_LIST_SIMULATE].InvalidIndex(); iCur = iNext )
 		{
+			if (!g_EntityLists[ENTITY_LIST_SIMULATE].IsValidIndex(iCur))
+			{
+				iNext++;
+				continue;
+			}
+
 			iNext = g_EntityLists[ENTITY_LIST_SIMULATE].Next( iCur );
+
 			C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_SIMULATE].Element(iCur);
-			if ( pCur->IsEFlagSet( EFL_KILLME ) )
+
+			if ( pCur->IsEFlagSet(EFL_KILLME))
 				continue;
 
 #ifdef _DEBUG
@@ -6214,6 +6237,10 @@ void C_BaseEntity::SimulateEntities()
 		for ( int iCur = g_EntityLists[ENTITY_LIST_SIMULATE].Head(); iCur != g_EntityLists[ENTITY_LIST_SIMULATE].InvalidIndex(); iCur = iNext )
 		{
 			iNext = g_EntityLists[ENTITY_LIST_SIMULATE].Next( iCur );
+
+			if (!g_EntityLists[ENTITY_LIST_SIMULATE].IsValidIndex(iCur))
+				continue;
+
 			C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_SIMULATE].Element(iCur);
 			if ( pCur->IsEFlagSet( EFL_KILLME ) )
 				continue;

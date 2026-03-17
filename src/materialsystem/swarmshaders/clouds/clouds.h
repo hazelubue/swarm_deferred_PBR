@@ -33,12 +33,12 @@ static const float CLOUDS_CUMULUS_SIZE = 1.0;
 
 // Global cloud parameters
 static CloudParams clouds_params;
-static float3 sun_dir;
-static float3 moon_dir;
-static float3 sun_color;
-static float3 moon_color;
-static float3 sky_color;
-static float3 sunlight_color;
+//static float3 sun_dir;
+//static float3 moon_dir;
+//static float3 sun_color;
+//static float3 moon_color;
+//static float3 sky_color;
+//static float3 sunlight_color;
 
 // ====================================
 // Utility Functions
@@ -52,9 +52,6 @@ float sqr(float x) { return x * x; }
 float rcp(float x) { return 1.0 / x; }
 float dampen(float x) { return sqrt(x); }
 
-float linear_step(float edge0, float edge1, float x) {
-	return saturate((x - edge0) / (edge1 - edge0));
-}
 
 float lift(float x, float power) {
 	return pow(saturate(x), power);
@@ -68,17 +65,17 @@ float cubic_smooth(float x) {
 // Cloud Result Structure
 // ====================================
 
-struct CloudsResult {
-	float4 scattering; // w = ambient scattering, for lightning flashes
-	float transmittance;
-	float apparent_distance;
-};
-
-static const CloudsResult clouds_not_hit = {
-	float4(0.0, 0.0, 0.0, 0.0),
-	1.0,
-	1e5
-};
+//struct CloudsResult {
+//	float4 scattering; // w = ambient scattering, for lightning flashes
+//	float transmittance;
+//	float apparent_distance;
+//};
+//
+//static const CloudsResult clouds_not_hit = {
+//	float4(0.0, 0.0, 0.0, 0.0),
+//	1.0,
+//	1e5
+//};
 
 CloudsResult blend_layers(CloudsResult back_layer, CloudsResult front_layer) {
 	bool front_in_front = front_layer.apparent_distance < back_layer.apparent_distance;
@@ -351,36 +348,8 @@ float2 clouds_cumulus_scattering(
 	return scattering * scattering_integral_times_density;
 }
 
-float2 intersect_sphere(float3 origin, float3 dir, float radius) {
-	float b = dot(origin, dir);
-	float c = dot(origin, origin) - radius * radius;
-	float discriminant = b * b - c;
 
-	if (discriminant < 0.0) return float2(-1.0, -1.0);
 
-	float sqrtDisc = sqrt(discriminant);
-	return float2(-b - sqrtDisc, -b + sqrtDisc);
-}
-
-float2 intersect_spherical_shell(float3 origin, float3 dir, float inner_radius, float outer_radius) {
-	float2 inner = intersect_sphere(origin, dir, inner_radius);
-	float2 outer = intersect_sphere(origin, dir, outer_radius);
-
-	float t_near = (inner.x > 0.0) ? inner.x : outer.x;
-	float t_far = outer.y;
-
-	return float2(t_near, t_far);
-}
-
-float2 hash2(float2 p) {
-	p = float2(dot(p, float2(127.1, 311.7)),
-		dot(p, float2(269.5, 183.3)));
-	return frac(sin(p) * 43758.5453123);
-}
-
-float2 hash2(float3 p) {
-	return hash2(p.xy + p.z);
-}
 
 float3 atmosphere_transmittance(float3 pos, float3 dir) {
 	return float3(1.0, 1.0, 1.0);
@@ -549,68 +518,6 @@ CloudsResult draw_cumulus_clouds(
 	result.scattering = global_scattering;
 	result.transmittance = clouds_transmittance;
 	result.apparent_distance = apparent_distance;
-
-	return result;
-}
-
-CloudsResult draw_clouds(
-	float3 air_viewer_pos,
-	float3 ray_dir,
-	float3 clear_sky,
-	float distance_to_terrain,
-	float dither
-) {
-	CloudsResult result = clouds_not_hit;
-	float r = length(air_viewer_pos);
-
-
-	result = draw_cumulus_clouds(air_viewer_pos, ray_dir, clear_sky, distance_to_terrain, dither);
-	if (clouds_early_exit(result, r, clouds_cumulus_radius)) {
-		return result;
-	}
-
-#ifdef CLOUDS_ALTOCUMULUS
-	CloudsResult result_ac = draw_altocumulus_clouds(air_viewer_pos, ray_dir, clear_sky, distance_to_terrain, dither);
-	result = blend_layers(result, result_ac);
-	if (clouds_early_exit(result, r, clouds_altocumulus_radius)) {
-		return result;
-	}
-#endif
-
-#ifdef CLOUDS_CUMULUS_CONGESTUS
-	if (clouds_params.cumulus_congestus_blend > eps) {
-		CloudsResult result_cu_con = draw_cumulus_congestus_clouds(air_viewer_pos, ray_dir, clear_sky, distance_to_terrain, dither);
-
-		// fade existing clouds into congestus
-		float distance_fade = lerp(
-			1.0,
-			result_cu_con.transmittance,
-			linear_step(
-				0.75,
-				1.0,
-				result.apparent_distance * rcp(clouds_cumulus_congestus_distance)
-			)
-		);
-		result.scattering *= distance_fade;
-		result.transmittance += (1.0 - result.transmittance) * (1.0 - distance_fade);
-		result.apparent_distance = lerp(result_cu_con.apparent_distance, result.apparent_distance, distance_fade);
-
-		result = blend_layers(result, result_cu_con);
-		if (result.transmittance < 1e-3) return result;
-	}
-#endif
-
-#ifdef CLOUDS_CIRRUS
-	CloudsResult result_ci = draw_cirrus_clouds(air_viewer_pos, ray_dir, clear_sky, distance_to_terrain, dither);
-	result = blend_layers(result, result_ci);
-	if (result.transmittance < 1e-3) return result;
-#endif
-
-#ifdef CLOUDS_NOCTILUCENT
-	float4 result_nlc = draw_noctilucent_clouds(air_viewer_pos, ray_dir, clear_sky);
-	result.scattering.rgb += result_nlc.xyz * result.transmittance;
-	result.transmittance *= result_nlc.w;
-#endif
 
 	return result;
 }

@@ -54,7 +54,7 @@ void FormatViewModelAttachment( C_BasePlayer *pPlayer, Vector &vOrigin, bool bIn
 	Assert( nSlot != -1 );
 
 	// Presumably, SetUpView has been called so we know our FOV and render origin.
-	const CViewSetup *pViewSetup = view->GetPlayerViewSetup( nSlot );
+	const CViewSetup *pViewSetup = view->GetPlayerViewSetup( );
 	
 	float worldx = tan( pViewSetup->fov * M_PI/360.0 );
 	float viewx = tan( pViewSetup->fovViewmodel * M_PI/360.0 );
@@ -201,7 +201,7 @@ bool C_BaseViewModel::Interpolate( float currentTime )
 
 inline bool C_BaseViewModel::ShouldFlipViewModel()
 {
-	return true;
+	return false;
 }
 
 
@@ -261,7 +261,7 @@ bool C_BaseViewModel::ShouldDraw()
 #endif
 	else
 	{
-		//Assert( !IsEffectActive( EF_NODRAW ) );
+		Assert( !IsEffectActive( EF_NODRAW ) );
 		Assert(	GetRenderMode() != kRenderNone );
 
 		if ( vm_draw_always.GetBool() )
@@ -271,27 +271,6 @@ bool C_BaseViewModel::ShouldDraw()
 
 		return BaseClass::ShouldDraw();
 	}
-}
-
-const Vector &C_BaseViewModel::GetRenderOrigin()
-{
-	m_vecRender = BaseClass::GetRenderOrigin();
-
-	if ( ShouldFlipViewModel() )
-	{
-		int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-
-		Assert( nSlot != -1 );
-		const CViewSetup *pViewSetup = view->GetPlayerViewSetup( nSlot );
-
-		Vector right, delta = m_vecRender - pViewSetup->origin;
-		AngleVectors( pViewSetup->angles, NULL, &right, NULL );
-		float flRight = DotProduct( right, delta );
-
-		m_vecRender += right * flRight * -2.0f;
-	}
-
-	return m_vecRender;
 }
 
 //-----------------------------------------------------------------------------

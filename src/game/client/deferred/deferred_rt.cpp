@@ -7,7 +7,7 @@
 static CTextureReference g_tex_Normals;
 static CTextureReference g_tex_Water_Normals;
 static CTextureReference g_tex_Depth;
-static CTextureReference g_tex_ForwardData;
+static ITexture* g_tex_ForwardData;
 
 static CTextureReference g_tex_Reflection;
 static CTextureReference g_tex_Refraction;
@@ -50,7 +50,7 @@ void InitDeferredRTs( bool bInitial )
 
 	materials->GetBackBufferDimensions( screen_w, screen_h );
 
-	const ImageFormat fmt_gbuffer0 = IMAGE_FORMAT_RGB888;
+	const ImageFormat fmt_gbuffer0 = IMAGE_FORMAT_RGBA8888;
 
 	const ImageFormat fmt_gbuffer2 = IMAGE_FORMAT_RGBA8888;
 
@@ -108,7 +108,7 @@ void InitDeferredRTs( bool bInitial )
 			dummy, dummy,
 			RT_SIZE_FULL_FRAME_BUFFER_ROUNDED_UP,
 			fmt_gbuffer0,
-			MATERIAL_RT_DEPTH_SHARED,
+			MATERIAL_RT_DEPTH_NONE,
 			gbufferFlags, 0));
 
 		g_tex_Depth.Init( materials->CreateNamedRenderTargetTextureEx2( DEFRTNAME_GBUFFER1,
@@ -118,12 +118,15 @@ void InitDeferredRTs( bool bInitial )
 			MATERIAL_RT_DEPTH_NONE,
 			gbufferFlags, 0 ) );
 
-		g_tex_ForwardData.Init(materials->CreateNamedRenderTargetTextureEx2(DEFRTNAME_FORWARDDATA,
-			dummy, dummy,
-			RT_SIZE_FULL_FRAME_BUFFER_ROUNDED_UP,
-			fmt_ForwardLightData,
-			MATERIAL_RT_DEPTH_NONE,
-			depthFlags, 0));
+		g_tex_ForwardData = materials->CreateProceduralTexture(
+			DEFRTNAME_FORWARDDATA,
+			TEXTURE_GROUP_RENDER_TARGET,
+			1, 512,  // 1 pixel wide, 512 rows tall (adjust as needed)
+			IMAGE_FORMAT_RGBA32323232F,
+			TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT |
+			TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_NOLOD |
+			TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_SINGLECOPY
+		);
 
 
 		g_tex_LightCtrl.Init( materials->CreateNamedRenderTargetTextureEx2( DEFRTNAME_GBUFFER2,

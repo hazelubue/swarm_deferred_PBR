@@ -61,15 +61,16 @@
 #include "dt_send.h"
 
 // Shared header between the client DLL and the game DLLs
+#if defined CLIENT_DLL || defined (GAME_DLL)
 #include "shareddefs.h"
 #include "ehandle.h"
-
+#endif
 // app
 #if defined(_X360)
 #define DISABLE_DEBUG_HISTORY 1
 #endif
 
-
+#if defined CLIENT_DLL || defined (GAME_DLL)
 #include "datamap.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -86,6 +87,7 @@
 #include "baseentity_shared.h"
 #include "basetoggle.h"
 #include "igameevents.h"
+#endif
 
 // saverestore.h declarations
 class ISave;
@@ -99,9 +101,9 @@ struct animevent_t;
 
 struct studiohdr_t;
 class CStudioHdr;
-
+#if defined CLIENT_DLL || defined (GAME_DLL)
 extern void FireTargets( const char *targetName, CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-
+#endif
 // people gib if their health is <= this at the time of death
 #define	GIB_HEALTH_VALUE	-30
 
@@ -144,6 +146,7 @@ class CSound;
 // This is kind of ugly in that it adds a bunch of dependency where it isn't needed.
 // But on balance, the compile time is much lower (even incrementally) once the precompiled
 // headers contain these headers.
+#if defined CLIENT_DLL || defined (GAME_DLL)
 #include "precache_register.h"
 #include "baseanimating.h"
 #include "basecombatweapon.h"
@@ -158,5 +161,6 @@ class CSound;
 #include "recipientfilter.h"
 #include "npcevent.h"
 #include "vprof.h"
+#endif
 
 #endif // CBASE_H

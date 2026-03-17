@@ -11,8 +11,6 @@
 #if defined( CLIENT_DLL )
 #include "iprediction.h"
 #include "prediction.h"
-
-#include "sdk/c_sdk_player.h"
 #else
 #include "vguiscreen.h"
 #endif
@@ -474,9 +472,10 @@ void CBaseViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& o
 		pitch += 360.0f;
 
 	//FIXME: These are the old settings that caused too many exposed polys on some models
-	VectorMA( origin, -pitch * 0.02f,	forward,	origin );
-	VectorMA( origin, -pitch * 0.01f,		right,	origin );
-	VectorMA( origin, -pitch * 0.005f,		up,		origin);
+	VectorMA( origin, -pitch * 0.035f,	forward,	origin );
+	VectorMA( origin, -pitch * 0.03f,		right,	origin );
+	VectorMA( origin, -pitch * 0.02f,		up,		origin);
+
 }
 
 //-----------------------------------------------------------------------------

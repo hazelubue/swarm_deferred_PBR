@@ -4565,7 +4565,7 @@ void CAI_BaseNPC::Sleep()
 
 	if( GetState() == NPC_STATE_SCRIPT )
 	{
-		Warning( "%s put to sleep while in Scripted state!\n");
+		Warning( "%s put to sleep while in Scripted state!\n", GetClassname() );
 	}
 
 	VacateStrategySlot();
@@ -6572,7 +6572,7 @@ void CAI_BaseNPC::SetSequenceByName( char *szSequence )
 		SetSequenceById( iSequence );
 	else
 	{
-		DevWarning( 2, "%s has no sequence to match request\n", GetClassname(), szSequence );
+		DevWarning( 2, "%s has no sequence %s to match request\n", GetClassname(), szSequence );
 		SetSequence( 0 );	// Set to the reset anim (if it's there)
 	}
 }

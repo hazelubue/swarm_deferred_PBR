@@ -22,10 +22,9 @@
 #include <limits.h>
 #include "weapon_proficiency.h"
 
+#include "basecombatweapon_shared.h"
 
-// HACK, Should come from game specific enum...
-#define WEAPON_MAX 32   
-
+#define WEAPON_MAX 32 
 
 class CScriptedTarget;
 typedef CHandle<CBaseCombatWeapon> CBaseCombatWeaponHandle;
@@ -151,12 +150,18 @@ public:
 	virtual bool		FVisible( const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL )	{ return BaseClass::FVisible( vecTarget, traceMask, ppBlocker ); }
 	static void			ResetVisibilityCache( CBaseCombatCharacter *pBCC = NULL );
 
+#ifdef PORTAL
+	virtual	bool		FVisibleThroughPortal(const CProp_Portal *pPortal, CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL);
+#endif
 
 
 	virtual bool		FInViewCone( CBaseEntity *pEntity );
 	virtual bool		FInViewCone( const Vector &vecSpot );
 
-
+#ifdef PORTAL
+	virtual CProp_Portal*	FInViewConeThroughPortal(CBaseEntity *pEntity);
+	virtual CProp_Portal*	FInViewConeThroughPortal(const Vector &vecSpot);
+#endif
 
 	virtual bool		FInAimCone( CBaseEntity *pEntity );
 	virtual bool		FInAimCone( const Vector &vecSpot );

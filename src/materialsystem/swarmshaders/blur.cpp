@@ -1,10 +1,12 @@
 
 #include "deferred_includes.h"
 
-#include "tier0/memdbgon.h"
 
 #include "screenspace_vs30.inc"
 #include "gaussianblur_6_ps30.inc"
+
+
+#include "tier0/memdbgon.h"
 
 BEGIN_VS_SHADER( GAUSSIAN_BLUR_6, "" )
 	BEGIN_SHADER_PARAMS
